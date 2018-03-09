@@ -33,12 +33,12 @@ For tickets generation, when looking for the template, we check in that order:
 A template file looks like this (not really definitive but that's an idea):
 
     {
-        base_image: "a_path_to_an_image",
+        base_image: /* path to the font to use */,
         components: [
             {
                 x: /* x position from left */,
                 y: /* y position from top */,
-                font_family: /* font family to use */,
+                font: /* path to the font to use */,
                 font_size: /* font size to use */,
                 content: /* the actual text to write, using variables */   
             }
@@ -54,7 +54,7 @@ The variables used are:
 Instead of using .tpl files we can use more SQL tables (yayyyyy).
 
 - `templates`: `id`, `base_image`
-- `templates_components`: `id`, `template_id`, `x`, `y`, `font_family`, `font_size`, `content`
+- `templates_components`: `id`, `template_id`, `x`, `y`, `font`, `font_size`, `content`
 - `templates_by_product`: `product_id`, `template_id`
 - `templates_by_category`: `category_id`, `template_id`
 - `templates_by_event`: `event_id`, `template_id`
