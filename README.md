@@ -15,11 +15,32 @@ after year. The goal of this project is to create a new plateform that can be us
 - [ ] Register / login
   -  [ ] Requires to verify email
   -  [ ] Can login using an old password that MUST be rehashed using a new algorithm then removed from the database
-- [ ] Pick tickets
-- [ ] Fill contact information on each ticket, and picture when needed
-- [ ] Pay for the tickets and get them by email and on your profile page
-- [ ] (Admin) Change the type of tickets sold
-- [ ] (Admin) Extract tickets in different formats (including the format required by FNAC)
+- [ ] Actual shop
+  -  [ ] List products for the active edition or show an error page
+  -  [ ] Select products and purchase them
+  -  [ ] Fill additional info when required
+  -  [ ] Upload photos when required
+  -  [ ] Go to the payment page and pay
+  -  [ ] IPN script is triggered and the tickets are sent
+  -  [ ] Display bought tickets on the user page
+  -  [ ] Avoid selling [too much] more than max allowed
+  -  [ ] Handle discount codes ? (optional)
+- [ ] (Admin) Manage the shop
+  -  [ ] Create and update events
+  -  [ ] Deep clone events
+  -  [ ] Create and update categories within events
+  -  [ ] Create and update products within categories
+  -  [ ] Create templates
+  -  [ ] Update fonts and template bases
+  -  [ ] Deep clone templates
+  -  [ ] Assign templates to products/categories/events
+  -  [ ] Update the default template
+  -  [ ] Create discount codes (optional)
+  -  [ ] Preview templates
+  -  [ ] Create free tickets of any kind of item
+- [ ] (Admin) Read data
+  -  [ ] Export all tickets for a given edition to different lists
+  -  [ ] Display stats 
 
 ## Ticket generation templates
 
@@ -34,6 +55,14 @@ A template looks like this (actually implemented in the SQL fashion but that's e
 
     {
         base_image: /* path to the font to use */,
+        barcode: {
+            x: /* x position of the barcode top left corner */,
+            y: /* y position of the barcode top left corner */,
+            width: /* width of the barcode */,
+            height: /* height of the barcode */
+            
+            /* if height > width, the barcode will be made vertical */
+        },
         components: [
             {
                 x: /* x position from left */,
@@ -49,5 +78,5 @@ The variables usable in the content are:
 
 - `%{table_name}.{column_name}%` the value of a column in a table
 
-The SQL implementation uses `ticket_templates` to store the `base_image` field as well as an id, and the
+The SQL implementation uses `ticket_templates` to store the `base_image` field as well as an id and the barcode stuff, and the
 `ticket_template_components` table to store the different components.

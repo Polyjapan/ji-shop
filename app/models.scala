@@ -214,15 +214,24 @@ package object models {
     * @param id the id of this template (the id 0 is reserved for the default template)
     * @param baseImage the path to the base image of this template, relative to some directory (probably uploads/ or
     *                  something like that)
+    *
+    * @param barCodeX the x position of the top-left corner of the barcode (0 is the leftmost position)
+    * @param barCodeY the x position of the top-left corner of the barcode (0 is the 1st line of the image)
+    * @param barCodeWidth the width of the barcode
+    * @param barCodeHeight the height of the barcode, if it's higher than the width the barcode will be vertical
     */
-  case class TicketTemplate(id: Option[Int], baseImage: String)
+  case class TicketTemplate(id: Option[Int], baseImage: String, barCodeX: Int, barCodeY: Int, barCodeWidth: Int, barCodeHeight: Int)
 
   private class TicketTemplates(tag: Tag) extends Table[TicketTemplate](tag, "ticket_templates") {
     def id = column[Int]("ticket_template_id", O.PrimaryKey, O.AutoInc)
     def baseImage = column[String]("ticket_template_base_image")
+    def barCodeX = column[Int]("ticket_template_barcode_x")
+    def barCodeY = column[Int]("ticket_template_barcode_y")
+    def barCodeWidth = column[Int]("ticket_template_barcode_width")
+    def barCodeHeight = column[Int]("ticket_template_barcode_height")
 
     def * =
-      (id.?, baseImage).shaped <> (TicketTemplate.tupled, TicketTemplate.unapply)
+      (id.?, baseImage, barCodeX, barCodeY, barCodeWidth, barCodeHeight).shaped <> (TicketTemplate.tupled, TicketTemplate.unapply)
   }
 
   val ticketTemplates = TableQuery[TicketTemplates]
