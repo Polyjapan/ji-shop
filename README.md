@@ -21,16 +21,16 @@ after year. The goal of this project is to create a new plateform that can be us
 - [ ] (Admin) Change the type of tickets sold
 - [ ] (Admin) Extract tickets in different formats (including the format required by FNAC)
 
-## Random stuff I thought about
+## Ticket generation templates
 
 For tickets generation, when looking for the template, we check in that order:
 
-1. `templates/by-product/{product_id}.tpl`
-1. `templates/by-category/{category_id}.tpl`
-1. `templates/by-event/{event_id}.tpl`
-1. `templates/general.tpl`
+1. Template for this particular product ID (`ticket_templates_by_product`)
+1. Template for this particular category ID (`ticket_templates_by_category`)
+1. Template for this particular event ID (`ticket_templates_by_event`)
+1. Default template (`ticket_template_id = 0`)
 
-A template file looks like this (not really definitive but that's an idea):
+A template looks like this (actually implemented in the SQL fashion but that's easier to picture this way):
 
     {
         base_image: /* path to the font to use */,
@@ -45,18 +45,9 @@ A template file looks like this (not really definitive but that's an idea):
         ]
     }
 
-The variables used are:
+The variables usable in the content are:
 
 - `%{table_name}.{column_name}%` the value of a column in a table
 
-### Alternative option 
-
-Instead of using .tpl files we can use more SQL tables (yayyyyy).
-
-- `templates`: `id`, `base_image`
-- `templates_components`: `id`, `template_id`, `x`, `y`, `font`, `font_size`, `content`
-- `templates_by_product`: `product_id`, `template_id`
-- `templates_by_category`: `category_id`, `template_id`
-- `templates_by_event`: `event_id`, `template_id`
-
-Default template will always be template with id = 0
+The SQL implementation uses `ticket_templates` to store the `base_image` field as well as an id, and the
+`ticket_template_components` table to store the different components.

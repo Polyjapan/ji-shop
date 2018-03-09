@@ -209,4 +209,87 @@ package object models {
 
   val filledDetails = TableQuery[FilledDetails]
 
+  /**
+    * Represents the base template for a ticket
+    * @param id the id of this template (the id 0 is reserved for the default template)
+    * @param baseImage the path to the base image of this template, relative to some directory (probably uploads/ or
+    *                  something like that)
+    */
+  case class TicketTemplate(id: Option[Int], baseImage: String)
+
+  private class TicketTemplates(tag: Tag) extends Table[TicketTemplate](tag, "ticket_templates") {
+    def id = column[Int]("ticket_template_id", O.PrimaryKey, O.AutoInc)
+    def baseImage = column[String]("ticket_template_base_image")
+
+    def * =
+      (id.?, baseImage).shaped <> (TicketTemplate.tupled, TicketTemplate.unapply)
+  }
+
+  val ticketTemplates = TableQuery[TicketTemplates]
+
+  /**
+    * Represents a text component on a ticket
+    * @param id the id of this component
+    * @param templateId the id of the parent template
+    * @param x the x position (0 is the leftmost position)
+    * @param y the y position (0 is the top position)
+    * @param font path to a font (relative to the same directory as in [[TicketTemplate]]
+    * @param fontSize the font size
+    * @param content the text to display. Put `%{table}.{column}%` to insert a value (i.e. `%products.name%`)
+    */
+  case class TicketTemplateComponent(id: Option[Int], templateId: Int, x: Int, y: Int, font: String, fontSize: Int, content: String)
+
+  private class TicketTemplateComponents(tag: Tag) extends Table[TicketTemplateComponent](tag, "ticket_template_components") {
+    def id = column[Int]("ticket_template_component_id", O.PrimaryKey, O.AutoInc)
+    def templateId = column[Int]("ticket_template_id")
+    def x = column[Int]("ticket_template_component_x")
+    def y = column[Int]("ticket_template_component_y")
+    def font = column[String]("ticket_template_component_font")
+    def fontSize = column[Int]("ticket_template_component_font_size")
+    def content = column[String]("ticket_template_component_content")
+
+    def template = foreignKey("ticket_template_components_template_fk", templateId, ticketTemplates)(_.id, onUpdate = ForeignKeyAction.Cascade, onDelete = ForeignKeyAction.Cascade)
+
+    def * =
+      (id.?, templateId, x, y, font, fontSize, content).shaped <> (TicketTemplateComponent.tupled, TicketTemplateComponent.unapply)
+  }
+
+  val ticketTemplateComponents = TableQuery[TicketTemplateComponents]
+
+
+
+  private class TicketTemplatesByProduct(tag: Tag) extends Table[(Int, Int)](tag, "ticket_templates_by_product") {
+    def templateId = column[Int]("ticket_template_id")
+    def template = foreignKey("ticket_templates_by_product_template_fk", templateId, ticketTemplates)(_.id, onUpdate = ForeignKeyAction.Cascade, onDelete = ForeignKeyAction.Cascade)
+
+    def productId = column[Int]("product_id")
+    def product = foreignKey("ticket_templates_by_product_product_fk", productId, products)(_.id, onUpdate = ForeignKeyAction.Cascade, onDelete = ForeignKeyAction.Cascade)
+
+    def * = (templateId, productId)
+  }
+
+  private class TicketTemplatesByCategory(tag: Tag) extends Table[(Int, Int)](tag, "ticket_templates_by_category") {
+    def templateId = column[Int]("ticket_template_id")
+    def template = foreignKey("ticket_templates_by_category_template_fk", templateId, ticketTemplates)(_.id, onUpdate = ForeignKeyAction.Cascade, onDelete = ForeignKeyAction.Cascade)
+
+    def categoryId = column[Int]("category_id")
+    def category = foreignKey("ticket_templates_by_category_category_fk", categoryId, categories)(_.id, onUpdate = ForeignKeyAction.Cascade, onDelete = ForeignKeyAction.Cascade)
+
+    def * = (templateId, categoryId)
+  }
+
+  private class TicketTemplatesByEvent(tag: Tag) extends Table[(Int, Int)](tag, "ticket_templates_by_event") {
+    def templateId = column[Int]("ticket_template_id")
+    def template = foreignKey("ticket_templates_by_event_template_fk", templateId, ticketTemplates)(_.id, onUpdate = ForeignKeyAction.Cascade, onDelete = ForeignKeyAction.Cascade)
+
+    def eventId = column[Int]("event_id")
+    def event = foreignKey("ticket_templates_by_event_event_fk", eventId, events)(_.id, onUpdate = ForeignKeyAction.Cascade, onDelete = ForeignKeyAction.Cascade)
+
+    def * = (templateId, eventId)
+  }
+
+  val templatesByProduct = TableQuery[TicketTemplatesByProduct]
+  val templatesByCategory = TableQuery[TicketTemplatesByCategory]
+  val templatesByEvent = TableQuery[TicketTemplatesByEvent]
+
 }
