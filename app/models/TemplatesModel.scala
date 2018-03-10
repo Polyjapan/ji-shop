@@ -55,16 +55,20 @@ class TemplatesModel @Inject()(protected val dbConfigProvider: DatabaseConfigPro
       (id.?, templateId, x, y, font, fontSize, content).shaped <> (TicketTemplateComponent.tupled, TicketTemplateComponent.unapply)
   }
 
-  private abstract class PairTable(_tableTag: Tag, _tableName: String) extends Table[(Int, Int)](_tableTag, _tableName)
+  private abstract class PairTable(_tableTag: Tag, _tableName: String) extends Table[(Int, Int)](_tableTag, _tableName) {
+    def templateId: Rep[Int] = column[Int]("ticket_template_id")
+
+    def otherId: Rep[Int]
+  }
 
   private class TicketTemplatesByProduct(tag: Tag) extends PairTable(tag, "ticket_templates_by_product") {
-    def templateId = column[Int]("ticket_template_id")
-
     def template = foreignKey("ticket_templates_by_product_template_fk", templateId, ticketTemplates)(_.id, onUpdate = ForeignKeyAction.Cascade, onDelete = ForeignKeyAction.Cascade)
 
     def productId = column[Int]("product_id")
 
     def product = foreignKey("ticket_templates_by_product_product_fk", productId, products)(_.id, onUpdate = ForeignKeyAction.Cascade, onDelete = ForeignKeyAction.Cascade)
+
+    def otherId = productId
 
     def * = (templateId, productId)
 
@@ -72,13 +76,13 @@ class TemplatesModel @Inject()(protected val dbConfigProvider: DatabaseConfigPro
   }
 
   private class TicketTemplatesByCategory(tag: Tag) extends PairTable(tag, "ticket_templates_by_category") {
-    def templateId = column[Int]("ticket_template_id")
-
     def template = foreignKey("ticket_templates_by_category_template_fk", templateId, ticketTemplates)(_.id, onUpdate = ForeignKeyAction.Cascade, onDelete = ForeignKeyAction.Cascade)
 
     def categoryId = column[Int]("category_id")
 
     def category = foreignKey("ticket_templates_by_category_category_fk", categoryId, categories)(_.id, onUpdate = ForeignKeyAction.Cascade, onDelete = ForeignKeyAction.Cascade)
+
+    def otherId = categoryId
 
     def * = (templateId, categoryId)
 
@@ -86,13 +90,13 @@ class TemplatesModel @Inject()(protected val dbConfigProvider: DatabaseConfigPro
   }
 
   private class TicketTemplatesByEvent(tag: Tag) extends PairTable(tag, "ticket_templates_by_event") {
-    def templateId = column[Int]("ticket_template_id")
-
     def template = foreignKey("ticket_templates_by_event_template_fk", templateId, ticketTemplates)(_.id, onUpdate = ForeignKeyAction.Cascade, onDelete = ForeignKeyAction.Cascade)
 
     def eventId = column[Int]("event_id")
 
     def event = foreignKey("ticket_templates_by_event_event_fk", eventId, events)(_.id, onUpdate = ForeignKeyAction.Cascade, onDelete = ForeignKeyAction.Cascade)
+
+    def otherId = eventId
 
     def * = (templateId, eventId)
 
@@ -105,7 +109,7 @@ class TemplatesModel @Inject()(protected val dbConfigProvider: DatabaseConfigPro
   private val templatesByCategory = TableQuery[TicketTemplatesByCategory]
   private val templatesByEvent = TableQuery[TicketTemplatesByEvent]
 
-  private val componentsJoin = ticketTemplates join ticketTemplateComponents on (_.id == _.templateId)
+  private val componentsJoin = ticketTemplates join ticketTemplateComponents on (_.id === _.templateId)
 
   /**
     * Create a template, returning its id in a future
@@ -130,9 +134,9 @@ class TemplatesModel @Inject()(protected val dbConfigProvider: DatabaseConfigPro
   def updateComponent(component: TicketTemplateComponent): Future[Boolean] =
     db.run((for {cmp <- ticketTemplateComponents} yield cmp).update(component)).map(_ > 0)
 
-  def deleteComponent(id: Int): Future[Boolean] = db.run(ticketTemplateComponents.filter(_.id == id).delete).map(_ > 0)
+  def deleteComponent(id: Int): Future[Boolean] = db.run(ticketTemplateComponents.filter(_.id === id).delete).map(_ > 0)
 
-  def deleteTemplate(id: Int): Future[Boolean] = db.run(ticketTemplates.filter(_.id == id).delete).map(_ > 0)
+  def deleteTemplate(id: Int): Future[Boolean] = db.run(ticketTemplates.filter(_.id === id).delete).map(_ > 0)
 
   private val componentsJoinMapper: (Seq[(TicketTemplate, TicketTemplateComponent)]) => Map[TicketTemplate, Seq[TicketTemplateComponent]] =
     _.groupBy(pair => pair._1).mapValues(_.map(_._2))
@@ -150,29 +154,37 @@ class TemplatesModel @Inject()(protected val dbConfigProvider: DatabaseConfigPro
     * Queries a template and its component by its id
     */
   def templateById(id: Int): Future[Option[TemplateAndComponents]] =
-    db.run(componentsJoin.filter(_._1.id == id).result).map(singleComponentJoinMapper)
+    db.run(componentsJoin.filter(_._1.id === id).result).map(singleComponentJoinMapper)
 
   /**
     * Queries a template for a given product
     */
   def templateByProduct(productId: Int, categoryId: Int, eventId: Int): Future[Option[TemplateAndComponents]] =
-    db.run(componentsJoin.join(templatesByProduct).on(_._1.id == _.templateId).filter(_._2.productId == productId).result)
+  // We first try to query the templatesByProduct table
+    db.run(componentsJoin.join(templatesByProduct).on(_._1.id === _.templateId).filter(_._2.productId === productId).result)
       .flatMap {
+        // If we found a reply we return a future with it
         case s: Seq[((TicketTemplate, TicketTemplateComponent), (Int, Int))] if s.nonEmpty => Future(singleComponentJoinMapper(s.map(_._1)))
-        case _ => db.run(componentsJoin.join(templatesByCategory).on(_._1.id == _.templateId).filter(_._2.categoryId == categoryId).result)
+        // If not, we try to query the templatesByCategory table
+        case _ => db.run(componentsJoin.join(templatesByCategory).on(_._1.id === _.templateId).filter(_._2.categoryId === categoryId).result)
       }.flatMap {
-      case opt: Option[TemplateAndComponents] => Future(opt)
-      case s: Seq[((TicketTemplate, TicketTemplateComponent), (Int, Int))] if s.nonEmpty => Future(singleComponentJoinMapper(s.map(_._1)))
-      case _ => db.run(componentsJoin.join(templatesByEvent).on(_._1.id == _.templateId).filter(_._2.eventId == eventId).result)
-    }.flatMap {
-      case opt: Option[TemplateAndComponents] => Future(opt)
-      case s: Seq[((TicketTemplate, TicketTemplateComponent), (Int, Int))] if s.nonEmpty => Future(singleComponentJoinMapper(s.map(_._1)))
-      case _ => db.run(componentsJoin.filter(_._1.id == 0).result)
-    }.map {
-      case opt: Option[TemplateAndComponents] => opt
-      case s: Seq[(TicketTemplate, TicketTemplateComponent)] if s.nonEmpty => singleComponentJoinMapper(s)
-      case _ => Option.empty
-    }
+        // If we already had a reply, we just pass it on
+        case opt: Option[TemplateAndComponents] => Future(opt)
+        // If we found something, we return a future with it
+        case s: Seq[((TicketTemplate, TicketTemplateComponent), (Int, Int))] if s.nonEmpty => Future(singleComponentJoinMapper(s.map(_._1)))
+        // It not, we try to query the templatesByEvent table
+        case _ => db.run(componentsJoin.join(templatesByEvent).on(_._1.id === _.templateId).filter(_._2.eventId === eventId).result)
+      }.flatMap {
+        // Same stuff as before
+        case opt: Option[TemplateAndComponents] => Future(opt)
+        case s: Seq[((TicketTemplate, TicketTemplateComponent), (Int, Int))] if s.nonEmpty => Future(singleComponentJoinMapper(s.map(_._1)))
+        // If nothing found, we query the default component that should be on id 0
+        case _ => db.run(componentsJoin.filter(_._1.id === 0).result)
+      }.map {
+        case opt: Option[TemplateAndComponents] => opt
+        case s: Seq[(TicketTemplate, TicketTemplateComponent)] if s.nonEmpty => singleComponentJoinMapper(s)
+        case _ => Option.empty
+      }
 
   class MapAction(templateId: Int) {
     private def mapTemplate[T <: PairTable](query: TableQuery[T], id: Int): Future[Boolean] =
@@ -187,7 +199,7 @@ class TemplatesModel @Inject()(protected val dbConfigProvider: DatabaseConfigPro
 
   class UnmapAction(templateId: Int) {
     private def unmapTemplate[T <: PairTable](query: TableQuery[T], id: Int): Future[Boolean] =
-      db.run(query.filter(_ == (templateId, id)).delete).map(_ > 0)
+      db.run(query.filter(e => e.templateId === templateId && e.otherId === id).delete).map(_ > 0)
 
     def fromProduct(id: Int): Future[Boolean] = unmapTemplate(templatesByProduct, id)
 

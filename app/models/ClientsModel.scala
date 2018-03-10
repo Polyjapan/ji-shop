@@ -29,7 +29,7 @@ class ClientsModel @Inject() (protected val dbConfigProvider: DatabaseConfigProv
   }
 
   private val permissions = TableQuery[Permissions]
-  private val clientsJoin = clients join permissions on (_.id == _.userId)
+  private val clientsJoin = clients join permissions on (_.id === _.userId)
 
   type ClientAndPermissions = (Client, Seq[String])
 
@@ -50,7 +50,7 @@ class ClientsModel @Inject() (protected val dbConfigProvider: DatabaseConfigProv
     * Query a client by its email
     */
   def findClient(email: String): Future[Option[ClientAndPermissions]] =
-    db.run(clientsJoin.filter(_._1.email == email).result).map(singleClientPermsJoinMapper)
+    db.run(clientsJoin.filter(_._1.email === email).result).map(singleClientPermsJoinMapper)
 
   /**
     * Create a client
