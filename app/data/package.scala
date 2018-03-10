@@ -101,13 +101,13 @@ package object data {
     * @param id the id of this template (the id 0 is reserved for the default template)
     * @param baseImage the path to the base image of this template, relative to some directory (probably uploads/ or
     *                  something like that)
-    *
+    * @param templateName the friendly name of this template
     * @param barCodeX the x position of the top-left corner of the barcode (0 is the leftmost position)
     * @param barCodeY the x position of the top-left corner of the barcode (0 is the 1st line of the image)
     * @param barCodeWidth the width of the barcode
     * @param barCodeHeight the height of the barcode, if it's higher than the width the barcode will be vertical
     */
-  case class TicketTemplate(id: Option[Int], baseImage: String, barCodeX: Int, barCodeY: Int, barCodeWidth: Int,
+  case class TicketTemplate(id: Option[Int], baseImage: String, templateName: String, barCodeX: Int, barCodeY: Int, barCodeWidth: Int,
                             barCodeHeight: Int)
 
 

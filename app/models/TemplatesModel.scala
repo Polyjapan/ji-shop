@@ -22,6 +22,8 @@ class TemplatesModel @Inject()(protected val dbConfigProvider: DatabaseConfigPro
 
     def baseImage = column[String]("ticket_template_base_image", O.SqlType("VARCHAR(250)"))
 
+    def templateName = column[String]("ticket_template_name", O.SqlType("VARCHAR(180)"), O.Unique)
+
     def barCodeX = column[Int]("ticket_template_barcode_x")
 
     def barCodeY = column[Int]("ticket_template_barcode_y")
@@ -31,7 +33,7 @@ class TemplatesModel @Inject()(protected val dbConfigProvider: DatabaseConfigPro
     def barCodeHeight = column[Int]("ticket_template_barcode_height")
 
     def * =
-      (id.?, baseImage, barCodeX, barCodeY, barCodeWidth, barCodeHeight).shaped <> (TicketTemplate.tupled, TicketTemplate.unapply)
+      (id.?, baseImage, templateName, barCodeX, barCodeY, barCodeWidth, barCodeHeight).shaped <> (TicketTemplate.tupled, TicketTemplate.unapply)
   }
 
   private class TicketTemplateComponents(tag: Tag) extends Table[TicketTemplateComponent](tag, "ticket_template_components") {

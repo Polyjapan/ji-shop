@@ -15,7 +15,7 @@ create table `ordered_products` (`ordered_product_id` INTEGER NOT NULL AUTO_INCR
 
 create table `filled_details` (`filled_detail_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,`ordered_product_id` INTEGER NOT NULL,`product_detail_id` INTEGER NOT NULL,`filled_detail_value` TEXT NOT NULL);
 
-create table `ticket_templates` (`ticket_template_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,`ticket_template_base_image` VARCHAR(250) NOT NULL,`ticket_template_barcode_x` INTEGER NOT NULL,`ticket_template_barcode_y` INTEGER NOT NULL,`ticket_template_barcode_width` INTEGER NOT NULL,`ticket_template_barcode_height` INTEGER NOT NULL);
+create table `ticket_templates` (`ticket_template_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,`ticket_template_base_image` VARCHAR(250) NOT NULL,`ticket_template_name` VARCHAR(180) NOT NULL UNIQUE,`ticket_template_barcode_x` INTEGER NOT NULL,`ticket_template_barcode_y` INTEGER NOT NULL,`ticket_template_barcode_width` INTEGER NOT NULL,`ticket_template_barcode_height` INTEGER NOT NULL);
 
 create table `ticket_template_components` (`ticket_template_component_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,`ticket_template_id` INTEGER NOT NULL,`ticket_template_component_x` INTEGER NOT NULL,`ticket_template_component_y` INTEGER NOT NULL,`ticket_template_component_font` VARCHAR(250) NOT NULL,`ticket_template_component_font_size` INTEGER NOT NULL,`ticket_template_component_content` TEXT NOT NULL);
 
