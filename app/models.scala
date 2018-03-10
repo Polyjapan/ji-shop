@@ -301,4 +301,16 @@ package object models {
   val templatesByCategory = TableQuery[TicketTemplatesByCategory]
   val templatesByEvent = TableQuery[TicketTemplatesByEvent]
 
+  private class Permissions(tag: Tag) extends Table[(Int, String)](tag, "permissions") {
+    def userId = column[Int]("client_id")
+    def permission = column[String]("permission")
+
+
+    def user = foreignKey("permissions_client_fk", userId, clients)(_.id, onDelete = ForeignKeyAction.Cascade)
+
+    def * = (userId, permission)
+  }
+
+  val permissions = TableQuery[Permissions]
+
 }
