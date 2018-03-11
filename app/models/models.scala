@@ -13,13 +13,14 @@ package object models {
     def firstname = column[String]("client_firstname", O.SqlType("VARCHAR(100)"))
     def lastname = column[String]("client_lastname", O.SqlType("VARCHAR(100)"))
     def email = column[String]("client_email", O.SqlType("VARCHAR(180)"), O.Unique)
-    def emailConfirmed = column[Boolean]("client_email_confirmed")
+    def emailConfirmKey = column[Option[String]]("client_email_confirm_key", O.SqlType("VARCHAR(100)"))
     def password = column[String]("client_password", O.SqlType("VARCHAR(250)"))
     def passwordAlgo = column[String]("client_password_algo", O.SqlType("VARCHAR(15)"))
     def passwordReset = column[Option[String]]("client_password_reset", O.SqlType("VARCHAR(250)"))
+    def passwordResetEnd = column[Option[Timestamp]]("client_password_reset_end")
 
     def * =
-      (id.?, firstname, lastname, email, emailConfirmed, password, passwordAlgo, passwordReset).shaped <> (Client.tupled, Client.unapply)
+      (id.?, firstname, lastname, email, emailConfirmKey, password, passwordAlgo, passwordReset, passwordResetEnd).shaped <> (Client.tupled, Client.unapply)
   }
 
   private[models] val clients = TableQuery[Clients]

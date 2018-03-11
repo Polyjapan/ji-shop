@@ -1,5 +1,5 @@
 # --- !Ups
-create table `clients` (`client_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,`client_firstname` VARCHAR(100) NOT NULL,`client_lastname` VARCHAR(100) NOT NULL,`client_email` VARCHAR(180) NOT NULL UNIQUE,`client_email_confirmed` BOOLEAN NOT NULL,`client_password` VARCHAR(250) NOT NULL,`client_password_algo` VARCHAR(15) NOT NULL,`client_password_reset` VARCHAR(250));
+create table `clients` (`client_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,`client_firstname` VARCHAR(100) NOT NULL,`client_lastname` VARCHAR(100) NOT NULL,`client_email` VARCHAR(180) NOT NULL UNIQUE,`client_email_confirm_key` VARCHAR(100) NULL,`client_password` VARCHAR(250) NOT NULL,`client_password_algo` VARCHAR(15) NOT NULL,`client_password_reset` VARCHAR(250), `client_password_reset_end` TIMESTAMP NULL);
 
 create table `events` (`event_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,`event_name` VARCHAR(250) NOT NULL,`event_location` VARCHAR(250) NOT NULL,`event_visible` BOOLEAN NOT NULL);
 
