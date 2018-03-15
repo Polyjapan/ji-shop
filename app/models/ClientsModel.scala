@@ -1,6 +1,6 @@
 package models
 
-import com.google.inject.Inject
+import javax.inject.Inject
 import data.{Client, TicketTemplate, TicketTemplateComponent}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.MySQLProfile

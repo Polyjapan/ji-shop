@@ -1,0 +1,11 @@
+@(field: Field, args: Map[Symbol, String] )(inputField: Html)(implicit messages: Messages)
+
+<div class="input-group">
+    <label for="@field.id" class="sr-only">@messages(args.withDefaultValue(field.name.capitalize)('label))</label>
+    @inputField
+    <div class="invalid-feedback">
+        @field.errors.map { error =>
+            <p>@messages(error.message)</p>
+        }
+    </div>
+</div>

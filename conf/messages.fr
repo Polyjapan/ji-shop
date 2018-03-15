@@ -1,0 +1,12 @@
+# definis par Play2
+error.email=Merci de saisir une adresse email valide !
+
+users.login.title=Connexion
+users.login.inside_title=Connectez vous
+users.login.email=Addresse email
+users.login.password=Mot de passe
+users.login.login_button=Connexion
+users.login.register=Inscription
+users.login.password_reset=Mot de passe oublié
+
+users.logout.done=Vous avez bien été déconnecté(e) !
