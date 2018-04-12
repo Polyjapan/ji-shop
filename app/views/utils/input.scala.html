@@ -8,5 +8,5 @@
     <input type="@map.withDefaultValue("text")('type)" name="@field.name" id="@field.id"
     class="form-control @{
         if(field.hasErrors) "is-invalid"
-    }" placeholder="@messages(map.withDefaultValue(field.name.capitalize)('label))" required>
+    }" placeholder="@messages(map.withDefaultValue(field.name.capitalize)('label))" value="@field.value.getOrElse("")" required>
 }

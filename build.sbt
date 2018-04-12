@@ -14,7 +14,8 @@ libraryDependencies ++= Seq( ehcache , ws , specs2 % Test , guice )
 libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-slick" % "3.0.0",
   "com.typesafe.play" %% "play-slick-evolutions" % "3.0.0",
-  "mysql" % "mysql-connector-java" % "5.1.34"
+  "mysql" % "mysql-connector-java" % "5.1.34",
+  "org.mindrot" % "jbcrypt" % "0.3m"
 )
 
 libraryDependencies += "com.typesafe.play" %% "play-mailer" % "6.0.1"

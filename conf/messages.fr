@@ -8,5 +8,18 @@ users.login.password=Mot de passe
 users.login.login_button=Connexion
 users.login.register=Inscription
 users.login.password_reset=Mot de passe oublié
+users.login.error_not_found=Email ou mot de passe incorrect
+users.login.email_not_confirmed=Vous devez confirmer votre adresse email pour vous connecter !
+
+users.signup.title=Inscription
+users.signup.inside_title=Inscrivez vous
+users.signup.password_repeat=Confirmation du mot de passe
+users.signup.login=Connexion
+users.signup.firstname=Prénom
+users.signup.lastname=Nom de famille
+users.signup.signup_button=Inscription
+users.signup.email_used=Cette adresse e-mail est déjà utilisée
+users.signup.password_not_strong=La longueur du mot de passe doit être d''au moins 8 caractères
+users.signup.password_repeat_incorrect=La confirmation du mot de passe doit être identique au mot de passe
 
 users.logout.done=Vous avez bien été déconnecté(e) !
