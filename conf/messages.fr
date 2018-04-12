@@ -21,5 +21,7 @@ users.signup.signup_button=Inscription
 users.signup.email_used=Cette adresse e-mail est déjà utilisée
 users.signup.password_not_strong=La longueur du mot de passe doit être d''au moins 8 caractères
 users.signup.password_repeat_incorrect=La confirmation du mot de passe doit être identique au mot de passe
+users.signup.email_title=Votre compte JapanImpact
+users.signup.email_from=Ne pas répondre
 
 users.logout.done=Vous avez bien été déconnecté(e) !

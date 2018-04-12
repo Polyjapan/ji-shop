@@ -1,20 +1,26 @@
 package controllers
 
+import java.net.{URLDecoder, URLEncoder}
+
 import javax.inject.Inject
 import models.ClientsModel
+import play.api.Configuration
 import play.api.data.Forms._
 import play.api.data._
 import play.api.data.validation.ValidationError
 import play.api.i18n.{I18nSupport, Lang, Messages}
+import play.api.libs.mailer._
 import play.api.mvc._
 import utils.HashHelper
+import views.html.helper
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Random
 
 /**
   * @author zyuiop
   */
-class UsersController @Inject()(cc: MessagesControllerComponents, clients: ClientsModel, hash: HashHelper)(implicit ec: ExecutionContext) extends MessagesAbstractController(cc) with I18nSupport {
+class UsersController @Inject()(cc: MessagesControllerComponents, clients: ClientsModel, hash: HashHelper, mailerClient: MailerClient, config: Configuration)(implicit ec: ExecutionContext) extends MessagesAbstractController(cc) with I18nSupport {
   private val loginForm = Form(mapping("email" -> email, "password" -> nonEmptyText)(Tuple2.apply)(Tuple2.unapply))
   private val registerForm = Form(mapping("email" -> email, "password" -> nonEmptyText, "password_repeat" -> nonEmptyText, "lastname" -> nonEmptyText, "firstname" -> nonEmptyText)(Tuple5.apply)(Tuple5.unapply))
 
@@ -57,6 +63,8 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
     Ok(views.html.Users.register(registerForm))
   }
 
+  private val chars = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9')
+
   def postSignup: Action[AnyContent] = Action.async { implicit request => {
     val form = registerForm.bindFromRequest
 
@@ -77,9 +85,22 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
               BadRequest(views.html.Users.register(form.withError("password_repeat", request.messages("users.signup.password_repeat_incorrect"))))
             } else {
               val hashed = hash.hash(userData._2)
-              // TODO : email confirmation
+              val emailCode = List.fill(30)(Random.nextInt(chars.length)).map(chars).mkString
 
-              clients.createClient(data.Client(Option.empty, userData._4, userData._5, userData._1, Option.empty, hashed._2, hashed._1))
+              val emailEncoded = URLEncoder.encode(userData._1, "UTF-8")
+
+              clients.createClient(data.Client(Option.empty, userData._4, userData._5, userData._1, Some(emailCode), hashed._2, hashed._1))
+
+              val url = config.get[String]("polyjapan.siteUrl") + routes.UsersController.emailConfirm(emailEncoded, emailCode)
+
+              // Send an email
+              mailerClient.send(Email(
+                request.messages("users.signup.email_title"),
+                request.messages("users.signup.email_from") + " <noreply@japan-impact.ch>",
+                Seq(userData._1),
+                bodyText = Some("WESH " + url)
+              ))
+
               Ok
             }
           }
@@ -96,7 +117,22 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
     Ok
   }
 
-  def emailConfirm = Action {
-    Ok
+  def emailConfirm(email: String, code: String): Action[AnyContent] = Action.async { implicit request => {
+    val emailDecoded = URLDecoder.decode(email, "UTF-8")
+
+    clients.findClient(emailDecoded).map { opt =>
+      if (opt.isEmpty)
+        NotFound // TODO : print some stuff
+      else {
+        val client = opt.get._1
+        if (client.emailConfirmKey.isEmpty) {
+          BadRequest // TODO : print some stuff
+        } else {
+          clients.updateClient(client.copy(emailConfirmKey = None)) // TODO : print some stuff
+          Ok
+        }
+      }
+    }
+    }
   }
 }

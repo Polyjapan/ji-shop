@@ -2,6 +2,7 @@ package models
 
 import javax.inject.Inject
 import data.{Client, TicketTemplate, TicketTemplateComponent}
+import org.apache.commons.lang3.Validate
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.MySQLProfile
 
@@ -60,4 +61,13 @@ class ClientsModel @Inject() (protected val dbConfigProvider: DatabaseConfigProv
     */
   def createClient(client: Client): Future[Int] = db.run((clients returning clients.map(_.id)) += client)
 
+  /**
+    * Updates a client whose id is set
+    * @param client the client to update/insert
+    * @return the number of updated rows in a future
+    */
+  def updateClient(client: Client): Future[Int] = {
+    Validate.isTrue(client.id.isDefined)
+    db.run(clients.filter(_.id === client.id.get).update(client))
+  }
 }
