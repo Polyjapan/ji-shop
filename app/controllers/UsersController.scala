@@ -1,18 +1,17 @@
 package controllers
 
 import java.net.{URLDecoder, URLEncoder}
+import java.sql.Timestamp
 
 import javax.inject.Inject
 import models.ClientsModel
 import play.api.Configuration
 import play.api.data.Forms._
 import play.api.data._
-import play.api.data.validation.ValidationError
-import play.api.i18n.{I18nSupport, Lang, Messages}
+import play.api.i18n.I18nSupport
 import play.api.libs.mailer._
 import play.api.mvc._
 import utils.HashHelper
-import views.html.helper
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
@@ -22,7 +21,11 @@ import scala.util.Random
   */
 class UsersController @Inject()(cc: MessagesControllerComponents, clients: ClientsModel, hash: HashHelper, mailerClient: MailerClient, config: Configuration)(implicit ec: ExecutionContext) extends MessagesAbstractController(cc) with I18nSupport {
   private val loginForm = Form(mapping("email" -> email, "password" -> nonEmptyText)(Tuple2.apply)(Tuple2.unapply))
-  private val registerForm = Form(mapping("email" -> email, "password" -> nonEmptyText, "password_repeat" -> nonEmptyText, "lastname" -> nonEmptyText, "firstname" -> nonEmptyText)(Tuple5.apply)(Tuple5.unapply))
+  private val registerForm = Form(mapping("email" -> email, "password" -> nonEmptyText(8), "password_repeat" -> nonEmptyText, "lastname" -> nonEmptyText, "firstname" -> nonEmptyText)(Tuple5.apply)(Tuple5.unapply))
+  private val recoverForm = Form(mapping("email" -> email)(e => e)(Some(_)))
+  private val resetForm = Form(mapping("email" -> email, "code" -> nonEmptyText, "password" -> nonEmptyText(8), "password_repeat" -> nonEmptyText)(Tuple4.apply)(Tuple4.unapply))
+
+  // Todo: block access to these pages to logged in users
 
   def login = Action { implicit request =>
     Ok(views.html.Users.login(loginForm))
@@ -50,7 +53,8 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
         }
       }
     )
-  } }
+  }
+  }
 
   /**
     * Disconnects the user: redirect him to the home cleaning its session
@@ -78,15 +82,12 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
           if (opt.isDefined) {
             BadRequest(views.html.Users.register(form.withGlobalError(request.messages("users.signup.email_used"))))
           } else {
-            // Okay, check password length:
-            if (userData._2.length < 8) {
-              BadRequest(views.html.Users.register(form.withError("password", request.messages("users.signup.password_not_strong"))))
-            } else if (userData._2 != userData._3) {
-              BadRequest(views.html.Users.register(form.withError("password_repeat", request.messages("users.signup.password_repeat_incorrect"))))
+            // Okay, check password data:
+            if (userData._2 != userData._3) {
+              BadRequest(views.html.Users.register(form.withError("password_repeat", "users.signup.password_repeat_incorrect")))
             } else {
               val hashed = hash.hash(userData._2)
               val emailCode = List.fill(30)(Random.nextInt(chars.length)).map(chars).mkString
-
               val emailEncoded = URLEncoder.encode(userData._1, "UTF-8")
 
               clients.createClient(data.Client(Option.empty, userData._4, userData._5, userData._1, Some(emailCode), hashed._2, hashed._1))
@@ -98,7 +99,7 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
                 request.messages("users.signup.email_title"),
                 request.messages("users.signup.email_from") + " <noreply@japan-impact.ch>",
                 Seq(userData._1),
-                bodyText = Some("WESH " + url)
+                bodyText = Some(request.messages("users.signup.email_text", url))
               ))
 
               Ok
@@ -107,10 +108,98 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
         }
       }
     )
-  } }
+  }
+  }
 
-  def passwordReset = Action {
-    Ok
+  def recoverPassword = Action { implicit request =>
+    Ok(views.html.Users.recoverPassword(recoverForm))
+  }
+
+  def recoverPasswordSend = Action { implicit request =>
+    recoverForm.bindFromRequest.fold(
+      withErrors => BadRequest(views.html.Users.recoverPassword(withErrors)), email => {
+        clients.findClient(email).map {
+          case Some((client, perms)) =>
+            val resetCode = List.fill(30)(Random.nextInt(chars.length)).map(chars).mkString
+            val emailEncoded = URLEncoder.encode(client.email, "UTF-8")
+
+            val url = config.get[String]("polyjapan.siteUrl") + routes.UsersController.passwordReset(emailEncoded, resetCode)
+
+            // TODO captcha ?
+
+            clients.updateClient(client.copy(
+              passwordReset = Some(resetCode),
+              passwordResetEnd = Some(
+                new Timestamp(System.currentTimeMillis + (24 * 3600 * 1000))
+              ))).onComplete(_ => {
+              mailerClient.send(Email(
+                request.messages("users.recover.email_title"),
+                request.messages("users.recover.email_from") + " <noreply@japan-impact.ch>",
+                Seq(client.email),
+                bodyText = Some(request.messages("users.recover.email_text", client.firstname, url))
+              ))
+            })
+
+          case None => mailerClient.send(Email(
+            request.messages("users.recover.email_title"),
+            request.messages("users.recover.email_from") + " <noreply@japan-impact.ch>",
+            Seq(email),
+            bodyText = Some(request.messages("users.recover.no_user_email_text"))
+          ))
+        }
+      }
+    )
+    Ok(views.html.Users.recoverPassword(recoverForm))
+  }
+
+  private def checkPasswordRequest(client: data.Client, code: String): Boolean =
+    client.passwordReset.contains(code) && client.passwordResetEnd.exists(_.getTime > System.currentTimeMillis)
+
+  def passwordReset(email: String, code: String) = Action.async { implicit request =>
+    val emailDecoded = URLDecoder.decode(email, "UTF-8")
+
+    clients.findClient(emailDecoded).map { opt =>
+      if (opt.isEmpty)
+        NotFound // TODO : print some stuff
+      else {
+        val client = opt.get._1
+        if (!checkPasswordRequest(client, code)) {
+          NotFound // TODO : print same stuff
+        } else {
+          Ok(views.html.Users.passwordReset(resetForm.fill((emailDecoded, code, "", ""))))
+        }
+      }
+    }
+  }
+
+  def passwordResetSend = Action.async { implicit request =>
+    val form = resetForm.bindFromRequest
+
+    form.fold(
+      withErrors => Future(BadRequest(views.html.Users.passwordReset(withErrors))),
+      { case (email, code, pass, passConfirm) =>
+        clients.findClient(email).map { opt =>
+          if (opt.isEmpty)
+            NotFound // TODO : print some stuff
+          else {
+            val client = opt.get._1
+            if (!checkPasswordRequest(client, code)) {
+              NotFound // TODO : print same stuff
+            } else {
+              if (pass != passConfirm) {
+                BadRequest(views.html.Users.passwordReset(form.withError("password_repeat", "users.signup.password_repeat_incorrect")))
+              } else {
+                val (algo, hashPass) = hash.hash(pass)
+                clients.updateClient(client.copy(passwordReset = None, passwordResetEnd = None, password = hashPass, passwordAlgo = algo)) // TODO : print some stuff
+                Ok
+              }
+
+            }
+          }
+        }
+      })
+
+
   }
 
   def passwordChange = Action {
@@ -125,14 +214,15 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
         NotFound // TODO : print some stuff
       else {
         val client = opt.get._1
-        if (client.emailConfirmKey.isEmpty) {
-          BadRequest // TODO : print some stuff
+
+        if (!client.emailConfirmKey.contains(code)) {
+          NotFound // TODO : print some stuff (same stuff)
         } else {
           clients.updateClient(client.copy(emailConfirmKey = None)) // TODO : print some stuff
           Ok
         }
       }
     }
-    }
+  }
   }
 }

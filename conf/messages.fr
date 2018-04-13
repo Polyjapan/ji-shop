@@ -1,5 +1,6 @@
 # definis par Play2
 error.email=Merci de saisir une adresse email valide !
+error.minLength=Longueur minimale : {0}
 
 users.login.title=Connexion
 users.login.inside_title=Connectez vous
@@ -19,9 +20,40 @@ users.signup.firstname=Prénom
 users.signup.lastname=Nom de famille
 users.signup.signup_button=Inscription
 users.signup.email_used=Cette adresse e-mail est déjà utilisée
-users.signup.password_not_strong=La longueur du mot de passe doit être d''au moins 8 caractères
 users.signup.password_repeat_incorrect=La confirmation du mot de passe doit être identique au mot de passe
 users.signup.email_title=Votre compte JapanImpact
 users.signup.email_from=Ne pas répondre
+users.signup.email_text=Bienvenue sur la boutique Japan Impact \n \
+Pour confirmer que cette addresse e-mail est correcte, merci de bien vouloir cliquer sur le lien ci dessous. Vous pourrez ensuite vous connecter à la boutique \n \
+\n \
+{0} \n \
+\n \
+Cordialement, \n \
+Le Comité PolyJapan
+
+
+users.recover.title=Réinitialisation du mot de passe
+users.recover.inside_title=Réinitialisez votre mot de passe
+users.recover.recover_button=Réinitialiser le mot de passe
+users.recover.email_title=Réinitialisation de mot de passe JapanImpact
+users.recover.email_from=Ne pas répondre
+users.recover.email_text=Bonjour, {0} \n \
+Vous avez envoyé une demande de récupération de mot de passe pour votre compte sur la boutique JapanImpact.\n \
+Pour réinitialiser votre mot de passe, merci de cliquer sur le lien ci dessous : \n \
+\n \
+{1} \n \
+\n \
+Cordialement, \n \
+Le Comité PolyJapan
+users.recover.no_user_email_text=Bonjour, \n \
+Vous avez envoyé une demande de récupération de mot de passe pour votre compte sur la boutique JapanImpact.\n \
+Malheureusement, cette adresse e-mail n''est associée à aucun compte sur notre site.\n \
+Nous vous invitons donc à vérifier que vous ne vous trompez pas d''adresse et que vous disposez bien d''un compte sur le site.\n \
+Cordialement, \n \
+Le Comité PolyJapan
+
+users.resetpwd.title=Réinitialisation du mot de passe
+users.resetpwd.inside_title=Changez votre mot de passe
+users.resetpwd.reset_button=Changer le mot de passe
 
 users.logout.done=Vous avez bien été déconnecté(e) !

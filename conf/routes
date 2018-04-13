@@ -1,9 +1,13 @@
 
 GET /users/login    controllers.UsersController.login
 POST /users/login    controllers.UsersController.postLogin
-GET /users/passwordReset    controllers.UsersController.passwordReset
 GET /users/signup    controllers.UsersController.signup
 POST /users/signup    controllers.UsersController.postSignup
 GET /users/emailConfirm/:email/:code   controllers.UsersController.emailConfirm(email: String, code: String)
+GET /users/recoverPassword  controllers.UsersController.recoverPassword
+POST /users/recoverPassword controllers.UsersController.recoverPasswordSend
+GET /users/resetPassword/:email/:code   controllers.UsersController.passwordReset(email: String, code: String)
+POST /users/resetPassword   controllers.UsersController.passwordResetSend
+
 
 GET /assets/*file   controllers.Assets.versioned(path="/public", file: Asset)

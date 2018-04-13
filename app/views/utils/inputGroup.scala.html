@@ -4,8 +4,6 @@
     <label for="@field.id" class="@args.getOrElse('labelclass, "")">@messages(args.withDefaultValue(field.name.capitalize)('label))</label>
     @inputField
     <div class="invalid-feedback">
-        @field.errors.map { error =>
-            <p>@messages(error.message)</p>
-        }
+        <p>@field.errors.map(er => messages(er.message, er.args: _*)).mkString("<br>")</p>
     </div>
 </div>
