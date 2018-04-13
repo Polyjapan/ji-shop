@@ -39,7 +39,7 @@ package object models {
 
   private[models] class Categories(tag: Tag) extends Table[Category](tag, "categories") {
     def id = column[Int]("category_id", O.PrimaryKey, O.AutoInc)
-    def eventId = column[Int]("client_id")
+    def eventId = column[Int]("event_id")
     def name = column[String]("category_name", O.SqlType("VARCHAR(250)"))
     def isTicket = column[Boolean]("category_is_ticket")
 

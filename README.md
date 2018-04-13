@@ -13,7 +13,7 @@ after year. The goal of this project is to create a new plateform that can be us
 ## Components
 
 - [ ] Register / login
-  -  [ ] Requires to verify email
+  -  [x] Requires to verify email
   -  [ ] Can login using an old password that MUST be rehashed using a new algorithm then removed from the database
 - [ ] Actual shop
   -  [ ] List products for the active edition or show an error page

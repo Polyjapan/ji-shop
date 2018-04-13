@@ -202,10 +202,6 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
 
   }
 
-  def passwordChange = Action {
-    Ok
-  }
-
   def emailConfirm(email: String, code: String): Action[AnyContent] = Action.async { implicit request => {
     val emailDecoded = URLDecoder.decode(email, "UTF-8")
 
