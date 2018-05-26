@@ -73,21 +73,6 @@ package object data {
   case class Product(id: Option[Int], name: String, price: Double, description: String, longDescription: String,
                      maxItems: Int, categoryId: Int, freePrice: Boolean)
 
-  /**
-    * Some products require additional details when they are purchased, this is what this case class describes
-    * @param id the id of the product detail
-    * @param productId the id of the product this detail applies to
-    * @param name the name of this detail
-    * @param description the description of this detail
-    * @param dType the type of value expected
-    */
-  case class ProductDetail(id: Option[Int], productId: Int, name: String, description: String, dType: String)
-
-  object DetailType {
-    val EMAIL: String = "email"
-    val STRING: String = "string"
-    val PHOTO: String = "photo"
-  }
 
   /**
     * Describes a product that has been ordered, i.e. that is part of an order
@@ -98,16 +83,6 @@ package object data {
     * @param barCode a barcode that is generated when the product is ordered and that identifies this product uniquely
     */
   case class OrderedProduct(id: Option[Int], productId: Int, orderId: Int, paidPrice: Double, barCode: String)
-
-  /**
-    * Describes a filled [[ProductDetail]] for a given [[OrderedProduct]]
-    * @param id an id to identify this filled detail
-    * @param orderedProductId the [[OrderedProduct]] this detail is related to
-    * @param productDetailId the detail this is the value of
-    * @param value the value of the given detail
-    */
-  case class FilledDetail(id: Option[Int], orderedProductId: Int, productDetailId: Int, value: String)
-
 
   /**
     * Represents the base template for a ticket

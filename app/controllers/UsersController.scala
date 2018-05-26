@@ -43,6 +43,7 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
             // We have found a client: check the password
             val (client, perms) = opt.get
 
+            // TODO: upgrade security if algo is not the current default one
             if (hash.check(client.passwordAlgo, client.password, userData._2)) {
               if (client.emailConfirmKey.nonEmpty)
                 BadRequest(views.html.Users.login(loginForm.withGlobalError(request.messages("users.login.email_not_confirmed"))))

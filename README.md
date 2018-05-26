@@ -18,8 +18,6 @@ after year. The goal of this project is to create a new plateform that can be us
 - [ ] Actual shop
   -  [ ] List products for the active edition or show an error page
   -  [ ] Select products and purchase them
-  -  [ ] Fill additional info when required
-  -  [ ] Upload photos when required
   -  [ ] Go to the payment page and pay
   -  [ ] IPN script is triggered and the tickets are sent
   -  [ ] Display bought tickets on the user page
@@ -38,6 +36,7 @@ after year. The goal of this project is to create a new plateform that can be us
   -  [ ] Create discount codes (optional)
   -  [ ] Preview templates
   -  [ ] Create free tickets of any kind of item
+  -  [ ] Sell tickets with real money
 - [ ] (Admin) Read data
   -  [ ] Export all tickets for a given edition to different lists
   -  [ ] Display stats 

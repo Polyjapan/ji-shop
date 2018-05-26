@@ -85,19 +85,6 @@ package object models {
 
   private[models] val products = TableQuery[Products]
 
-  private[models] class ProductDetails(tag: Tag) extends Table[ProductDetail](tag, "product_details") {
-    def id = column[Int]("product_detail_id", O.PrimaryKey, O.AutoInc)
-    def productId = column[Int]("product_id")
-    def name = column[String]("product_detail_name", O.SqlType("VARCHAR(250)"))
-    def description = column[String]("product_detail_description")
-    def dType  = column[String]("product_detail_type", O.SqlType("SET('email', 'string', 'photo')"))
-
-    def * =
-      (id.?, productId, name, description, dType).shaped <> (ProductDetail.tupled, ProductDetail.unapply)
-  }
-
-  private[models] val productDetails = TableQuery[ProductDetails]
-
   private[models] class OrderedProducts(tag: Tag) extends Table[OrderedProduct](tag, "ordered_products") {
     def id = column[Int]("ordered_product_id", O.PrimaryKey, O.AutoInc)
     def productId = column[Int]("product_id")
@@ -113,20 +100,4 @@ package object models {
   }
 
   private[models] val orderedProducts = TableQuery[OrderedProducts]
-
-  private[models] class FilledDetails(tag: Tag) extends Table[FilledDetail](tag, "filled_details") {
-    def id = column[Int]("filled_detail_id", O.PrimaryKey, O.AutoInc)
-    def orderedProductId = column[Int]("ordered_product_id")
-    def productDetailId = column[Int]("product_detail_id")
-    def value = column[String]("filled_detail_value")
-
-    def orderedProduct = foreignKey("filled_detail_ordered_product_fk", orderedProductId, orderedProducts)(_.id)
-    def productDetail = foreignKey("filled_detail_product_detail_fk", productDetailId, productDetails)(_.id)
-
-    def * =
-      (id.?, orderedProductId, productDetailId, value).shaped <> (FilledDetail.tupled, FilledDetail.unapply)
-  }
-
-  private[models] val filledDetails = TableQuery[FilledDetails]
-
 }

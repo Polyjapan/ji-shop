@@ -5,6 +5,7 @@
     @styles = {
         <link href="@routes.Assets.versioned("/stylesheets/login.css")" rel="stylesheet" />
     }
+
     @head(title = messages("users.login.title"), otherStyles = styles)
     <body class="text-center">
         @helper.form(action = routes.UsersController.postLogin(), 'class -> "form-signin") {
