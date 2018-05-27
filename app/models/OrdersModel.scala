@@ -27,11 +27,11 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   private val productJoin = orderedProducts join products on (_.productId === _.id)
   private val ticketTickets = tickets join orderedProductTickets on (_.id === _.ticketId)
 
-  private def barcodeGen(attempt: Int = 0): String = {
-    val int = BigInt(55, new SecureRandom())
+  private def barcodeGen: String = {
+    val bytes = new Array[Byte](8)
+    new SecureRandom().nextBytes(bytes)
 
-    if (int.bitLength < 50 && attempt < 10) barcodeGen(attempt + 1)
-    else f"$int%015d"
+    BigInt(bytes).toString.takeRight(15)
   }
 
   def acceptOrder(order: Int): Future[Seq[GeneratedBarCode]] = {
