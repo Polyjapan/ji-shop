@@ -15,3 +15,5 @@ POST        /users/resetPassword          controllers.UsersController.passwordRe
 GET         /shop/items                   controllers.ShoppingController.homepage
 +nocsrf
 POST        /shop/checkout                controllers.ShoppingController.checkout
++nocsrf
+POST        /shop/ipn                controllers.ShoppingController.ipn

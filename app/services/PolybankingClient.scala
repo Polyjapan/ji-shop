@@ -5,8 +5,6 @@ import java.security.MessageDigest
 
 import data.CheckedOutItem
 import javax.inject.Inject
-import org.bouncycastle.crypto.digests.SHA256Digest
-import org.bouncycastle.jcajce.provider.digest.SHA256
 import play.api.Configuration
 import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.{DefaultWSCookie, WSClient}
@@ -19,6 +17,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class PolybankingClient @Inject()(config: Configuration, ws: WSClient)(implicit ec: ExecutionContext)  {
   lazy val configId: Int = config.get[Int]("polybanking.configId")
   lazy val requestKey: String = config.get[String]("polybanking.requestKey")
+  lazy val ipnKey: String = config.get[String]("polybanking.ipnKey")
   lazy val url: String = config.get[String]("polybanking.baseUrl")
   lazy val postUrl: String = url + "/paiements/start/"
 
@@ -42,7 +41,7 @@ class PolybankingClient @Inject()(config: Configuration, ws: WSClient)(implicit 
   def startPayment(amount: Double, orderId: Int, products: Iterable[CheckedOutItem]): Future[(Boolean, String)] = {
     val reference = Json.stringify(Json.toJson(products))
 
-    val params = Map[String, String]("amount" -> (0.01 * 100).toInt.toString, "reference" -> ("trid#" + orderId.toString),
+    val params = Map[String, String]("amount" -> (amount * 100).toInt.toString, "reference" -> ("trid#" + orderId.toString),
       "extra_data" -> reference,
       "config_id" -> configId.toString)
 
@@ -66,4 +65,42 @@ class PolybankingClient @Inject()(config: Configuration, ws: WSClient)(implicit 
         (false, "Exception")
     }
   }
+
+  import PolybankingClient._
+
+  def checkIpn(map: Map[String, Seq[String]]): IpnStatus = {
+    val required = Seq("config", "reference", "postfinance_status", "postfinance_status_good", "last_update", "sign")
+    val missing = required.filterNot(map.keySet)
+
+    if (missing.nonEmpty) return MissingFields(missing)
+
+    val single = map.mapValues(_.head)
+    val sig = computeSignature(single - "sign", ipnKey)
+
+    if (sig != single("sign")) return BadSignature
+
+    if (single("config") != configId.toString) return BadConfig
+
+    val order = single("reference")
+    if (!order.startsWith("trid#")) return MissingFields(Seq("reference"))
+
+    try {
+      val num = (order drop 5).toInt
+      val isOk = single("postfinance_status_good").toBoolean
+
+      CorrectIpn(isOk, num)
+    } catch {
+      case _: Throwable => MissingFields(Seq("reference", "postfinance_status_good"))
+    }
+
+  }
+}
+
+object PolybankingClient {
+  sealed trait IpnStatus
+
+  case class MissingFields(missingFields: Seq[String]) extends IpnStatus
+  case object BadSignature extends IpnStatus
+  case object BadConfig extends IpnStatus
+  case class CorrectIpn(status: Boolean, orderId: Int) extends IpnStatus
 }

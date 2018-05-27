@@ -101,7 +101,7 @@ package object data {
     *                  this ticket. It has to be unique
     * @param createdAt the time at which this ticket was created
     */
-  case class Ticket(id: Option[Int], barCode: String, createdAt: Timestamp)
+  case class Ticket(id: Option[Int], barCode: String, createdAt: Option[Timestamp] = Option.empty)
 
   /**
     * Describe the event that a ticket was claimed. A claimed ticket was scanned and cannot be scanned anymore

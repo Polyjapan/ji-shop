@@ -25,12 +25,13 @@ alter table `claimed_tickets` add constraint `claimed_tickets_ticket_fk` foreign
 
 alter table `claimed_tickets` add constraint `claimed_tickets_client_fk` foreign key(`ticket_claimed_by_admin`) references `clients`(`client_id`) on update NO ACTION on delete NO ACTION;
 
-create table `ordered_products_tickets` (`ordered_product_id` INTEGER NOT NULL PRIMARY KEY, `ticket_id` INTEGER NOT NULL UNIQUE);
+create table `ordered_products_tickets` (`ordered_product_id` INTEGER NOT NULL UNIQUE, `ticket_id` INTEGER NOT NULL UNIQUE, PRIMARY KEY (ordered_product_id, ticket_id));
 
 alter table `ordered_products_tickets` add constraint `ordered_products_tickets_product_fk` foreign key(`ordered_product_id`) references `ordered_products`(`ordered_product_id`) on update NO ACTION on delete NO ACTION;
 alter table `ordered_products_tickets` add constraint `ordered_products_tickets_ticket_fk` foreign key(`ticket_id`) references `tickets`(`ticket_id`) on update NO ACTION on delete NO ACTION;
 
-create table `orders_tickets` (`order_id` INTEGER NOT NULL PRIMARY KEY, `ticket_id` INTEGER NOT NULL UNIQUE);
+create table `orders_tickets` (`order_id` INTEGER NOT NULL UNIQUE, `ticket_id` INTEGER NOT NULL UNIQUE, PRIMARY KEY (order_id, ticket_id));
+
 
 alter table `orders_tickets` add constraint `orders_tickets_order_fk` foreign key(`order_id`) references `orders`(`order_id`) on update NO ACTION on delete NO ACTION;
 alter table `orders_tickets` add constraint `orders_tickets_ticket_fk` foreign key(`ticket_id`) references `tickets`(`ticket_id`) on update NO ACTION on delete NO ACTION;

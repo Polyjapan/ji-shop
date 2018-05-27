@@ -2,6 +2,7 @@ package controllers
 
 import data._
 import javax.inject.Inject
+import models.OrdersModel.{OrderBarCode, TicketBarCode}
 import models.{ClientsModel, OrdersModel, ProductsModel}
 import play.api.Configuration
 import play.api.i18n.I18nSupport
@@ -13,6 +14,7 @@ import pdi.jwt.JwtSession._
 import pdi.jwt._
 import play.api.data.FormError
 import services.PolybankingClient
+import services.PolybankingClient.CorrectIpn
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -43,6 +45,19 @@ class ShoppingController @Inject()(cc: MessagesControllerComponents, orders: Ord
   }
   }
 
+  def ipn = Action.async(parse.formUrlEncoded) { implicit request => {
+    pb.checkIpn(request.body) match {
+      case CorrectIpn(valid: Boolean, order: Int) => println(s"ipn for order $order is $valid")
+        orders.acceptOrder(order).map(_.foreach{
+          case OrderBarCode(id, code) => println( " -> Barcode " + code + " for order " + id)
+          case TicketBarCode(prod, code) => println(s" -> Barcode $code for ticket $prod")
+        })
+        Future(BadRequest)
+      case a @ _ => Future(BadRequest(Json.obj("success" -> false, "errors" -> Seq(FormError("", a.toString)))))
+    }
+
+  }}
+
   def checkout = Action.async(parse.json) { implicit request => {
     val session = request.jwtSession
     val user = session.get("user")
@@ -70,9 +85,17 @@ class ShoppingController @Inject()(cc: MessagesControllerComponents, orders: Ord
             case (product, coItem) => (product, coItem.copy(itemPrice = Some(product.price)))
           })
           .mapValues(coItem => coItem.copy(itemPrice = coItem.itemPrice.map(d => math.round(d * 100) / 100D)))
-      ).flatMap(v => {
-            val ticketsPrice = v.filter(p => p._1.isTicket).values.map(_.itemPrice.get).sum
-            val totalPrice = v.values.map(_.itemPrice.get).sum
+      ).map(m => {
+        val byId = m.map(_._2.itemId).toSet
+
+        if (items.forall(i => byId(i._1))) m
+        else throw new NoSuchElementException
+      }).flatMap(v => {
+
+        def sumPrice(list: Iterable[CheckedOutItem]) = list.map(p => p.itemPrice.get * p.itemAmount).sum
+
+        val ticketsPrice = sumPrice(v.filter(p => p._1.isTicket).values)
+        val totalPrice = sumPrice(v.values)
 
         orders.createOrder(Order(Option.empty, user.get.as[AuthenticatedUser].id, ticketsPrice, totalPrice)).map((v.values, _, totalPrice))
       }).flatMap{
@@ -95,6 +118,8 @@ class ShoppingController @Inject()(cc: MessagesControllerComponents, orders: Ord
               Future(InternalServerError(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.db_error")))))
           }
       }.recover{
+        case _: NoSuchElementException =>
+          NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.missing_item"))))
         case _: Throwable =>
           InternalServerError(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.exception"))))
       }
