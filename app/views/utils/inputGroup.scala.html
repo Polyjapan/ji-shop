@@ -1,9 +1,0 @@
-@(field: Field, args: Map[Symbol, String])(inputField: Html)(implicit messages: Messages)
-
-<div class="@args.getOrElse('groupclass, "input-group")">
-    <label for="@field.id" class="@args.getOrElse('labelclass, "")">@messages(args.withDefaultValue(field.name.capitalize)('label))</label>
-    @inputField
-    <div class="invalid-feedback">
-        <p>@field.errors.map(er => messages(er.message, er.args: _*)).mkString("<br>")</p>
-    </div>
-</div>

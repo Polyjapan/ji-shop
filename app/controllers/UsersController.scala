@@ -2,13 +2,18 @@ package controllers
 
 import java.net.{URLDecoder, URLEncoder}
 import java.sql.Timestamp
+import utils.Formats._
 
+import data.AuthenticatedUser
 import javax.inject.Inject
 import models.ClientsModel
+import pdi.jwt.JwtSession._
+import pdi.jwt._
 import play.api.Configuration
 import play.api.data.Forms._
 import play.api.data._
 import play.api.i18n.I18nSupport
+import play.api.libs.json._
 import play.api.libs.mailer._
 import play.api.mvc._
 import utils.HashHelper
@@ -21,21 +26,19 @@ import scala.util.Random
   */
 class UsersController @Inject()(cc: MessagesControllerComponents, clients: ClientsModel, hash: HashHelper, mailerClient: MailerClient, config: Configuration)(implicit ec: ExecutionContext) extends MessagesAbstractController(cc) with I18nSupport {
   private val loginForm = Form(mapping("email" -> email, "password" -> nonEmptyText)(Tuple2.apply)(Tuple2.unapply))
-  private val registerForm = Form(mapping("email" -> email, "password" -> nonEmptyText(8), "password_repeat" -> nonEmptyText, "lastname" -> nonEmptyText, "firstname" -> nonEmptyText)(Tuple5.apply)(Tuple5.unapply))
+  private val registerForm = Form(mapping("email" -> email, "password" -> nonEmptyText(8), "lastname" -> nonEmptyText, "firstname" -> nonEmptyText)(Tuple4.apply)(Tuple4.unapply))
   private val recoverForm = Form(mapping("email" -> email)(e => e)(Some(_)))
-  private val resetForm = Form(mapping("email" -> email, "code" -> nonEmptyText, "password" -> nonEmptyText(8), "password_repeat" -> nonEmptyText)(Tuple4.apply)(Tuple4.unapply))
+  private val resetForm = Form(mapping("email" -> email, "code" -> nonEmptyText, "password" -> nonEmptyText(8))(Tuple3.apply)(Tuple3.unapply))
+  private val emailConfirm = Form(mapping("email" -> email, "code" -> nonEmptyText)(Tuple2.apply)(Tuple2.unapply))
 
-  // Todo: block access to these pages to logged in users
 
-  def login = Action { implicit request =>
-    Ok(views.html.Users.login(loginForm))
-  }
 
-  def postLogin: Action[AnyContent] = Action.async { implicit request => {
+  def postLogin = Action.async(parse.json) { implicit request: Request[JsValue] => {
     loginForm.bindFromRequest.fold( // We bind the request to the form
       withErrors => {
+
         // If we have errors, we show the form again with the errors
-        Future(BadRequest(views.html.Users.login(withErrors)))
+        Future(BadRequest(Json.obj("success" -> false, "errors" -> withErrors.errors)))
       }, userData => {
         // If we have no error in the form itself we try to find the user data
         clients.findClient(userData._1).map { opt =>
@@ -46,65 +49,56 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
             // TODO: upgrade security if algo is not the current default one
             if (hash.check(client.passwordAlgo, client.password, userData._2)) {
               if (client.emailConfirmKey.nonEmpty)
-                BadRequest(views.html.Users.login(loginForm.withGlobalError(request.messages("users.login.email_not_confirmed"))))
-              else
-                Ok(client.toString) // TODO : session and redirect
-            } else BadRequest(views.html.Users.login(loginForm.withGlobalError(request.messages("users.login.error_not_found"))))
-          } else BadRequest(views.html.Users.login(loginForm.withGlobalError(request.messages("users.login.error_not_found"))))
+                BadRequest(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.email_not_confirmed"))))
+              else {
+
+                val session = JwtSession() + ("user", AuthenticatedUser(client, perms))
+                Ok(Json.obj("success" -> true, "errors" -> JsArray())).withJwtSession(session)
+                // TODO: permissions
+              }
+            } else BadRequest(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.not_found"))))
+          } else BadRequest(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.not_found"))))
+
         }
       }
     )
   }
   }
 
-  /**
-    * Disconnects the user: redirect him to the home cleaning its session
-    */
-  def logout = Action { implicit request =>
-    Redirect("/").withNewSession.flashing("message" -> request.messages.apply("users.logout.done"))
-  }
-
-  def signup = Action { implicit request =>
-    Ok(views.html.Users.register(registerForm))
-  }
-
   private val chars = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9')
 
-  def postSignup: Action[AnyContent] = Action.async { implicit request => {
+
+  def postSignup = Action.async(parse.json) { implicit request => {
     val form = registerForm.bindFromRequest
 
     form.fold( // We bind the request to the form
       withErrors => {
         // If we have errors, we show the form again with the errors
-        Future(BadRequest(views.html.Users.register(withErrors)))
+        Future(BadRequest(Json.obj("success" -> false, "errors" -> withErrors.errors)))
       }, userData => {
         // If we have no error in the form itself we try to find the user data
         clients.findClient(userData._1).map { opt =>
           if (opt.isDefined) {
-            BadRequest(views.html.Users.register(form.withGlobalError(request.messages("users.signup.email_used"))))
+            BadRequest(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.user_exists"))))
           } else {
-            // Okay, check password data:
-            if (userData._2 != userData._3) {
-              BadRequest(views.html.Users.register(form.withError("password_repeat", "users.signup.password_repeat_incorrect")))
-            } else {
-              val hashed = hash.hash(userData._2)
-              val emailCode = List.fill(30)(Random.nextInt(chars.length)).map(chars).mkString
-              val emailEncoded = URLEncoder.encode(userData._1, "UTF-8")
+            val hashed = hash.hash(userData._2)
+            val emailCode = List.fill(30)(Random.nextInt(chars.length)).map(chars).mkString
+            val emailEncoded = URLEncoder.encode(userData._1, "UTF-8")
 
-              clients.createClient(data.Client(Option.empty, userData._4, userData._5, userData._1, Some(emailCode), hashed._2, hashed._1))
+            clients.createClient(data.Client(Option.empty, userData._3, userData._4, userData._1, Some(emailCode), hashed._2, hashed._1))
 
-              val url = config.get[String]("polyjapan.siteUrl") + routes.UsersController.emailConfirm(emailEncoded, emailCode)
+            val url = config.get[String]("polyjapan.siteUrl") + "/emailConfirm#mail=" + emailEncoded + "&code=" + emailCode
 
-              // Send an email
-              mailerClient.send(Email(
-                request.messages("users.signup.email_title"),
-                request.messages("users.signup.email_from") + " <noreply@japan-impact.ch>",
-                Seq(userData._1),
-                bodyText = Some(request.messages("users.signup.email_text", url))
-              ))
+            // Send an email
+            mailerClient.send(Email(
+              request.messages("users.signup.email_title"),
+              request.messages("users.signup.email_from") + " <noreply@japan-impact.ch>",
+              Seq(userData._1),
+              bodyText = Some(request.messages("users.signup.email_text", url))
+            ))
 
-              Ok
-            }
+            Ok(Json.obj("success" -> true, "errors" -> JsArray()))
+
           }
         }
       }
@@ -112,21 +106,17 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
   }
   }
 
-  def recoverPassword = Action { implicit request =>
-    Ok(views.html.Users.recoverPassword(recoverForm))
-  }
-
-  def recoverPasswordSend = Action { implicit request =>
+  def recoverPasswordSend = Action(parse.json) { implicit request =>
     recoverForm.bindFromRequest.fold(
-      withErrors => BadRequest(views.html.Users.recoverPassword(withErrors)), email => {
+      withErrors => Future(BadRequest(Json.obj("success" -> false, "errors" -> withErrors.errors))), email => {
         clients.findClient(email).map {
           case Some((client, perms)) =>
             val resetCode = List.fill(30)(Random.nextInt(chars.length)).map(chars).mkString
             val emailEncoded = URLEncoder.encode(client.email, "UTF-8")
 
-            val url = config.get[String]("polyjapan.siteUrl") + routes.UsersController.passwordReset(emailEncoded, resetCode)
+            val url = config.get[String]("polyjapan.siteUrl") + "/passwordReset#mail=" + emailEncoded + "&code=" + resetCode
 
-            // TODO captcha ?
+            // TODO captcha
 
             clients.updateClient(client.copy(
               passwordReset = Some(resetCode),
@@ -150,51 +140,29 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
         }
       }
     )
-    Ok(views.html.Users.recoverPassword(recoverForm))
+    Ok
   }
 
   private def checkPasswordRequest(client: data.Client, code: String): Boolean =
     client.passwordReset.contains(code) && client.passwordResetEnd.exists(_.getTime > System.currentTimeMillis)
 
-  def passwordReset(email: String, code: String) = Action.async { implicit request =>
-    val emailDecoded = URLDecoder.decode(email, "UTF-8")
-
-    clients.findClient(emailDecoded).map { opt =>
-      if (opt.isEmpty)
-        NotFound // TODO : print some stuff
-      else {
-        val client = opt.get._1
-        if (!checkPasswordRequest(client, code)) {
-          NotFound // TODO : print same stuff
-        } else {
-          Ok(views.html.Users.passwordReset(resetForm.fill((emailDecoded, code, "", ""))))
-        }
-      }
-    }
-  }
-
-  def passwordResetSend = Action.async { implicit request =>
+  def passwordResetSend = Action.async(parse.json) { implicit request =>
     val form = resetForm.bindFromRequest
 
     form.fold(
-      withErrors => Future(BadRequest(views.html.Users.passwordReset(withErrors))),
-      { case (email, code, pass, passConfirm) =>
+      withErrors => Future(BadRequest(Json.obj("success" -> false, "errors" -> withErrors.errors))),
+      { case (email, code, pass) =>
         clients.findClient(email).map { opt =>
           if (opt.isEmpty)
-            NotFound // TODO : print some stuff
+            NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("email", "error.not_found"))))
           else {
             val client = opt.get._1
             if (!checkPasswordRequest(client, code)) {
-              NotFound // TODO : print same stuff
+              NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("code", "error.not_found"))))  // TODO : print same stuff
             } else {
-              if (pass != passConfirm) {
-                BadRequest(views.html.Users.passwordReset(form.withError("password_repeat", "users.signup.password_repeat_incorrect")))
-              } else {
-                val (algo, hashPass) = hash.hash(pass)
-                clients.updateClient(client.copy(passwordReset = None, passwordResetEnd = None, password = hashPass, passwordAlgo = algo)) // TODO : print some stuff
-                Ok
-              }
-
+              val (algo, hashPass) = hash.hash(pass)
+              clients.updateClient(client.copy(passwordReset = None, passwordResetEnd = None, password = hashPass, passwordAlgo = algo)) // TODO : print some stuff
+              Ok(Json.obj("success" -> true, "errors" -> JsArray()))
             }
           }
         }
@@ -203,23 +171,26 @@ class UsersController @Inject()(cc: MessagesControllerComponents, clients: Clien
 
   }
 
-  def emailConfirm(email: String, code: String): Action[AnyContent] = Action.async { implicit request => {
-    val emailDecoded = URLDecoder.decode(email, "UTF-8")
+  def emailConfirmProcess = Action.async(parse.json) { implicit request => {
+    val form = emailConfirm.bindFromRequest
 
-    clients.findClient(emailDecoded).map { opt =>
-      if (opt.isEmpty)
-        NotFound // TODO : print some stuff
-      else {
-        val client = opt.get._1
-
-        if (!client.emailConfirmKey.contains(code)) {
-          NotFound // TODO : print some stuff (same stuff)
-        } else {
-          clients.updateClient(client.copy(emailConfirmKey = None)) // TODO : print some stuff
-          Ok
+    form.fold(
+      withErrors => Future(BadRequest(Json.obj("success" -> false, "errors" -> withErrors.errors))),
+      { case (email, code) =>
+        clients.findClient(email).map { opt =>
+          if (opt.isEmpty)
+            NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("email", "error.not_found"))))
+          else {
+            val client = opt.get._1
+            if (!client.emailConfirmKey.contains(code)) {
+              NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("code", "error.not_found"))))  // TODO : print same stuff
+            } else {
+              clients.updateClient(client.copy(emailConfirmKey = None)) // TODO : print some stuff
+              Ok(Json.obj("success" -> true, "errors" -> JsArray()))
+            }
+          }
         }
-      }
-    }
+      })
   }
   }
 }

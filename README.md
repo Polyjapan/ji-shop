@@ -1,5 +1,5 @@
-JIShop
-======
+JIShop (Backend)
+================
 
 ## What is JIShop?
 
@@ -10,15 +10,14 @@ JIShop is a webapp written in scala with PlayFramework which goal is to provide 
 The current Japan Impact shop is a PHP plugin for wordpress which has become unmaintainable because of successive changes year
 after year. The goal of this project is to create a new plateform that can be used correctly year after year.
 
-## Components
+## Components (backend)
 
-- [ ] Register / login
+- [x] Register / login
   -  [x] Requires to verify email
   -  [ ] Can login using an old password that MUST be rehashed using a new algorithm then removed from the database
 - [ ] Actual shop
-  -  [ ] List products for the active edition or show an error page
-  -  [ ] Select products and purchase them
-  -  [ ] Go to the payment page and pay
+  -  [x] List products for the active edition 
+  -  [x] Go to the payment page and pay
   -  [ ] IPN script is triggered and the tickets are sent
   -  [ ] Display bought tickets on the user page
     -  [ ] Each bought ticket get its own ticket and barcode (yes these two concepts share the same name)

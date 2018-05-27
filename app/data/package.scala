@@ -62,7 +62,7 @@ package object data {
     * @param source           the source of the order (web, on site, reseller)
     */
   case class Order(id: Option[Int], clientId: Int, ticketsPrice: Double, totalPrice: Double,
-                   paymentConfirmed: Option[Timestamp], enterDate: Option[Timestamp], source: Source)
+                   paymentConfirmed: Option[Timestamp] = Option.empty, enterDate: Option[Timestamp] = Option.empty, source: Source = Web)
 
   /**
     * Describes a product that can be bought
