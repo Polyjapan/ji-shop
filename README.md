@@ -18,25 +18,25 @@ after year. The goal of this project is to create a new plateform that can be us
 - [ ] Actual shop
   -  [x] List products for the active edition 
   -  [x] Go to the payment page and pay
-  -  [ ] IPN script is triggered and the tickets are sent
-  -  [ ] Display bought tickets on the user page
+  -  [ ] IPN script is triggered and the tickets are sent `/shop/ipn`
+  -  [ ] Display bought tickets on the user page `/users/orders` and `/users/tickets`
     -  [ ] Each bought ticket get its own ticket and barcode (yes these two concepts share the same name)
     -  [ ] If the order has a non-ticket item, an order ticket is generated too
   -  [ ] Avoid selling [too much] more than max allowed
   -  [ ] Handle discount codes ? (optional)
 - [ ] (Admin) Manage the shop
-  -  [ ] Create and update events
-  -  [ ] Deep clone events
-  -  [ ] Create and update products within events
-  -  [ ] Create templates
-  -  [ ] Update fonts and template bases
-  -  [ ] Deep clone templates
-  -  [ ] Assign templates to products/categories/events
-  -  [ ] Update the default template
-  -  [ ] Create discount codes (optional)
-  -  [ ] Preview templates
-  -  [ ] Create free tickets of any kind of item
-  -  [ ] Sell tickets with real money
+  -  [ ] Create and update events `POST /admin/events`
+  -  [ ] Deep clone events `GET /admin/events/copy/:id`
+  -  [ ] Create and update products within events `POST /admin/events/:id/products` and `PUT /admin/events/:id/products/:id`
+  -  [ ] Create templates `POST /admin/templates`
+  -  [ ] Update fonts and template bases `POST ...`
+  -  [ ] Deep clone templates `GET /admin/templates/copy/:id`
+  -  [ ] Assign templates to products/categories/events `POST ...`
+  -  [ ] Update the default template `PUT /admin/templates/default`
+  -  [ ] Create discount codes (optional) `POST /admin/discount`
+  -  [ ] Preview templates `GET /admin/templates/[:id]`
+  -  [ ] Create free tickets of any kind of item `(multiple endpoints to create orders)`
+  -  [ ] Sell tickets with real money `(use JI10 code)`
 - [ ] (Admin) Read data
   -  [ ] Export all tickets for a given edition to different lists
   -  [ ] Display stats 
