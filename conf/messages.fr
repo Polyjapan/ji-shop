@@ -57,3 +57,11 @@ users.resetpwd.inside_title=Changez votre mot de passe
 users.resetpwd.reset_button=Changer le mot de passe
 
 users.logout.done=Vous avez bien été déconnecté(e) !
+
+shopping.list.title=Billetterie Japan Impact
+shopping.list.noed.title=Aucun article en vente :(
+shopping.list.noed.text=La billetterie ne propose actuellement aucun billet ou goodies. Revenez peut être plus tard !
+shopping.list.tickets.title=Billetterie
+shopping.list.goodies.title=Goodies
+shopping.list.checkout=Payer »
+

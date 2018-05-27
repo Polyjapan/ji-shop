@@ -47,7 +47,6 @@ after year. The goal of this project is to create a new plateform that can be us
 For tickets generation, when looking for the template, we check in that order:
 
 1. Template for this particular product ID (`ticket_templates_by_product`)
-1. Template for this particular category ID (`ticket_templates_by_category`)
 1. Template for this particular event ID (`ticket_templates_by_event`)
 1. Default template (`ticket_template_id = 0`)
 

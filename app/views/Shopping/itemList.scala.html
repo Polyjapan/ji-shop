@@ -1,0 +1,42 @@
+@import data.{Event,Product}
+@(data: Map[Event, Seq[Product]], title: String)(implicit messages: Messages)
+
+@if(data.mapValues(_.size).foldLeft(0)((s, p) => s + p._2) > 0) {
+
+    <h2>@messages(title)</h2>
+
+    @for(event <- data.keySet) {
+        @if(data.size > 1 && data(event).nonEmpty) {
+            <h2>@{
+                event.name
+            }</h2>
+        }
+
+        <!-- TODO : Add product images -->
+
+        <table>
+        @for(product <- data(event)) {
+            <tr>
+                <td><b>@product.name</b><br>@product.longDescription</td>
+
+                <td><b>@product.price</b><br><input type="number" name="product-@{
+                    product.id.get
+                }-amt" value="0" min="0" max="50" />
+                </td>
+                 
+                @if(product.freePrice) {
+                    <td><input type="number" name="product-@{
+                        product.id.get
+                    }-price" value="@{
+                        product.price
+                    }" min="@{
+                        product.price
+                    }" />
+                    </td>
+                }
+
+            </tr>
+        }
+        </table>
+    }
+}

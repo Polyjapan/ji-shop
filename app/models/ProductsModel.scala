@@ -23,6 +23,9 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
   def getProducts: Future[Map[Event, Seq[data.Product]]] =
     db.run(productsJoin.filter(_._1.visible === true).result).map(joinToMap)
 
+  def getMergedProducts: Future[Seq[data.Product]] =
+    db.run(productsJoin.filter(_._1.visible === true).result).map(_.map(_._2))
+
   def splitTickets(map: Map[Event, Seq[data.Product]]): Map[Event, (Seq[data.Product], Seq[data.Product])] =
     map.mapValues(_.partition(_.isTicket))
 }
