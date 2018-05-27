@@ -21,13 +21,14 @@ after year. The goal of this project is to create a new plateform that can be us
   -  [ ] Go to the payment page and pay
   -  [ ] IPN script is triggered and the tickets are sent
   -  [ ] Display bought tickets on the user page
+    -  [ ] Each bought ticket get its own ticket and barcode (yes these two concepts share the same name)
+    -  [ ] If the order has a non-ticket item, an order ticket is generated too
   -  [ ] Avoid selling [too much] more than max allowed
   -  [ ] Handle discount codes ? (optional)
 - [ ] (Admin) Manage the shop
   -  [ ] Create and update events
   -  [ ] Deep clone events
-  -  [ ] Create and update categories within events
-  -  [ ] Create and update products within categories
+  -  [ ] Create and update products within events
   -  [ ] Create templates
   -  [ ] Update fonts and template bases
   -  [ ] Deep clone templates
