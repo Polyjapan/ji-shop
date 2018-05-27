@@ -1,5 +1,6 @@
 package models
 
+import java.security.SecureRandom
 import java.sql.Timestamp
 
 import data.{Order, OrderedProduct, Ticket}
@@ -27,7 +28,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   private val ticketTickets = tickets join orderedProductTickets on (_.id === _.ticketId)
 
   private def barcodeGen(attempt: Int = 0): String = {
-    val int = BigInt(55, new Random())
+    val int = BigInt(55, new SecureRandom())
 
     if (int.bitLength < 50 && attempt < 10) barcodeGen(attempt + 1)
     else f"$int%015d"
