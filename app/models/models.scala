@@ -37,19 +37,15 @@ package object models {
 
   private[models] val events = TableQuery[Events]
 
-  private[models] class Categories(tag: Tag) extends Table[Category](tag, "categories") {
-    def id = column[Int]("category_id", O.PrimaryKey, O.AutoInc)
-    def eventId = column[Int]("event_id")
-    def name = column[String]("category_name", O.SqlType("VARCHAR(250)"))
-    def isTicket = column[Boolean]("category_is_ticket")
-
-    def event = foreignKey("category_event_fk", eventId, events)(_.id)
-
-    def * =
-      (id.?, eventId, name, isTicket).shaped <> (Category.tupled, Category.unapply)
-  }
-
-  private[models] val categories = TableQuery[Categories]
+  implicit val sourceMap = MappedColumnType.base[Source, String]({
+    case OnSite => "ONSITE"
+    case Reseller => "RESELLER"
+    case Web => "WEB"
+  }, {
+    case "ONSITE" => OnSite
+    case "RESELLER" => Reseller
+    case "WEB" => Web
+  })
 
   private[models] class Orders(tag: Tag) extends Table[Order](tag, "orders") {
     def id = column[Int]("order_id", O.PrimaryKey, O.AutoInc)
@@ -58,14 +54,41 @@ package object models {
     def totalPrice = column[Double]("order_total_price")
     def paymentConfirmed = column[Option[Timestamp]]("order_payment_confirmed")
     def enterDate = column[Timestamp]("order_enter_date", O.SqlType("timestamp DEFAULT now()"))
+    def source = column[Source]("order_source", O.SqlType("SET('WEB', 'ONSITE', 'RESELLER') DEFAULT 'WEB'"))
 
     def client = foreignKey("order_client_fk", clientId, clients)(_.id)
 
     def * =
-      (id.?, clientId, ticketsPrice, totalPrice, paymentConfirmed, enterDate.?).shaped <> (Order.tupled, Order.unapply)
+      (id.?, clientId, ticketsPrice, totalPrice, paymentConfirmed, enterDate.?, source).shaped <> (Order.tupled, Order.unapply)
   }
-
   private[models] val orders = TableQuery[Orders]
+
+
+  private[models] class Tickets(tag: Tag) extends Table[Ticket](tag, "tickets") {
+    def id = column[Int]("ticket_id", O.PrimaryKey, O.AutoInc)
+    def createdAt = column[Timestamp]("ticket_created_at", O.SqlType("timestamp DEFAULT now()"))
+    def barCode = column[String]("ticket_bar_code", O.SqlType("VARCHAR(50)"), O.Unique)
+
+
+    def * =
+      (id.?, barCode, createdAt).shaped <> (Ticket.tupled, Ticket.unapply)
+  }
+  private[models] val tickets = TableQuery[Tickets]
+
+  private[models] class ClaimedTickets(tag: Tag) extends Table[ClaimedTicket](tag, "claimed_tickets") {
+    def ticketId = column[Int]("ticket_id", O.PrimaryKey)
+    def claimedAt = column[Timestamp]("ticket_claimed_at", O.SqlType("timestamp DEFAULT now()"))
+    def claimedBy = column[Int]("ticket_claimed_by_admin")
+
+    def client = foreignKey("claimed_tickets_client_fk", claimedBy, clients)(_.id)
+    def ticket = foreignKey("claimed_tickets_ticket_fk", ticketId, tickets)(_.id)
+
+
+    def * =
+      (ticketId, claimedAt, claimedBy).shaped <> (ClaimedTicket.tupled, ClaimedTicket.unapply)
+  }
+  private[models] val claimedTickets = TableQuery[ClaimedTickets]
+
 
   private[models] class Products(tag: Tag) extends Table[Product](tag, "products") {
     def id = column[Int]("product_id", O.PrimaryKey, O.AutoInc)
@@ -73,14 +96,15 @@ package object models {
     def price = column[Double]("product_price")
     def description = column[String]("product_description")
     def longDescription  = column[String]("product_long_description")
-    def maxItems = column[Int]("order_enter_date")
-    def categoryId = column[Int]("order_enter_date")
-    def freePrice = column[Boolean]("order_enter_date")
+    def maxItems = column[Int]("product_max_items")
+    def eventId = column[Int]("event_id")
+    def isTicket = column[Boolean]("is_ticket")
+    def freePrice = column[Boolean]("product_free_price")
 
-    def category = foreignKey("product_category_fk", categoryId, categories)(_.id)
+    def category = foreignKey("product_event_fk", eventId, events)(_.id)
 
     def * =
-      (id.?, name, price, description, longDescription, maxItems, categoryId, freePrice).shaped <> (Product.tupled, Product.unapply)
+      (id.?, name, price, description, longDescription, maxItems, eventId, isTicket, freePrice).shaped <> (Product.tupled, Product.unapply)
   }
 
   private[models] val products = TableQuery[Products]
@@ -90,13 +114,12 @@ package object models {
     def productId = column[Int]("product_id")
     def orderId = column[Int]("order_id")
     def paidPrice = column[Double]("ordered_product_paid_price")
-    def barCode = column[String]("ordered_product_bar_code", O.SqlType("VARCHAR(50)"), O.Unique)
 
     def product = foreignKey("ordered_product_product_fk", productId, products)(_.id)
     def order = foreignKey("ordered_product_order_fk", orderId, orders)(_.id)
 
     def * =
-      (id.?, productId, orderId, paidPrice, barCode).shaped <> (OrderedProduct.tupled, OrderedProduct.unapply)
+      (id.?, productId, orderId, paidPrice).shaped <> (OrderedProduct.tupled, OrderedProduct.unapply)
   }
 
   private[models] val orderedProducts = TableQuery[OrderedProducts]
