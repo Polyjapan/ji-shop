@@ -8,6 +8,7 @@ import javax.inject.Inject
 import models.OrdersModel.{GeneratedBarCode, OrderBarCode, TicketBarCode}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.MySQLProfile
+import utils.Barcodes.{BarcodeType, OrderCode, ProductCode}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
@@ -27,11 +28,11 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   private val productJoin = orderedProducts join products on (_.productId === _.id)
   private val ticketTickets = tickets join orderedProductTickets on (_.id === _.ticketId)
 
-  private def barcodeGen: String = {
+  private def barcodeGen(barcodeType: BarcodeType): String = {
     val bytes = new Array[Byte](8)
     new SecureRandom().nextBytes(bytes)
 
-    BigInt(bytes).toString.takeRight(15)
+    barcodeType.getId + BigInt(bytes).toString.takeRight(14)
   }
 
   def acceptOrder(order: Int): Future[Seq[GeneratedBarCode]] = {
@@ -50,7 +51,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     // Thanks to atomic execution, if a given order has already been IPN-ed, its tickets won't be regenerated
     val qq1: DBIOAction[Seq[GeneratedBarCode], _, _] = (q1 flatMap {
       a =>
-        DBIO.sequence(a.map(product => (product, Ticket(Option.empty, barcodeGen()))).map(pair =>
+        DBIO.sequence(a.map(product => (product, Ticket(Option.empty, barcodeGen(ProductCode)))).map(pair =>
           // Add a ticket in the database and get its id back
           ((tickets returning tickets.map(_.id)) += pair._2)
             // Create a pair (product, ticket)
@@ -68,7 +69,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     val qq2 = (q2 filter (_.nonEmpty) flatMap ( _ => {
       // If we have items:
       // Create a ticket
-      val ticket = Ticket(Option.empty, barcodeGen())
+      val ticket = Ticket(Option.empty, barcodeGen(OrderCode))
       ((tickets returning tickets.map(_.id)) += ticket)
         // Link it to the order
         .flatMap(ticketId => orderTickets += (order, ticketId))
