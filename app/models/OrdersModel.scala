@@ -28,11 +28,19 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   private val ticketTickets = tickets join orderedProductTickets on (_.id === _.ticketId)
   private val orderJoin = orders join clients on (_.clientId === _.id)
 
+  type TicketFormat = BigInt => String
+  private val numeric: TicketFormat = _.toString(10).takeRight(14)
+
+  // 10 alphanum characters still produces a barcode with fine size. More makes it too big
+  private val alphaNumeric: TicketFormat = _.toString(36).takeRight(10).toUpperCase
+
+  private val usedFormat = numeric
+
   private def barcodeGen(barcodeType: BarcodeType): String = {
     val bytes = new Array[Byte](8)
     new SecureRandom().nextBytes(bytes)
 
-    barcodeType.getId + BigInt(bytes).toString.takeRight(14)
+    barcodeType.getId + usedFormat(BigInt(bytes))
   }
 
   def acceptOrder(order: Int): Future[(Seq[GeneratedBarCode], data.Client)] = {
