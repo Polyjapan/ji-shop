@@ -65,3 +65,11 @@ shopping.list.tickets.title=Billetterie
 shopping.list.goodies.title=Goodies
 shopping.list.checkout=Payer »
 
+shopping.tickets.email_title=Vos billets JapanImpact
+shopping.tickets.email_from=Billetterie JapanImpact
+shopping.tickets.email_text=Bonjour, \n \
+Vous avez réalisé des achats sur la boutique JapanImpact et nous vous en remercions.\n \
+Vous trouverez en pièce jointe vos billets. Vous pouvez les imprimer ou les présenter sur smartphone.\n \
+Les billets sont non nominatifs, mais ils ne peuvent être utilisés qu'une seule fois. Si vous avez un tarif réduit, n'oubliez pas de prendre votre justificatif avec vous, ou il pourrait vous être demandé de payer la différence.\n\n \
+Avec nos remerciements, \n \
+L'équipe Japan Impact

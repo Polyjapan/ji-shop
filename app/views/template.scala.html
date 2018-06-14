@@ -1,0 +1,54 @@
+@(event: data.Event, title: String, poster: String, topCode: String, bottomCode: String)(content: Html)
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+                .bordered td, .bordered th {
+                    border: 1px solid black;
+                    padding-left: 2px;
+                }
+
+                table {
+                    border-collapse: collapse;
+                    width: 100%;
+                }
+
+                body {
+                    font-family: sans-serif;
+                }
+        </style>
+
+    </head>
+    <body>
+        <h1>@event.name - @title</h1>
+        <h2>@event.location</h2>
+        <table>
+            <tr>
+                <td><img src='data:image/png;base64,@poster'/></td>
+                <td><img src='data:image/png;base64,@topCode'/></td>
+            </tr>
+        </table>
+
+        <br>
+
+        @content
+
+        <p style="position: fixed;
+            bottom: 0;
+            left: 0;
+            word-wrap: break-spaces;">
+            <img src='data:image/png;base64,@bottomCode' style="float: right;"/>
+
+            <strong>Watch out!</strong> Each ticket will be scanned by our staff and can be used only once. Don't buy this ticket to an unknown person.
+            <br>
+            <strong>Attention !</strong>
+            Chaque billet est scanné par notre staff et ne peut être utilisé qu'une seule fois. N'achetez pas ce billet à un inconnu.
+            <br>
+            <br>
+            <small>Ticket generated on @{
+                new java.text.SimpleDateFormat("dd/MM/yyyy 'at' HH:mm:ss z").format(new java.util.Date())
+            }</small>
+        </p>
+    </body>
+</html>

@@ -1,7 +1,7 @@
 package models
 
 import javax.inject.Inject
-import data.{Client, TicketTemplate, TicketTemplateComponent}
+import data.Client
 import org.apache.commons.lang3.Validate
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.MySQLProfile

@@ -111,34 +111,4 @@ package object data {
     * @param claimedBy the person who claimed the ticket (the one who scanned it)
     */
   case class ClaimedTicket(ticketId: Int, claimedAt: Timestamp, claimedBy: Int)
-
-  /**
-    * Represents the base template for a ticket
-    *
-    * @param id            the id of this template (the id 0 is reserved for the default template)
-    * @param baseImage     the path to the base image of this template, relative to some directory (probably uploads/ or
-    *                      something like that)
-    * @param templateName  the friendly name of this template
-    * @param barCodeX      the x position of the top-left corner of the barcode (0 is the leftmost position)
-    * @param barCodeY      the x position of the top-left corner of the barcode (0 is the 1st line of the image)
-    * @param barCodeWidth  the width of the barcode
-    * @param barCodeHeight the height of the barcode, if it's higher than the width the barcode will be vertical
-    */
-  case class TicketTemplate(id: Option[Int], baseImage: String, templateName: String, barCodeX: Int, barCodeY: Int, barCodeWidth: Int,
-                            barCodeHeight: Int)
-
-
-  /**
-    * Represents a text component on a ticket
-    *
-    * @param id         the id of this component
-    * @param templateId the id of the parent template
-    * @param x          the x position (0 is the leftmost position)
-    * @param y          the y position (0 is the top position)
-    * @param font       path to a font (relative to the same directory as in [[TicketTemplate]]
-    * @param fontSize   the font size
-    * @param content    the text to display. Put `%{table}.{column}%` to insert a value (i.e. `%products.name%`)
-    */
-  case class TicketTemplateComponent(id: Option[Int], templateId: Int, x: Int, y: Int, font: String, fontSize: Int, content: String)
-
 }

@@ -2,29 +2,25 @@ package controllers
 
 import data._
 import javax.inject.Inject
-import models.OrdersModel.{OrderBarCode, TicketBarCode}
-import models.{ClientsModel, OrdersModel, ProductsModel}
-import play.api.Configuration
-import play.api.i18n.I18nSupport
-import play.api.libs.json.Json
-import play.api.libs.mailer.MailerClient
-import play.api.mvc.{Action, AnyContent, MessagesAbstractController, MessagesControllerComponents}
-import utils.HashHelper
+import models.{OrdersModel, ProductsModel}
 import pdi.jwt.JwtSession._
-import pdi.jwt._
+import play.api.Configuration
 import play.api.data.FormError
-import services.PolybankingClient
+import play.api.i18n.I18nSupport
+import play.api.libs.json.{JsValue, Json}
+import play.api.libs.mailer.{AttachmentData, Email, MailerClient}
+import play.api.mvc.{Action, AnyContent, MessagesAbstractController, MessagesControllerComponents}
 import services.PolybankingClient.CorrectIpn
+import services.{PolybankingClient, TicketGenerator}
+import utils.Formats._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
-import utils.Formats._
 
 
 /**
   * @author zyuiop
   */
-class ShoppingController @Inject()(cc: MessagesControllerComponents, orders: OrdersModel, products: ProductsModel, mailerClient: MailerClient, config: Configuration, pb: PolybankingClient)(implicit ec: ExecutionContext) extends MessagesAbstractController(cc) with I18nSupport {
+class ShoppingController @Inject()(cc: MessagesControllerComponents, pdfGen: TicketGenerator, orders: OrdersModel, products: ProductsModel, mailerClient: MailerClient, config: Configuration, pb: PolybankingClient)(implicit ec: ExecutionContext) extends MessagesAbstractController(cc) with I18nSupport {
 
   implicit val eventFormat = Json.format[Event]
   implicit val productFormat = Json.format[Product]
@@ -45,20 +41,35 @@ class ShoppingController @Inject()(cc: MessagesControllerComponents, orders: Ord
   }
   }
 
-  def ipn = Action.async(parse.formUrlEncoded) { implicit request => {
+  def ipn: Action[Map[String, Seq[String]]] = Action.async(parse.formUrlEncoded) { implicit request => {
     pb.checkIpn(request.body) match {
-      case CorrectIpn(valid: Boolean, order: Int) => println(s"ipn for order $order is $valid")
-        orders.acceptOrder(order).map(_.foreach{
-          case OrderBarCode(id, code) => println( " -> Barcode " + code + " for order " + id)
-          case TicketBarCode(prod, code) => println(s" -> Barcode $code for ticket $prod")
-        })
-        Future(BadRequest)
-      case a @ _ => Future(BadRequest(Json.obj("success" -> false, "errors" -> Seq(FormError("", a.toString)))))
+      case CorrectIpn(valid: Boolean, order: Int) =>
+        println(s"Processing IPN request for order $order. PostFinance status is $valid")
+        if (!valid) Future(BadRequest)
+        else orders.acceptOrder(order).map {
+          case (Seq(), _) => NotFound
+          case (oldSeq, client) =>
+            val attachments =
+              oldSeq.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))
+
+            mailerClient.send(Email(
+              request.messages("shopping.tickets.email_title"),
+              request.messages("shopping.tickets.email_from") + " <ticket@japan-impact.ch>",
+              Seq(client.email),
+              bodyText = Some(request.messages("shopping.tickets.email_text")),
+              attachments = attachments
+            ))
+
+            Ok
+          case _ => BadRequest
+        }
+      case a@_ => Future(BadRequest(Json.obj("success" -> false, "errors" -> Seq(FormError("", a.toString)))))
     }
 
-  }}
+  }
+  }
 
-  def checkout = Action.async(parse.json) { implicit request => {
+  def checkout: Action[JsValue] = Action.async(parse.json) { implicit request => {
     val session = request.jwtSession
     val user = session.get("user")
     val itemsOpt = request.body.asOpt[Seq[CheckedOutItem]]
@@ -75,16 +86,16 @@ class ShoppingController @Inject()(cc: MessagesControllerComponents, orders: Ord
       }
 
       products.getMergedProducts.map(_.map(p => (p, items.get(p.id.get))).toMap
-          .filter(p => p._2.nonEmpty && p._2.get.nonEmpty)
-          .mapValues(s => s.get.head)
-          .map({
-            case (product, coItem) if product.freePrice =>
-              if (coItem.itemPrice.isEmpty || coItem.itemPrice.get < product.price)
-                (product, coItem.copy(itemPrice = Some(product.price)))
-              else (product, coItem)
-            case (product, coItem) => (product, coItem.copy(itemPrice = Some(product.price)))
-          })
-          .mapValues(coItem => coItem.copy(itemPrice = coItem.itemPrice.map(d => math.round(d * 100) / 100D)))
+        .filter(p => p._2.nonEmpty && p._2.get.nonEmpty)
+        .mapValues(s => s.get.head)
+        .map({
+          case (product, coItem) if product.freePrice =>
+            if (coItem.itemPrice.isEmpty || coItem.itemPrice.get < product.price)
+              (product, coItem.copy(itemPrice = Some(product.price)))
+            else (product, coItem)
+          case (product, coItem) => (product, coItem.copy(itemPrice = Some(product.price)))
+        })
+        .mapValues(coItem => coItem.copy(itemPrice = coItem.itemPrice.map(d => math.round(d * 100) / 100D)))
       ).map(m => {
         val byId = m.map(_._2.itemId).toSet
 
@@ -98,10 +109,10 @@ class ShoppingController @Inject()(cc: MessagesControllerComponents, orders: Ord
         val totalPrice = sumPrice(v.values)
 
         orders.createOrder(Order(Option.empty, user.get.as[AuthenticatedUser].id, ticketsPrice, totalPrice)).map((v.values, _, totalPrice))
-      }).flatMap{
+      }).flatMap {
         case (list, orderId, totalPrice) =>
           val items = list.flatMap(coItem =>
-            for (i <- 1 to coItem.itemAmount)  // Generate as much ordered products as the quantity requested
+            for (i <- 1 to coItem.itemAmount) // Generate as much ordered products as the quantity requested
               yield OrderedProduct(Option.empty, coItem.itemId, orderId, coItem.itemPrice.get)
           )
 
@@ -117,13 +128,14 @@ class ShoppingController @Inject()(cc: MessagesControllerComponents, orders: Ord
             case _ =>
               Future(InternalServerError(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.db_error")))))
           }
-      }.recover{
+      }.recover {
         case _: NoSuchElementException =>
           NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.missing_item"))))
         case _: Throwable =>
           InternalServerError(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.exception"))))
       }
     }
-  }}
+  }
+  }
 
 }

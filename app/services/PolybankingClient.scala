@@ -32,7 +32,6 @@ class PolybankingClient @Inject()(config: Configuration, ws: WSClient)(implicit 
       digest.update(";".getBytes)
       digest.update(secret.getBytes)
       digest.update(";".getBytes)
-      println(pair)
     })
 
     String.format("%032x", new BigInteger(1, digest.digest()))

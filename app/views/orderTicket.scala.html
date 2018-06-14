@@ -1,0 +1,42 @@
+@(poster: String, event: data.Event, products: Map[data.Product, Int], orderId: Int, codes: (String, String))
+
+@template(event, "Goodies Order " + orderId, poster, codes._1, codes._2) {
+
+    <h3>Goodies Ticket</h3>
+
+    <p>
+        Show this ticket at PolyJapan's stand to retrieve your goodies!  <strong>Watch out!</strong> This ticket doesn't give you an access to the convention.
+        <br>Montrez ce billet au stand PolyJapan pour récupérer vos goodies ! <strong>Attention !</strong> Ce ticket ne vous donne pas accès au festival.
+    </p>
+
+    <h3>Items:</h3>
+
+    <table class="bordered">
+        <tr>
+            <th style="width: 10%;">Quantity</th>
+            <th style="width: 70%;">Product</th>
+            <th style="width: 10%;">Unit Price</th>
+            <th style="width: 10%;">Total Price</th>
+        </tr>
+
+        @for(item <- products) {
+            <tr>
+                <td>@item._2</td>
+                <td>@item._1.name</td>
+                <td>@item._1.price</td>
+                <td>@{
+                    item._2 * item._1.price
+                }</td>
+            </tr>
+        }
+
+        <tr>
+            <td colspan="3"><b>Total</b></td>
+            <td>@{
+                products.map(p => p._1.price * p._2).sum
+            }</td>
+        </tr>
+    </table>
+
+}
+
