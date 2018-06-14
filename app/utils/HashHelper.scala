@@ -22,6 +22,11 @@ class HashHelper{
 
   def check(algo: String, hashed: String, input: String): Boolean = providers(algo).check(hashed, input)
 
+  def upgrade(algo: String, clearPassword: String): Option[(String, String)] = {
+    if (algo != DEFAULT_ALGO) Some(hash(clearPassword))
+    else Option.empty
+  }
+
   private trait HashProvider {
     def hash(password: String): String
     def check(hashed: String, input: String): Boolean
