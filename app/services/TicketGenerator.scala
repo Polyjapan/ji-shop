@@ -47,13 +47,9 @@ class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(imp
     top.setMsgPosition(HumanReadablePlacement.HRP_NONE)
     top.setHeight(750) // This is way more a magic value that you would think, it doesn't work if h*dpi != 150k
 
-    val horiz = new Code128Bean
-    horiz.setMsgPosition(HumanReadablePlacement.HRP_NONE)
-    horiz.setHeight(300)
-
     val classic = new Code128Bean
 
-    (getCode(top, 90, 200), getCode(classic, dpi = 150)) /* getCode(horiz, 270) */
+    (getCode(top, 90, 200), getCode(classic, dpi = 150))
   }
 
   private def doGenPdf(ticket: TicketBarCode): Array[Byte] = {
@@ -72,7 +68,7 @@ class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(imp
 
   def genPdf(ticket: GeneratedBarCode): (String, Array[Byte]) = ticket match {
     case a: TicketBarCode => ("ticket_" + a.barcode + ".pdf", doGenPdf(a))
-    case a: OrderBarCode => ("order_" + a.order + ".pdf", doGenPdf(a))
+    case a: OrderBarCode => ("goodies_" + a.order + ".pdf", doGenPdf(a))
     case _ => throw new UnsupportedOperationException
   }
 
