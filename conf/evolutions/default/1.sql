@@ -3,7 +3,7 @@ create table `clients` (`client_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,
 
 create table `events` (`event_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,`event_name` VARCHAR(250) NOT NULL,`event_location` VARCHAR(250) NOT NULL,`event_visible` BOOLEAN NOT NULL);
 
-create table `orders` (`order_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,`client_id` INTEGER not NULL,`order_tickets_price` DOUBLE NOT NULL,`order_total_price` DOUBLE NOT NULL,`order_payment_confirmed` TIMESTAMP NULL,`order_enter_date` timestamp DEFAULT now() NOT NULL, `order_source` SET('WEB', 'ONSITE', 'RESELLER') DEFAULT 'WEB');
+create table `orders` (`order_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,`client_id` INTEGER not NULL,`order_tickets_price` DOUBLE NOT NULL,`order_total_price` DOUBLE NOT NULL,`order_payment_confirmed` TIMESTAMP NULL,`order_enter_date` timestamp DEFAULT now() NOT NULL, `order_source` SET('WEB', 'ONSITE', 'RESELLER', 'GIFT') DEFAULT 'WEB');
 
 alter table `orders` add constraint `order_client_fk` foreign key(`client_id`) references `clients`(`client_id`) on update NO ACTION on delete NO ACTION;
 

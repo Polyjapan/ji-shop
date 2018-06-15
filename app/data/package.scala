@@ -49,6 +49,12 @@ package object data {
     * admin who imported the database
     */
   case object Reseller extends Source
+
+  /**
+    * An order made by an admin to generate free tickets. The clientId is the id of the admin who generated the tickets.
+    */
+  case object Gift extends Source
+  
   /**
     * Describes an order in the shop.
     *
