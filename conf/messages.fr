@@ -1,26 +1,4 @@
-# definis par Play2
-error.email=Merci de saisir une adresse email valide !
-error.minLength=Longueur minimale : {0}
-
-users.login.title=Connexion
-users.login.inside_title=Connectez vous
-users.login.email=Addresse email
 users.login.password=Mot de passe
-users.login.login_button=Connexion
-users.login.register=Inscription
-users.login.password_reset=Mot de passe oublié
-users.login.error_not_found=Email ou mot de passe incorrect
-users.login.email_not_confirmed=Vous devez confirmer votre adresse email pour vous connecter !
-
-users.signup.title=Inscription
-users.signup.inside_title=Inscrivez vous
-users.signup.password_repeat=Confirmation du mot de passe
-users.signup.login=Connexion
-users.signup.firstname=Prénom
-users.signup.lastname=Nom de famille
-users.signup.signup_button=Inscription
-users.signup.email_used=Cette adresse e-mail est déjà utilisée
-users.signup.password_repeat_incorrect=La confirmation du mot de passe doit être identique au mot de passe
 users.signup.email_title=Votre compte JapanImpact
 users.signup.email_from=Ne pas répondre
 users.signup.email_text=Bienvenue sur la boutique Japan Impact \n \
@@ -31,10 +9,6 @@ Pour confirmer que cette addresse e-mail est correcte, merci de bien vouloir cli
 Cordialement, \n \
 Le Comité PolyJapan
 
-
-users.recover.title=Réinitialisation du mot de passe
-users.recover.inside_title=Réinitialisez votre mot de passe
-users.recover.recover_button=Réinitialiser le mot de passe
 users.recover.email_title=Réinitialisation de mot de passe JapanImpact
 users.recover.email_from=Ne pas répondre
 users.recover.email_text=Bonjour, {0} \n \
@@ -52,24 +26,3 @@ Nous vous invitons donc à vérifier que vous ne vous trompez pas d''adresse et 
 Cordialement, \n \
 Le Comité PolyJapan
 
-users.resetpwd.title=Réinitialisation du mot de passe
-users.resetpwd.inside_title=Changez votre mot de passe
-users.resetpwd.reset_button=Changer le mot de passe
-
-users.logout.done=Vous avez bien été déconnecté(e) !
-
-shopping.list.title=Billetterie Japan Impact
-shopping.list.noed.title=Aucun article en vente :(
-shopping.list.noed.text=La billetterie ne propose actuellement aucun billet ou goodies. Revenez peut être plus tard !
-shopping.list.tickets.title=Billetterie
-shopping.list.goodies.title=Goodies
-shopping.list.checkout=Payer »
-
-shopping.tickets.email_title=Vos billets JapanImpact
-shopping.tickets.email_from=Billetterie JapanImpact
-shopping.tickets.email_text=Bonjour, \n \
-Vous avez réalisé des achats sur la boutique JapanImpact et nous vous en remercions.\n \
-Vous trouverez en pièce jointe vos billets. Vous pouvez les imprimer ou les présenter sur smartphone.\n \
-Les billets sont non nominatifs, mais ils ne peuvent être utilisés qu''une seule fois. Si vous avez un tarif réduit, n''oubliez pas de prendre votre justificatif avec vous, ou il pourrait vous être demandé de payer la différence.\n\n \
-Avec nos remerciements, \n \
-L'équipe Japan Impact

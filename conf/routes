@@ -1,24 +1,26 @@
+# TODO : replace with CORS checks
 
- # TODO : replace with CORS checks
+GET         /shop/items                     controllers.shop.ItemsController.getItems
+GET         /shop/items/all                 controllers.shop.ItemsController.getAllItems
+
 +nocsrf
-POST        /users/login                  controllers.UsersController.postLogin
+POST        /users/login                    controllers.users.LoginController.postLogin
 +nocsrf
-POST        /users/signup                 controllers.UsersController.postSignup
+POST        /users/signup                   controllers.users.RegisterController.postSignup
 +nocsrf
-POST        /users/emailConfirm           controllers.UsersController.emailConfirmProcess
+POST        /users/emailConfirm             controllers.users.EmailConfirmController.emailConfirmProcess
 +nocsrf
-POST        /users/recoverPassword        controllers.UsersController.recoverPasswordSend
+POST        /users/recoverPassword          controllers.users.PasswordResetController.recoverPasswordSend
 +nocsrf
-POST        /users/resetPassword          controllers.UsersController.passwordResetSend
+POST        /users/resetPassword            controllers.users.PasswordResetController.passwordResetSend
 
 
-GET         /shop/items                   controllers.ShoppingController.homepage
-+nocsrf
-POST        /shop/checkout                controllers.ShoppingController.checkout
-+nocsrf
-POST        /shop/ipn                controllers.ShoppingController.ipn
 
-GET         /shop/download/:barcode.pdf  controllers.ShoppingController.getTicket(barcode: String)
++nocsrf
+POST        /orders/create                  controllers.orders.CheckoutController.checkout
++nocsrf
+POST        /orders/ipn                     controllers.orders.TicketsController.ipn
 
-GET         /shop/myOrders                controllers.ShoppingController.getOrders
-GET         /shop/myOrders/:id                controllers.ShoppingController.getOrder(id: Int)
+GET         /orders/download/:barcode.pdf   controllers.orders.TicketsController.getTicket(barcode: String)
+GET         /orders/view                    controllers.orders.OrdersController.getOrders
+GET         /orders/view/:id                controllers.orders.OrdersController.getOrder(id: Int)

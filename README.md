@@ -30,6 +30,7 @@ after year. The goal of this project is to create a new plateform that can be us
   -  [ ] Create and update products within events `POST /admin/events/:id/products` and `PUT /admin/events/:id/products/:id`
   -  [ ] Create free tickets of any kind of item `(multiple endpoints to create orders)`
   -  [ ] Sell tickets with real money `(use JI10 code)`
+  -  [ ] Import fnac dump
 - [ ] (Admin) Read data
   -  [ ] Export all tickets for a given edition to different lists
   -  [ ] Display stats 
