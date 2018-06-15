@@ -3,6 +3,7 @@ package controllers
 import data._
 import exceptions.OutOfStockException
 import javax.inject.Inject
+import models.OrdersModel.TicketBarCode
 import models.{JsonOrder, JsonOrderData, OrdersModel, ProductsModel}
 import pdi.jwt.JwtSession._
 import play.api.Configuration
@@ -38,6 +39,15 @@ class ShoppingController @Inject()(cc: MessagesControllerComponents, pdfGen: Tic
       Ok(json)
     })
   }
+  }
+
+  def test = Action {
+    Ok(pdfGen.genPdf(TicketBarCode(
+      data.Product(None, "Name", 0, "descript", "Lorem ipsum", 0, 0, true, true),
+      "912345678901234",
+      data.Event(None, "Japan Impact 27", "EPFL Mars - Mars", true)
+    ))._2).as("application/pdf")
+
   }
 
   def getOrders = Action.async { implicit request => {

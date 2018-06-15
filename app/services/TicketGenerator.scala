@@ -11,7 +11,7 @@ import org.apache.commons.io.{FileUtils, IOUtils}
 import org.krysalis.barcode4j.HumanReadablePlacement
 import org.krysalis.barcode4j.impl.AbstractBarcodeBean
 import org.krysalis.barcode4j.impl.code128.Code128Bean
-import org.krysalis.barcode4j.impl.datamatrix.DataMatrixBean
+import org.krysalis.barcode4j.impl.datamatrix.{DataMatrixBean, SymbolShapeHint}
 import org.krysalis.barcode4j.output.bitmap.BitmapCanvasProvider
 import play.api.Configuration
 import play.api.mvc.{Action, AnyContent}
@@ -51,7 +51,7 @@ class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(imp
 
     val classic = new DataMatrixBean
 
-    (getCode(top, 90, 200), getCode(classic, dpi = 150))
+    (getCode(top, 90, 200), getCode(classic, 0, 350))
   }
 
   private def doGenPdf(ticket: TicketBarCode): Array[Byte] = {
