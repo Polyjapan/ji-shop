@@ -9,7 +9,9 @@ import javax.inject.Inject
 import models.OrdersModel.{GeneratedBarCode, OrderBarCode, TicketBarCode}
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.krysalis.barcode4j.HumanReadablePlacement
+import org.krysalis.barcode4j.impl.AbstractBarcodeBean
 import org.krysalis.barcode4j.impl.code128.Code128Bean
+import org.krysalis.barcode4j.impl.datamatrix.DataMatrixBean
 import org.krysalis.barcode4j.output.bitmap.BitmapCanvasProvider
 import play.api.Configuration
 import play.api.mvc.{Action, AnyContent}
@@ -32,7 +34,7 @@ class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(imp
 
 
   private def genCodes(code: String): (String, String) = {
-    def getCode(bean: Code128Bean, rotation: Int = 0, dpi: Int = 100): String = {
+    def getCode(bean: AbstractBarcodeBean, rotation: Int = 0, dpi: Int = 100): String = {
       val out = new ByteArrayOutputStream()
       val canvas = new BitmapCanvasProvider(out, "image/png", dpi, BufferedImage.TYPE_BYTE_BINARY, false, rotation)
       //Generate the barcode
@@ -47,7 +49,7 @@ class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(imp
     top.setMsgPosition(HumanReadablePlacement.HRP_NONE)
     top.setHeight(750) // This is way more a magic value that you would think, it doesn't work if h*dpi != 150k
 
-    val classic = new Code128Bean
+    val classic = new DataMatrixBean
 
     (getCode(top, 90, 200), getCode(classic, dpi = 150))
   }
