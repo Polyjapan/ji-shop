@@ -15,7 +15,7 @@ after year. The goal of this project is to create a new plateform that can be us
 - [x] Register / login
   -  [x] Requires to verify email
   -  [x] Can login using an old password that MUST be rehashed using a new algorithm then removed from the database
-- [ ] Actual shop
+- [x] Actual shop
   -  [x] List products for the active edition 
   -  [x] Go to the payment page and pay
   -  [x] IPN script is triggered and the tickets are sent `/shop/ipn`
@@ -23,7 +23,7 @@ after year. The goal of this project is to create a new plateform that can be us
     -  [x] If the order has a non-ticket item, an order ticket is generated too
   -  [x] Display bought tickets on the user page `/users/orders` and `/users/tickets`
     -  [x] Get an URL to generate again a given ticket
-  -  [ ] Avoid selling [too much] more than max allowed
+  -  [x] Avoid selling [too much] more than max allowed
 - [ ] (Admin) Manage the shop
   -  [ ] Create and update events `POST /admin/events`
   -  [ ] Deep clone events `GET /admin/events/copy/:id`
@@ -33,6 +33,15 @@ after year. The goal of this project is to create a new plateform that can be us
 - [ ] (Admin) Read data
   -  [ ] Export all tickets for a given edition to different lists
   -  [ ] Display stats 
+  
+## Other stuff to do:
+
+- [ ] Write tests
+- [ ] Write tests
+- [ ] Write more tests
+- [ ] Or at least test by hand
+- [ ] Refactor/Reorder code
+- [ ] More comments and documentation!
 
 ## Ticket generation templates
 
