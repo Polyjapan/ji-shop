@@ -57,13 +57,13 @@ class HashHelper{
     override def check(hashed: String, input: String): Boolean = {
       val sha = new SHA1.Digest
       val md5 = new MD5.Digest
-      sha.update(input.getBytes)
-      md5.update(input.getBytes)
+      sha.update(input.trim.getBytes)
+      md5.update(input.trim.getBytes)
       md5.update(sha.digest())
 
       val hash = new String(md5.digest())
 
-      hash == input
+      hash == hashed
     }
   }
 }
