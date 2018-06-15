@@ -22,14 +22,37 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
 
   import profile.api._
 
+  /**
+    * Insert an order in the database
+    *
+    * @param order the order to insert, with the id field set to `None`
+    * @return the number of orders inserted (should be == 1)
+    */
   def createOrder(order: Order): Future[Int] = db.run((orders returning orders.map(_.id)) += order)
 
+  /**
+    * Insert multiple ordered products at once. Their orderId MUST be set to a previously inserted order.
+    *
+    * @param ordered the ordered products to insert
+    * @return the number of elements inserted (should be == `ordered.size`)
+    */
   def orderProducts(ordered: Iterable[OrderedProduct]): Future[Option[Int]] = db.run(orderedProducts ++= ordered)
 
+  /**
+    * List of ordered products, associated with the product and the event in which this product appears
+    * ordered_products JOIN products JOIN events
+    */
   private val productJoin = (orderedProducts join products on (_.productId === _.id) join events on (_._2.eventId === _.id)).map { case ((p1, p2), p3) => (p1, p2, p3) }
+
+  /**
+    * List of orders and the client who made them
+    * orders JOIN clients
+    */
   private val orderJoin = orders join clients on (_.clientId === _.id)
 
-
+  /**
+    * Defines a style of barcode
+    */
   type TicketFormat = BigInt => String
   private val numeric: TicketFormat = _.toString(10).takeRight(14)
 
@@ -45,30 +68,47 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     barcodeType.getId + usedFormat(BigInt(bytes))
   }
 
+  /**
+    * Read all orders made by a given user. If the user is not admin, only the orders with source == `Web` will be
+    * returned. If the user is admin, all the orders will be returned.
+    *
+    * @param userId  the id of the user for whom we want to retrieve the orders
+    * @param isAdmin whether or not the user is admin
+    * @return a future, containing a sequence of orders
+    */
   def loadOrders(userId: Int, isAdmin: Boolean): Future[Seq[data.Order]] = {
     db.run(clients.filter(_.id === userId)
       .join(orders)
       .on(_.id === _.clientId)
-      .map(_._2)
+      .map { case (_, order) => order }
       .result
       .map(_.filter(_.source == data.Web || isAdmin)))
   }
 
+  /**
+    * Read an order by its id and return it. The caller should check that the user requesting the order has indeed the
+    * right to read it.
+    *
+    * @param orderId the orderId to look for
+    * @return a future, containing an optional OrderData
+    */
   def loadOrder(orderId: Int): Future[Option[OrderData]] = {
+    // orderedProductsTickets JOIN tickets
     val oPTicketsJoin = orderedProductTickets join tickets on (_.ticketId === _.id)
+    // orderTickets JOIN tickets
     val oTicketsJoin = orderTickets join tickets on (_.ticketId === _.id)
 
-    val req = orders.filter(_.id === orderId)
-      .join(orderedProducts).on(_.id === _.orderId)
-      .join(products).on(_._2.productId === _.id)
+    val req = orders.filter(_.id === orderId) // find the order
+      .join(orderedProducts).on(_.id === _.orderId) // join it to its orderedProducts
+      .join(products).on(_._2.productId === _.id) // join them to their corresponding product
       .map { case ((ord, op), p) => (ord, op, p) }
-      .joinLeft(oPTicketsJoin).on(_._2.id === _._1.orderedProductId)
-      .joinLeft(oTicketsJoin).on(_._1._1.id === _._1.orderId)
+      .joinLeft(oPTicketsJoin).on(_._2.id === _._1.orderedProductId) // join the products with their potential barcode
+      .joinLeft(oTicketsJoin).on(_._1._1.id === _._1.orderId) // join the order with its potential barcode
       .map { case (((ord, op, p), productCode), orderCode) => (ord, op, p, productCode, orderCode) }
       .result
       .map(seq => {
         val productMap = seq
-          .map{ case (_, o, p, pc, _) => (o, p, pc.map(_._2.barCode)) } // Keep only (orderedProduct, product, barcode)
+          .map { case (_, o, p, pc, _) => (o, p, pc.map(_._2.barCode)) } // Keep only (orderedProduct, product, barcode)
           .groupBy(p => (p._1.productId, p._1.paidPrice)) // Group the data by (orderedProduct, product)
           .map(pair => ((pair._2.head._1, pair._2.head._2), pair._2))
           .mapValues(seq => (seq.length, seq.map(_._3).filter(_.nonEmpty).map(_.get))) // compute the amt of items then the list of codes
@@ -81,6 +121,12 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     db.run(req)
   }
 
+  /**
+    * Find a given barcode and return it, along with the client that created it
+    *
+    * @param barcode the barcode to look for
+    * @return an optional pair of the barcode data and the client that created it
+    */
   def findBarcode(barcode: String): Future[Option[(GeneratedBarCode, data.Client)]] = {
     val req = tickets.filter(_.barCode === barcode).map(_.id).result.map(seq => seq.head).flatMap(barcodeId => {
       Barcodes.parseCode(barcode) match {
@@ -88,8 +134,6 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
         case OrderCode => findOrder(barcode, barcodeId)
         case _ => DBIO.failed(new UnknownError)
       }
-
-
     })
 
     db.run(req).recover {
@@ -100,13 +144,14 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
 
   private def findOrder(barcode: String, barcodeId: Int): DBIOAction[Option[(GeneratedBarCode, data.Client)], NoStream, Effect.Read] = {
     val join =
-      orderTickets filter (_.ticketId === barcodeId) join
-        orders on (_.orderId === _.id) map (_._2) join
-        clients on (_.clientId === _.id) join
-        productJoin on (_._1.id === _._1.orderId) map { case ((a, b), (c, d, e)) => (a.id, d, e, b)}
+      orderTickets filter (_.ticketId === barcodeId) join // find the orderTicket by ticketId
+        orders on (_.orderId === _.id) map (_._2) join // find the order by its ticket
+        clients on (_.clientId === _.id) join // find the client who made the order
+        productJoin on (_._1.id === _._1.orderId) map { // find products in the order
+          case ((order, client), (_, product, event)) => (order.id, product, event, client) }
 
     join.result.map(seq => {
-      val products = seq.map(_._2).groupBy(p => p).mapValues(_.size)
+      val products = seq.map{ case (_, product, _, _) => product }.groupBy(p => p).mapValues(_.size)
 
       seq.headOption.map {
         case (orderId, _, event, client) => (OrderBarCode(orderId, products, barcode, event), client)
@@ -116,14 +161,21 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
 
   private def findProduct(barcode: String, barcodeId: Int): DBIOAction[Option[(GeneratedBarCode, data.Client)], NoStream, Effect.Read] = {
     val join =
-      orderedProductTickets filter (_.ticketId === barcodeId) join
-        productJoin on (_.orderedProductId === _._1.id) join
-        orders on (_._2._1.orderId === _.id) join
-        clients on (_._2.clientId === _.id) map { case (((_, (_, p, e)), _), client) => (p, e, client) }
+      orderedProductTickets filter (_.ticketId === barcodeId) join // find the orderedProductTicket by ticketId
+        productJoin on (_.orderedProductId === _._1.id) join // find the product by its ticket
+        orders on (_._2._1.orderId === _.id) join // find the order corresponding to the products
+        clients on (_._2.clientId === _.id) map { // find the client who made the order
+          case (((_, (_, p, e)), _), client) => (p, e, client) } // keep only product, event and client
 
     join.result.map(_ map { case (p, e, client) => (TicketBarCode(p, barcode, e), client) } headOption)
   }
 
+  /**
+    * Accept an order by its id, generating barcodes and returning them.
+    *
+    * @param order the order to accept
+    * @return a future holding the barcodes as well as the client to which they should be sent
+    */
   def acceptOrder(order: Int): Future[(Seq[GeneratedBarCode], data.Client)] = {
     // This query updates the confirm time of the order
     val updateConfirmTimeQuery = orders
@@ -134,7 +186,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
 
     // This query selects the tickets in the command
     val orderedTicketsQuery = productJoin
-      .filter { case (orderedProduct, product, _) => orderedProduct.orderId === order && product.isTicket}
+      .filter { case (orderedProduct, product, _) => orderedProduct.orderId === order && product.isTicket }
       .result
 
     // This query insert tickets for the tickets and return their barcodes
@@ -142,7 +194,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     // Thanks to atomic execution, if a given order has already been IPN-ed, its tickets won't be regenerated
     val orderedTicketsBarcodesQuery: DBIOAction[Seq[GeneratedBarCode], _, _] = (orderedTicketsQuery flatMap {
       result =>
-        DBIO.sequence(result.map(product => (product, Ticket(Option.empty, barcodeGen(ProductCode)))).map{
+        DBIO.sequence(result.map(product => (product, Ticket(Option.empty, barcodeGen(ProductCode)))).map {
           case ((orderedProduct, product, event), ticket) =>
             // Add a ticket in the database and get its id back
             ((tickets returning tickets.map(_.id)) += ticket)
@@ -158,14 +210,14 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
 
     // This query selects the products in the command that are not tickets
     val otherProducts = productJoin
-      .filter{ case (orderedProduct, product, _) => orderedProduct.orderId === order && !product.isTicket}
+      .filter { case (orderedProduct, product, _) => orderedProduct.orderId === order && !product.isTicket }
       .result
 
     // This query inserts a single ticket for the order and return its barcode
     val orderBarcodeQuery = (otherProducts filter (_.nonEmpty) flatMap (r => {
 
-      val event = r.headOption.map{ case (_, _, pairEvent) => pairEvent }.getOrElse(data.Event(None, "unknown_event", "unknown_location", visible = false))
-      val products = r.map{ case(_, product, _) => product }.groupBy(p => p).mapValues(_.size)
+      val event = r.headOption.map { case (_, _, pairEvent) => pairEvent }.getOrElse(data.Event(None, "unknown_event", "unknown_location", visible = false))
+      val products = r.map { case (_, product, _) => product }.groupBy(p => p).mapValues(_.size)
       // If we have items:
       // Create a ticket
       val ticket = Ticket(Option.empty, barcodeGen(OrderCode))
@@ -178,14 +230,14 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     val orderQuery = orderJoin.filter(_._1.id === order).take(1).result
 
     val allProductsQuery = productJoin
-      .filter{ case (orderedProduct, _, _) => orderedProduct.orderId === order } // Get all products in the order
+      .filter { case (orderedProduct, _, _) => orderedProduct.orderId === order } // Get all products in the order
       .map { case (_, product, _) => product } // keep only the product itself
       .filter(_.maxItems > 0).result // if their maxItems value is > 0...
 
     val updateRemainingStockQuery = allProductsQuery.flatMap(res =>
-          DBIO.sequence(
-            res.map(p => products.filter(_.id === p.id).map(_.maxItems).update(p.maxItems - 1))
-          ))  // decrease the maxItems value
+      DBIO.sequence(
+        res.map(p => products.filter(_.id === p.id).map(_.maxItems).update(p.maxItems - 1))
+      )) // decrease the maxItems value
 
     val computeResult = orderedTicketsBarcodesQuery flatMap
       (seq => orderBarcodeQuery.flatMap(code => DBIO.successful(seq :+ code))) flatMap // get the order code
@@ -227,11 +279,33 @@ object OrdersModel {
 
 }
 
+/**
+  * A convenience return type for the [[OrdersModel.loadOrder]] method
+  *
+  * @param order     the order data
+  * @param products  a map of products with the quantity and a sequence of barcodes, if any
+  * @param orderCode the barcode of the order, if any
+  */
 case class OrderData(order: data.Order, products: Map[(OrderedProduct, data.Product), (Int, Seq[String])], orderCode: Option[String])
 
+/**
+  * A description of an order that can be mapped to JSon
+  *
+  * @param id               the id of the order
+  * @param price            the total cart price of the order
+  * @param paymentConfirmed whether or not the payment has been received
+  * @param createdAt        the time (ms) at which this order was created
+  * @param source           where this order comes from ([[data.Source.toString]])
+  */
 case class JsonOrder(id: Int, price: Double, paymentConfirmed: Boolean, createdAt: Long, source: String)
 
 case object JsonOrder {
+  /**
+    * Convert a database order to a [[JsonOrder]]. The given order MUST have already been inserted.
+    *
+    * @param order the order to convert
+    * @return a [[JsonOrder]]
+    */
   def apply(order: data.Order): JsonOrder = order match {
     case Order(Some(id), _, _, price, paymentConfirmed, Some(enterDate), source) =>
       JsonOrder(id, price, paymentConfirmed.isDefined, enterDate.getTime, source.toString)
@@ -240,6 +314,14 @@ case object JsonOrder {
   implicit val format = Json.format[JsonOrder]
 }
 
+/**
+  * A description of an ordered product that can be mapped to JSON
+  *
+  * @param product   the db description of the product
+  * @param paidPrice the amount paid for this product
+  * @param amount    the quantity of this product ordered
+  * @param codes     a sequence of barcodes associated with this product, of length <= amount
+  */
 case class JsonOrderedProduct(product: data.Product, paidPrice: Double, amount: Int, codes: Seq[String])
 
 case object JsonOrderedProduct {
@@ -251,6 +333,13 @@ case object JsonOrderedProduct {
   implicit val format = Json.format[JsonOrderedProduct]
 }
 
+/**
+  * A JSON type representing an order with all its products
+  *
+  * @param order     the JSON representation of the order itself
+  * @param products  the products in the order
+  * @param orderCode the barcode of the order, if any
+  */
 case class JsonOrderData(order: JsonOrder, products: Seq[JsonOrderedProduct], orderCode: Option[String])
 
 case object JsonOrderData {
