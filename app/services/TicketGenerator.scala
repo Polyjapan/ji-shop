@@ -47,25 +47,25 @@ class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(imp
 
     val top = new Code128Bean
     top.setMsgPosition(HumanReadablePlacement.HRP_NONE)
-    top.setHeight(750) // This is way more a magic value that you would think, it doesn't work if h*dpi != 150k
+    top.setHeight(10) // This is way more a magic value that you would think, it doesn't work if h*dpi != 150k
 
     val classic = new DataMatrixBean
 
-    (getCode(top, 90, 200), getCode(classic, 0, 350))
+    (getCode(top, 90, 200), getCode(classic, 0, 1000))
   }
 
   private def doGenPdf(ticket: TicketBarCode): Array[Byte] = {
     val codes = genCodes(ticket.barcode)
 
 
-    pdfGen.toBytes(views.html.ticket(image, ticket.event, ticket.product, codes), "goodies_" + ticket.barcode + ".pdf", Seq())
+    pdfGen.toBytes(views.html.ticket(image, ticket.event, ticket.product, codes, ticket.barcode), "goodies_" + ticket.barcode + ".pdf", Seq())
   }
 
   private def doGenPdf(ticket: OrderBarCode): Array[Byte] = {
     val codes = genCodes(ticket.barcode)
 
 
-    pdfGen.toBytes(views.html.orderTicket(image, ticket.event, ticket.products, ticket.order, codes), "ticket_" + ticket.barcode + ".pdf", Seq())
+    pdfGen.toBytes(views.html.orderTicket(image, ticket.event, ticket.products, ticket.order, codes, ticket.barcode), "ticket_" + ticket.barcode + ".pdf", Seq())
   }
 
   def genPdf(ticket: GeneratedBarCode): (String, Array[Byte]) = ticket match {

@@ -1,6 +1,6 @@
-@(poster: String, event: data.Event, products: Map[data.Product, Int], orderId: Int, codes: (String, String))
+@(poster: String, event: data.Event, products: Map[data.Product, Int], orderId: Int, codes: (String, String), code: String)
 
-@template(event, "Goodies #" + orderId, poster, codes._1, codes._2) {
+@template(event, "Goodies #" + orderId, poster, codes._1, codes._2, code) {
 
     <h3>Goodies Ticket</h3>
 
