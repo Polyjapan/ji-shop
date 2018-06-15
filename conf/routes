@@ -19,3 +19,6 @@ POST        /shop/checkout                controllers.ShoppingController.checkou
 POST        /shop/ipn                controllers.ShoppingController.ipn
 
 GET         /shop/download/:barcode.pdf  controllers.ShoppingController.getTicket(barcode: String)
+
+GET         /shop/myOrders                controllers.ShoppingController.getOrders
+GET         /shop/myOrders/:id                controllers.ShoppingController.getOrder(id: Int)

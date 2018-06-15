@@ -1,5 +1,7 @@
 import java.sql.Timestamp
 
+import play.api.libs.json.Json
+
 /**
   * @author zyuiop
   */
@@ -117,4 +119,8 @@ package object data {
     * @param claimedBy the person who claimed the ticket (the one who scanned it)
     */
   case class ClaimedTicket(ticketId: Int, claimedAt: Timestamp, claimedBy: Int)
+
+
+  implicit val eventFormat = Json.format[Event]
+  implicit val productFormat = Json.format[Product]
 }

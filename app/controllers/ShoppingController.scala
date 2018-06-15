@@ -2,12 +2,12 @@ package controllers
 
 import data._
 import javax.inject.Inject
-import models.{OrdersModel, ProductsModel}
+import models.{JsonOrder, JsonOrderData, OrdersModel, ProductsModel}
 import pdi.jwt.JwtSession._
 import play.api.Configuration
 import play.api.data.FormError
 import play.api.i18n.I18nSupport
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.libs.mailer.{AttachmentData, Email, MailerClient}
 import play.api.mvc.{Action, AnyContent, MessagesAbstractController, MessagesControllerComponents}
 import services.PolybankingClient.CorrectIpn
@@ -22,8 +22,6 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 class ShoppingController @Inject()(cc: MessagesControllerComponents, pdfGen: TicketGenerator, orders: OrdersModel, products: ProductsModel, mailerClient: MailerClient, config: Configuration, pb: PolybankingClient)(implicit ec: ExecutionContext) extends MessagesAbstractController(cc) with I18nSupport {
 
-  implicit val eventFormat = Json.format[Event]
-  implicit val productFormat = Json.format[Product]
 
   def homepage: Action[AnyContent] = Action.async { implicit request => {
     products.getProducts.map(data => {
@@ -41,6 +39,36 @@ class ShoppingController @Inject()(cc: MessagesControllerComponents, pdfGen: Tic
   }
   }
 
+  def getOrders = Action.async { implicit request => {
+    val session = request.jwtSession
+    val user = session.getAs[AuthenticatedUser]("user")
+
+    if (user.isEmpty)
+      Future(Unauthorized(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.no_auth_token")))))
+    else {
+      orders.loadOrders(user.get.id, user.get.hasPerm("admin.see_all")).map(ords => Ok(
+        JsArray(ords.map(ord => Json.toJson(JsonOrder(ord))))
+      ))
+    }
+  }}
+
+  def getOrder(orderId: Int) = Action.async { implicit request => {
+    val session = request.jwtSession
+    val user = session.getAs[AuthenticatedUser]("user")
+
+    if (user.isEmpty)
+      Future(Unauthorized(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.no_auth_token")))))
+    else {
+      orders.loadOrder(orderId)
+        .map(opt =>
+          opt.filter(data => data.order.clientId == user.get.id || user.get.hasPerm("admin.view_other_order")))
+        .map {
+          case Some(data) => Ok(Json.toJson(JsonOrderData(data)))
+          case None => NotFound
+        }
+    }
+  }}
+
   /**
     * Get the PDF ticket for a given barcode
     * @param barCode the barcode searched
@@ -57,7 +85,7 @@ class ShoppingController @Inject()(cc: MessagesControllerComponents, pdfGen: Tic
         case None =>
           NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.ticket_not_found"))))
         case Some((code, client: Client)) =>
-          if (client.id.get != user.get.id && !user.get.permissions.contains("admin.view_other_ticket"))
+          if (client.id.get != user.get.id && !user.get.hasPerm("admin.view_other_ticket"))
             // Return the same error as if the ticket didn't exist
             // It avoids leaking information about whether or not a ticket exists
             NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.ticket_not_found"))))

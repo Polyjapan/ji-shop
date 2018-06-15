@@ -21,7 +21,7 @@ after year. The goal of this project is to create a new plateform that can be us
   -  [x] IPN script is triggered and the tickets are sent `/shop/ipn`
     -  [x] Each bought ticket get its own ticket and barcode (yes these two concepts share the same name)
     -  [x] If the order has a non-ticket item, an order ticket is generated too
-  -  [ ] Display bought tickets on the user page `/users/orders` and `/users/tickets`
+  -  [x] Display bought tickets on the user page `/users/orders` and `/users/tickets`
     -  [x] Get an URL to generate again a given ticket
   -  [ ] Avoid selling [too much] more than max allowed
 - [ ] (Admin) Manage the shop

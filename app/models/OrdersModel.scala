@@ -7,6 +7,7 @@ import data.{Order, OrderedProduct, Ticket}
 import javax.inject.Inject
 import models.OrdersModel.{GeneratedBarCode, OrderBarCode, TicketBarCode}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import play.api.libs.json.Json
 import slick.jdbc.MySQLProfile
 import utils.Barcodes
 import utils.Barcodes.{BarcodeType, OrderCode, ProductCode}
@@ -42,6 +43,42 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     new SecureRandom().nextBytes(bytes)
 
     barcodeType.getId + usedFormat(BigInt(bytes))
+  }
+
+  def loadOrders(userId: Int, isAdmin: Boolean): Future[Seq[data.Order]] = {
+    db.run(clients.filter(_.id === userId)
+      .join(orders)
+      .on(_.id === _.clientId)
+      .map(_._2)
+      .result
+      .map(_.filter(_.source == data.Web || isAdmin)))
+  }
+
+  def loadOrder(orderId: Int): Future[Option[OrderData]] = {
+    val oPTicketsJoin = orderedProductTickets join tickets on (_.ticketId === _.id)
+    val oTicketsJoin = orderTickets join tickets on (_.ticketId === _.id)
+
+    val req = orders.filter(_.id === orderId)
+      .join(orderedProducts).on(_.id === _.orderId)
+      .join(products).on(_._2.productId === _.id)
+      .map { case ((ord, op), p) => (ord, op, p) }
+      .joinLeft(oPTicketsJoin).on(_._2.id === _._1.orderedProductId)
+      .joinLeft(oTicketsJoin).on(_._1._1.id === _._1.orderId)
+      .map { case (((ord, op, p), productCode), orderCode) => (ord, op, p, productCode, orderCode) }
+      .result
+      .map(seq => {
+        val productMap = seq
+          .map{ case (_, o, p, pc, _) => (o, p, pc.map(_._2.barCode)) } // Keep only (orderedProduct, product, barcode)
+          .groupBy(p => (p._1.productId, p._1.paidPrice)) // Group the data by (orderedProduct, product)
+          .map(pair => ((pair._2.head._1, pair._2.head._2), pair._2))
+          .mapValues(seq => (seq.length, seq.map(_._3).filter(_.nonEmpty).map(_.get))) // compute the amt of items then the list of codes
+
+        seq.headOption.map { case (ord, _, _, _, orderCode) =>
+          OrderData(ord, productMap, orderCode.map(_._2.barCode))
+        }
+      })
+
+    db.run(req)
   }
 
   def findBarcode(barcode: String): Future[Option[(GeneratedBarCode, data.Client)]] = {
@@ -133,9 +170,18 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
 
     val q3 = orderJoin.filter(_._1.id === order).take(1).result
 
+    val qq4 = productJoin.filter(_._1.orderId === order) // Get all products in the order
+        .map(_._2).filter(_.maxItems > 0).result // if their maxItems value is > 0...
+
+    val q4 = qq4.flatMap(res =>
+          DBIO.sequence(
+            res.map(p => products.filter(_.id === p.id).map(_.maxItems).update(p.maxItems - 1))
+          ))  // decrease the maxItems value
+
     val result = qq1 flatMap
-      (seq => qq2.flatMap(code => DBIO.successful(seq :+ code))) flatMap
-      (seq => q3.flatMap(cli => DBIO.successful((seq, cli.head._2))))
+      (seq => qq2.flatMap(code => DBIO.successful(seq :+ code))) flatMap // get the order code
+      (seq => q3.flatMap(cli => DBIO.successful((seq, cli.head._2)))) flatMap // get the client
+      (res => q4.flatMap(_ => DBIO.successful(res))) // execute the 4th request, ignoring its result
 
 
     db.run((q0 andThen result).transactionally).recover {
@@ -170,4 +216,39 @@ object OrdersModel {
     */
   case class OrderBarCode(order: Int, products: Map[data.Product, Int], barcode: String, event: data.Event) extends GeneratedBarCode
 
+}
+
+case class OrderData(order: data.Order, products: Map[(OrderedProduct, data.Product), (Int, Seq[String])], orderCode: Option[String])
+
+case class JsonOrder(id: Int, price: Double, paymentConfirmed: Boolean, createdAt: Long, source: String)
+
+case object JsonOrder {
+  def apply(order: data.Order): JsonOrder = order match {
+    case Order(Some(id), _, _, price, paymentConfirmed, Some(enterDate), source) =>
+      JsonOrder(id, price, paymentConfirmed.isDefined, enterDate.getTime, source.toString)
+  }
+
+  implicit val format = Json.format[JsonOrder]
+}
+
+case class JsonOrderedProduct(product: data.Product, paidPrice: Double, amount: Int, codes: Seq[String])
+
+case object JsonOrderedProduct {
+  def apply(pair: ((OrderedProduct, data.Product), (Int, Seq[String]))): JsonOrderedProduct = pair match {
+    case ((op, product), (amt, codes)) =>
+      JsonOrderedProduct(product, op.paidPrice, amt, codes)
+  }
+
+  implicit val format = Json.format[JsonOrderedProduct]
+}
+
+case class JsonOrderData(order: JsonOrder, products: Seq[JsonOrderedProduct], orderCode: Option[String])
+
+case object JsonOrderData {
+  def apply(data: OrderData): JsonOrderData = data match {
+    case OrderData(order, pdts, code) =>
+      JsonOrderData(JsonOrder(order), pdts.map(JsonOrderedProduct.apply).toSeq, code)
+  }
+
+  implicit val format = Json.format[JsonOrderData]
 }
