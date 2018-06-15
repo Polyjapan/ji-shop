@@ -7,7 +7,7 @@ create table `orders` (`order_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,`c
 
 alter table `orders` add constraint `order_client_fk` foreign key(`client_id`) references `clients`(`client_id`) on update NO ACTION on delete NO ACTION;
 
-create table `products` (`product_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,`product_name` VARCHAR(250) NOT NULL,`product_price` DOUBLE NOT NULL,`product_description` TEXT NOT NULL,`product_long_description` TEXT NOT NULL, `event_id` INTEGER NOT NULL, `is_ticket` BOOLEAN NOT NULL, `product_max_items` INTEGER NOT NULL, `product_free_price` BOOLEAN DEFAULT FALSE);
+create table `products` (`product_id` INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,`product_name` VARCHAR(250) NOT NULL,`product_price` DOUBLE NOT NULL,`product_description` TEXT NOT NULL,`product_long_description` TEXT NOT NULL, `event_id` INTEGER NOT NULL, `is_ticket` BOOLEAN NOT NULL, `product_max_items` INTEGER NOT NULL, `product_free_price` BOOLEAN DEFAULT FALSE, `is_visible` BOOLEAN DEFAULT FALSE);
 
 alter table `products` add constraint `product_event_fk` foreign key(`event_id`) references `events`(`event_id`) on update NO ACTION on delete NO ACTION;
 

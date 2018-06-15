@@ -56,7 +56,7 @@ package object data {
     * An order made by an admin to generate free tickets. The clientId is the id of the admin who generated the tickets.
     */
   case object Gift extends Source
-  
+
   /**
     * Describes an order in the shop.
     *
@@ -86,9 +86,10 @@ package object data {
     *                        buying page. Moreover, when buying, the ticket items will be counted to make a ticket price that will be stored
     *                        separately.
     * @param freePrice       if true, the `price` becomes a minimal price and the client can choose to pay more
+    * @param isVisible       if false, this product is not visible to the public and cannot be bought via the site
     */
   case class Product(id: Option[Int], name: String, price: Double, description: String, longDescription: String,
-                     maxItems: Int, eventId: Int, isTicket: Boolean, freePrice: Boolean)
+                     maxItems: Int, eventId: Int, isTicket: Boolean, freePrice: Boolean, isVisible: Boolean)
 
 
   /**

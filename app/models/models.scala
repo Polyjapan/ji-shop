@@ -127,11 +127,12 @@ package object models {
     def eventId = column[Int]("event_id")
     def isTicket = column[Boolean]("is_ticket")
     def freePrice = column[Boolean]("product_free_price")
+    def isVisible = column[Boolean]("is_visible")
 
     def category = foreignKey("product_event_fk", eventId, events)(_.id)
 
     def * =
-      (id.?, name, price, description, longDescription, maxItems, eventId, isTicket, freePrice).shaped <> (Product.tupled, Product.unapply)
+      (id.?, name, price, description, longDescription, maxItems, eventId, isTicket, freePrice, isVisible).shaped <> (Product.tupled, Product.unapply)
   }
 
   private[models] val products = TableQuery[Products]
