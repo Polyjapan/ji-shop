@@ -8,6 +8,7 @@ import javax.inject.Inject
 import models.OrdersModel.{GeneratedBarCode, OrderBarCode, TicketBarCode}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.MySQLProfile
+import utils.Barcodes
 import utils.Barcodes.{BarcodeType, OrderCode, ProductCode}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -25,8 +26,8 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   def orderProducts(ordered: Iterable[OrderedProduct]): Future[Option[Int]] = db.run(orderedProducts ++= ordered)
 
   private val productJoin = (orderedProducts join products on (_.productId === _.id) join events on (_._2.eventId === _.id)).map { case ((p1, p2), p3) => (p1, p2, p3) }
-  private val ticketTickets = tickets join orderedProductTickets on (_.id === _.ticketId)
   private val orderJoin = orders join clients on (_.clientId === _.id)
+
 
   type TicketFormat = BigInt => String
   private val numeric: TicketFormat = _.toString(10).takeRight(14)
@@ -41,6 +42,49 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     new SecureRandom().nextBytes(bytes)
 
     barcodeType.getId + usedFormat(BigInt(bytes))
+  }
+
+  def findBarcode(barcode: String): Future[Option[(GeneratedBarCode, data.Client)]] = {
+    val req = tickets.filter(_.barCode === barcode).map(_.id).result.map(seq => seq.head).flatMap(barcodeId => {
+      Barcodes.parseCode(barcode) match {
+        case ProductCode => findProduct(barcode, barcodeId)
+        case OrderCode => findOrder(barcode, barcodeId)
+        case _ => DBIO.failed(new UnknownError)
+      }
+
+
+    })
+
+    db.run(req).recover {
+      case e: UnknownError => None
+      case e: UnsupportedOperationException => None // no result (empty.head)
+    }
+  }
+
+  private def findOrder(barcode: String, barcodeId: Int): DBIOAction[Option[(GeneratedBarCode, data.Client)], NoStream, Effect.Read] = {
+    val join =
+      orderTickets filter (_.ticketId === barcodeId) join
+        orders on (_.orderId === _.id) map (_._2) join
+        clients on (_.clientId === _.id) join
+        productJoin on (_._1.id === _._1.orderId) map { case ((a, b), (c, d, e)) => (a.id, d, e, b)}
+
+    join.result.map(seq => {
+      val products = seq.map(_._2).groupBy(p => p).mapValues(_.size)
+
+      seq.headOption.map {
+        case (orderId, _, event, client) => (OrderBarCode(orderId, products, barcode, event), client)
+      }
+    })
+  }
+
+  private def findProduct(barcode: String, barcodeId: Int): DBIOAction[Option[(GeneratedBarCode, data.Client)], NoStream, Effect.Read] = {
+    val join =
+      orderedProductTickets filter (_.ticketId === barcodeId) join
+        productJoin on (_.orderedProductId === _._1.id) join
+        orders on (_._2._1.orderId === _.id) join
+        clients on (_._2.clientId === _.id) map { case (((_, (_, p, e)), _), client) => (p, e, client) }
+
+    join.result.map(_ map { case (p, e, client) => (TicketBarCode(p, barcode, e), client) } headOption)
   }
 
   def acceptOrder(order: Int): Future[(Seq[GeneratedBarCode], data.Client)] = {

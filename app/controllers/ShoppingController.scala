@@ -41,6 +41,34 @@ class ShoppingController @Inject()(cc: MessagesControllerComponents, pdfGen: Tic
   }
   }
 
+  /**
+    * Get the PDF ticket for a given barcode
+    * @param barCode the barcode searched
+    * @return the pdf ticket
+    */
+  def getTicket(barCode: String) = Action.async { implicit request => {
+    val session = request.jwtSession
+    val user = session.getAs[AuthenticatedUser]("user")
+
+    if (user.isEmpty)
+      Future(Unauthorized(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.no_auth_token")))))
+    else {
+      orders.findBarcode(barCode) map {
+        case None =>
+          NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.ticket_not_found"))))
+        case Some((code, client: Client)) =>
+          if (client.id.get != user.get.id && !user.get.permissions.contains("admin.view_other_ticket"))
+            // Return the same error as if the ticket didn't exist
+            // It avoids leaking information about whether or not a ticket exists
+            NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.ticket_not_found"))))
+          else {
+            // Generate the PDF
+            Ok(pdfGen.genPdf(code)._2).as("application/pdf")
+          }
+      }
+    }
+  }}
+
   def ipn: Action[Map[String, Seq[String]]] = Action.async(parse.formUrlEncoded) { implicit request => {
     pb.checkIpn(request.body) match {
       case CorrectIpn(valid: Boolean, order: Int) =>

@@ -79,13 +79,13 @@ package object models {
 
 
   private[models] class OrderedProductTickets(tag: Tag) extends Table[(Int, Int)](tag, "ordered_products_tickets") {
-    def productId = column[Int]("ordered_product_id", O.PrimaryKey, O.Unique)
+    def orderedProductId = column[Int]("ordered_product_id", O.PrimaryKey, O.Unique)
     def ticketId = column[Int]("ticket_id", O.PrimaryKey, O.Unique)
 
-    def product = foreignKey("ordered_products_tickets_product_fk", productId, orderedProducts)(_.id)
+    def product = foreignKey("ordered_products_tickets_product_fk", orderedProductId, orderedProducts)(_.id)
     def ticket = foreignKey("ordered_products_tickets_ticket_fk", ticketId, tickets)(_.id)
 
-    def * = (productId, ticketId).shaped
+    def * = (orderedProductId, ticketId).shaped
   }
   private[models] val orderedProductTickets = TableQuery[OrderedProductTickets]
 

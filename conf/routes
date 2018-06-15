@@ -17,3 +17,5 @@ GET         /shop/items                   controllers.ShoppingController.homepag
 POST        /shop/checkout                controllers.ShoppingController.checkout
 +nocsrf
 POST        /shop/ipn                controllers.ShoppingController.ipn
+
+GET         /shop/download/:barcode.pdf  controllers.ShoppingController.getTicket(barcode: String)

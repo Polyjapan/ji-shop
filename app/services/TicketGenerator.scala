@@ -56,14 +56,14 @@ class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(imp
     val codes = genCodes(ticket.barcode)
 
 
-    pdfGen.toBytes(views.html.ticket(image, ticket.event, ticket.product, codes), "https://example.com/hello", Seq())
+    pdfGen.toBytes(views.html.ticket(image, ticket.event, ticket.product, codes), "goodies_" + ticket.barcode + ".pdf", Seq())
   }
 
   private def doGenPdf(ticket: OrderBarCode): Array[Byte] = {
     val codes = genCodes(ticket.barcode)
 
 
-    pdfGen.toBytes(views.html.orderTicket(image, ticket.event, ticket.products, ticket.order, codes), "https://example.com/hello", Seq())
+    pdfGen.toBytes(views.html.orderTicket(image, ticket.event, ticket.products, ticket.order, codes), "ticket_" + ticket.barcode + ".pdf", Seq())
   }
 
   def genPdf(ticket: GeneratedBarCode): (String, Array[Byte]) = ticket match {

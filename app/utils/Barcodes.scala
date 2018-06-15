@@ -13,5 +13,7 @@ object Barcodes {
 
   private val types: Map[Int, BarcodeType] = List(ProductCode, OrderCode).map(_.pair).toMap
 
-  def parseCode(code: String): BarcodeType = types.getOrElse(code.head.toInt, Invalid)
+  def parseCode(code: String): BarcodeType =
+    types.getOrElse(code.head.toString.toInt, Invalid)
+
 }
