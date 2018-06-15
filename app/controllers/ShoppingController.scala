@@ -41,15 +41,6 @@ class ShoppingController @Inject()(cc: MessagesControllerComponents, pdfGen: Tic
   }
   }
 
-  def test = Action {
-    Ok(pdfGen.genPdf(TicketBarCode(
-      data.Product(None, "Name", 0, "descript", "Lorem ipsum", 0, 0, true, true),
-      "912345678901234",
-      data.Event(None, "Japan Impact 27", "EPFL Mars - Mars", true)
-    ))._2).as("application/pdf")
-
-  }
-
   def getOrders = Action.async { implicit request => {
     val session = request.jwtSession
     val user = session.getAs[AuthenticatedUser]("user")

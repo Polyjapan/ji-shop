@@ -20,6 +20,7 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
   private val joinToMap: (Seq[(Event, data.Product)]) => Map[Event, Seq[data.Product]] =
     _.groupBy(_._1).mapValues(_.map(_._2))
 
+
   def getProducts: Future[Map[Event, Seq[data.Product]]] =
     db.run(productsJoin.filter(_._1.visible === true).result).map(joinToMap)
 

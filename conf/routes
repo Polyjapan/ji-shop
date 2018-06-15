@@ -20,7 +20,5 @@ POST        /shop/ipn                controllers.ShoppingController.ipn
 
 GET         /shop/download/:barcode.pdf  controllers.ShoppingController.getTicket(barcode: String)
 
-GET /test controllers.ShoppingController.test
-
 GET         /shop/myOrders                controllers.ShoppingController.getOrders
 GET         /shop/myOrders/:id                controllers.ShoppingController.getOrder(id: Int)
