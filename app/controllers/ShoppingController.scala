@@ -158,7 +158,7 @@ class ShoppingController @Inject()(cc: MessagesControllerComponents, pdfGen: Tic
         val byId = m.map(_._2.itemId).toSet // Create a set of all item ids
 
         if (items.forall(i => byId(i._1))) { // Check that all items in the order correspond to available items
-          val oos = m.keys.filter(_.maxItems == 0) // Get all the out of stock items
+          val oos = m.filter(p => p._1.maxItems >= 0 && p._1.maxItems < p._2.itemAmount).keys // Get all the out of stock items
           if (oos.isEmpty) m // Check that all the items are available
           else throw new OutOfStockException(oos)
         } else throw new NoSuchElementException
