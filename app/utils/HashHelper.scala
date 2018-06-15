@@ -1,6 +1,9 @@
 package utils
 
+import java.math.BigInteger
+
 import javax.inject.{Inject, Singleton}
+import javax.xml.bind.DatatypeConverter
 import org.bouncycastle.jcajce.provider.digest.{MD5, SHA1}
 import org.mindrot.jbcrypt.BCrypt
 
@@ -58,10 +61,12 @@ class HashHelper{
       val sha = new SHA1.Digest
       val md5 = new MD5.Digest
       sha.update(input.trim.getBytes)
-      md5.update(input.trim.getBytes)
-      md5.update(sha.digest())
+      val salt = DatatypeConverter.printHexBinary(sha.digest()).toLowerCase
 
-      val hash = new String(md5.digest())
+      md5.update(input.trim.getBytes)
+      md5.update(salt.getBytes)
+
+      val hash = DatatypeConverter.printHexBinary(md5.digest()).toLowerCase
 
       hash == hashed
     }
