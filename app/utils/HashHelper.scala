@@ -1,6 +1,7 @@
 package utils
 
 import javax.inject.{Inject, Singleton}
+import org.bouncycastle.jcajce.provider.digest.{MD5, SHA1}
 import org.mindrot.jbcrypt.BCrypt
 
 /**
@@ -8,7 +9,10 @@ import org.mindrot.jbcrypt.BCrypt
   */
 @Singleton
 class HashHelper{
-  private val providers: Map[String, HashProvider] = Map("bcrypt" -> new BCryptHashProvider)
+  private val providers: Map[String, HashProvider] = Map(
+    "bcrypt" -> new BCryptHashProvider,
+    "old" -> new ShittyAlgoProvider
+  )
   private val DEFAULT_ALGO = "bcrypt"
 
   /**
@@ -41,6 +45,25 @@ class HashHelper{
     override def check(hashed: String, input: String): Boolean = {
       if (hashed != null && input != null) BCrypt.checkpw(input, hashed)
       else throw new NullPointerException
+    }
+  }
+
+  /**
+    * The HashProvider for the old password hashing mechanism
+    */
+  private class ShittyAlgoProvider extends HashProvider {
+    override def hash(password: String): String = throw new UnsupportedOperationException("why are you using this algo?")
+
+    override def check(hashed: String, input: String): Boolean = {
+      val sha = new SHA1.Digest
+      val md5 = new MD5.Digest
+      sha.update(input.getBytes)
+      md5.update(input.getBytes)
+      md5.update(sha.digest())
+
+      val hash = new String(md5.digest())
+
+      hash == input
     }
   }
 }
