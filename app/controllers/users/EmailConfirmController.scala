@@ -9,7 +9,8 @@ import play.api.mvc._
 import utils.Formats._
 
 import scala.concurrent.{ExecutionContext, Future}
-
+import constants.results.Errors._
+import utils.Implicits._
 /**
   * @author zyuiop
   */
@@ -20,15 +21,15 @@ class EmailConfirmController @Inject()(cc: ControllerComponents, clients: Client
     val form = emailConfirm.bindFromRequest
 
     form.fold(
-      withErrors => Future(BadRequest(Json.obj("success" -> false, "errors" -> withErrors.errors))),
+      withErrors => formError(withErrors).asFuture,
       { case (email, code) =>
         clients.findClient(email).map { opt =>
           if (opt.isEmpty)
-            NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("email", "error.not_found"))))
+            notFound("email")
           else {
             val client = opt.get._1
             if (!client.emailConfirmKey.contains(code)) {
-              NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("code", "error.not_found"))))
+              notFound("code")
             } else {
               clients.updateClient(client.copy(emailConfirmKey = None))
               Ok(Json.obj("success" -> true, "errors" -> JsArray()))

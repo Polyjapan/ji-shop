@@ -13,7 +13,8 @@ import utils.Formats._
 import utils.HashHelper
 
 import scala.concurrent.{ExecutionContext, Future}
-
+import constants.results.Errors._
+import utils.Implicits._
 /**
   * @author zyuiop
   */
@@ -25,7 +26,7 @@ class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel,
       withErrors => {
 
         // If we have errors, we show the form again with the errors
-        Future(BadRequest(Json.obj("success" -> false, "errors" -> withErrors.errors)))
+        formError(withErrors).asFuture
       }, userData => {
         // If we have no error in the form itself we try to find the user data
         clients.findClient(userData._1).map { opt =>
@@ -35,7 +36,7 @@ class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel,
 
             if (hash.check(client.passwordAlgo, client.password, userData._2)) {
               if (client.emailConfirmKey.nonEmpty)
-                BadRequest(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.email_not_confirmed"))))
+                BadRequest.asError("error.email_not_confirmed")
               else {
                 // We try to upgrade the password of the user if it's using an insecure algo
                 val newPasword = hash.upgrade(client.passwordAlgo, userData._2)
@@ -53,8 +54,8 @@ class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel,
                 val session = JwtSession() + ("user", AuthenticatedUser(client, perms))
                 Ok(Json.obj("success" -> true, "errors" -> JsArray())).withJwtSession(session)
               }
-            } else BadRequest(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.not_found"))))
-          } else BadRequest(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.not_found"))))
+            } else notFound()
+          } else notFound()
 
         }
       }

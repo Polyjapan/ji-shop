@@ -1,20 +1,19 @@
 package controllers.shop
 
+import constants.results.Errors._
 import data._
 import javax.inject.Inject
 import models.{OrdersModel, ProductsModel}
 import pdi.jwt.JwtSession._
 import play.api.Configuration
-import play.api.data.FormError
 import play.api.i18n.I18nSupport
 import play.api.libs.json.Json
 import play.api.libs.mailer.MailerClient
 import play.api.mvc._
 import services.{PolybankingClient, TicketGenerator}
-import utils.Formats._
+import utils.Implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
-
 
 /**
   * @author zyuiop
@@ -43,12 +42,12 @@ class ItemsController @Inject()(cc: MessagesControllerComponents, pdfGen: Ticket
 
   /**
     * Get all the items in the visible editions, even if they are not visible to the public<br>
-    *   These items will not be allowed to appear on a non-web order
+    * These items will not be allowed to appear on a non-web order
     */
   def getAllItems: Action[AnyContent] = Action.async { implicit request => {
     request.jwtSession.getAs[AuthenticatedUser]("user") match {
       case Some(user) if user.hasPerm("admin.see_invisible_items") => sqlGetItems(_.getProductsAdmin)
-      case _ => Future(Unauthorized(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.no_permissions")))))
+      case _ => noPermissions.asFuture
     }
   }
   }

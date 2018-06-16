@@ -37,17 +37,7 @@ package object models {
 
   private[models] val events = TableQuery[Events]
 
-  implicit val sourceMap = MappedColumnType.base[Source, String]({
-    case OnSite => "ONSITE"
-    case Reseller => "RESELLER"
-    case Web => "WEB"
-    case Gift => "GIFT"
-  }, {
-    case "ONSITE" => OnSite
-    case "RESELLER" => Reseller
-    case "WEB" => Web
-    case "GIFT" => Gift
-  })
+  implicit val sourceMap = MappedColumnType.base[Source, String](Source.unapply, Source.apply)
 
   private[models] class Orders(tag: Tag) extends Table[Order](tag, "orders") {
     def id = column[Int]("order_id", O.PrimaryKey, O.AutoInc)

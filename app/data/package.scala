@@ -57,6 +57,17 @@ package object data {
     */
   case object Gift extends Source
 
+  object Source {
+    def unapply(arg: Source): String = arg.toString.toUpperCase
+
+    def apply(string: String): Source = string.toUpperCase match {
+      case "ONSITE" => OnSite
+      case "RESELLER" => Reseller
+      case "WEB" => Web
+      case "GIFT" => Gift
+    }
+  }
+
   /**
     * Describes an order in the shop.
     *

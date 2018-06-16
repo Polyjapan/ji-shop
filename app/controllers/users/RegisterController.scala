@@ -18,7 +18,8 @@ import utils.HashHelper
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
-
+import constants.results.Errors._
+import utils.Implicits._
 /**
   * @author zyuiop
   */
@@ -32,10 +33,7 @@ class RegisterController @Inject()(cc: MessagesControllerComponents, clients: Cl
     val form = registerForm.bindFromRequest
 
     form.fold( // We bind the request to the form
-      withErrors => {
-        // If we have errors, we show the form again with the errors
-        Future(BadRequest(Json.obj("success" -> false, "errors" -> withErrors.errors)))
-      }, userData => {
+      formError(_).asFuture, userData => {
         // If we have no error in the form itself we try to find the user data
         clients.findClient(userData._1).map { opt =>
           if (opt.isDefined) {

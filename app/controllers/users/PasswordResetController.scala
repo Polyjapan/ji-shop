@@ -18,7 +18,8 @@ import utils.HashHelper
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
-
+import constants.results.Errors._
+import utils.Implicits._
 /**
   * @author zyuiop
   */
@@ -74,15 +75,15 @@ class PasswordResetController @Inject()(cc: MessagesControllerComponents, client
     val form = resetForm.bindFromRequest
 
     form.fold(
-      withErrors => Future(BadRequest(Json.obj("success" -> false, "errors" -> withErrors.errors))),
+      withErrors => formError(withErrors).asFuture,
       { case (email, code, pass) =>
         clients.findClient(email).map { opt =>
           if (opt.isEmpty)
-            NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("email", "error.not_found"))))
+            notFound("email")
           else {
             val client = opt.get._1
             if (!checkPasswordRequest(client, code)) {
-              NotFound(Json.obj("success" -> false, "errors" -> Seq(FormError("code", "error.not_found"))))
+              notFound("code")
             } else {
               val (algo, hashPass) = hash.hash(pass)
               clients.updateClient(client.copy(passwordReset = None, passwordResetEnd = None, password = hashPass, passwordAlgo = algo))

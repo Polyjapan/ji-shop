@@ -10,7 +10,8 @@ import play.api.mvc._
 import utils.Formats._
 
 import scala.concurrent.{ExecutionContext, Future}
-
+import constants.results.Errors._
+import utils.Implicits._
 
 /**
   * @author zyuiop
@@ -22,7 +23,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel)(
     val user = session.getAs[AuthenticatedUser]("user")
 
     if (user.isEmpty)
-      Future(Unauthorized(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.no_auth_token")))))
+      notAuthenticated.asFuture
     else {
       orders.loadOrders(user.get.id, user.get.hasPerm("admin.see_all")).map(ords => Ok(
         JsArray(ords.map(ord => Json.toJson(JsonOrder(ord))))
