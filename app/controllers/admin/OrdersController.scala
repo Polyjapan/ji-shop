@@ -13,8 +13,9 @@ import play.api.mvc.{AbstractController, Action, ControllerComponents}
 import services.TicketGenerator
 import utils.Implicits._
 import pdi.jwt.JwtSession._
+import utils.Timings
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * @author zyuiop
@@ -63,7 +64,8 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
         val attachments: Seq[AttachmentData] =
           oldSeq.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))
 
-        mailSender(attachments, client)
+
+        Future(mailSender(attachments, client))
 
         Ok
       case _ => dbError
