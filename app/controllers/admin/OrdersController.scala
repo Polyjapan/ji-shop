@@ -58,7 +58,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
 
   private def processOrder(orderId: Int, mailSender: MailSender) = {
     orders.acceptOrder(orderId).map {
-      case (Seq(), _) => NotFound.asError("error.order_not_found")
+      case (Seq(), _) => NotFound.asError("error.already_accepted")
       case (oldSeq, client) if oldSeq.nonEmpty =>
         val attachments: Seq[AttachmentData] =
           oldSeq.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))
@@ -66,7 +66,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
         mailSender(attachments, client)
 
         Ok
-      case _ => BadRequest.asError("error.already_accepted")
+      case _ => dbError
     }
   }
 
