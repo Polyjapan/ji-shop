@@ -183,6 +183,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       .map(_.paymentConfirmed)
       .filter(_.isEmpty)
       .update(Some(new Timestamp(System.currentTimeMillis())))
+      .flatMap(r => if (r >= 1) DBIO.successful(Unit) else DBIO.failed(new IllegalStateException()))
 
     // This query selects the tickets in the command
     val orderedTicketsQuery = productJoin
@@ -246,7 +247,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
 
 
     db.run((updateConfirmTimeQuery andThen computeResult).transactionally).recover {
-      case e: SQLIntegrityConstraintViolationException =>
+      case _: SQLIntegrityConstraintViolationException | _: IllegalStateException =>
         println("Duplicate IPN request for " + order + ", returning empty result")
         (Seq(), null)
     }
