@@ -2,7 +2,6 @@ package constants.results
 
 import play.api.data.{Form, FormError}
 import play.api.libs.json.Json
-import play.api.libs.json.Json.JsValueWrapper
 import play.api.mvc.Result
 import play.api.mvc.Results._
 import utils.Formats._
@@ -12,15 +11,15 @@ import utils.Formats._
   */
 object Errors {
 
-  type BaseResultType = Function[Any, Result]
-
   implicit class PostFixAsError(result: Result) {
-    implicit def asFormErrorSeq(err: Seq[FormError]): Result =
-      result match {
-        case r: BaseResultType =>
-          r(Json.obj("success" -> false, "errors" -> err))
-        case _ => result
-      }
+    //noinspection TypeCheckCanBeMatch
+    //somehow, patternmatching doesn't work for this case
+    implicit def asFormErrorSeq(err: Seq[FormError]): Result = {
+      if (result.isInstanceOf[Status]) {
+        val r = result.asInstanceOf[Status]
+        r(Json.obj("success" -> false, "errors" -> err))
+      } else result
+    }
 
     implicit def asFormError(err: FormError*): Result = asFormErrorSeq(err.toSeq)
 

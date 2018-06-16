@@ -24,3 +24,6 @@ POST        /orders/ipn                     controllers.orders.TicketsController
 GET         /orders/download/:barcode.pdf   controllers.orders.TicketsController.getTicket(barcode: String)
 GET         /orders/view                    controllers.orders.OrdersController.getOrders
 GET         /orders/view/:id                controllers.orders.OrdersController.getOrder(id: Int)
+
++nocsrf
+POST        /admin/orders/validate          controllers.admin.OrdersController.validateOrder
