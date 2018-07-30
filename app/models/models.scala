@@ -156,7 +156,7 @@ package object models {
 
   private[models] class ScanningItems(tag: Tag) extends Table[ScanningItem](tag, "scanning_items") {
     def scanningConfigurationId = column[Int]("scanning_configuration_id")
-    def acceptedItemId = column[Int]("scanning_configuration_name")
+    def acceptedItemId = column[Int]("product_id")
 
     def configuration = foreignKey("scanning_items_config_fk", scanningConfigurationId, scanningConfigurations)(_.id)
     def item = foreignKey("scanning_items_item_fk", acceptedItemId, products)(_.id)
