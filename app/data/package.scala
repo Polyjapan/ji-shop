@@ -132,6 +132,21 @@ package object data {
     */
   case class ClaimedTicket(ticketId: Int, claimedAt: Timestamp, claimedBy: Int)
 
+  /**
+    * Describe a scanning configuration, i.e. a group of accepted barcode types
+    * @param id                 the unique id of this configuration
+    * @param name               a name identifying the configuration
+    * @param acceptOrderTickets if true, order barcodes will be accepted by this configuration
+    */
+  case class ScanningConfiguration(id: Option[Int], name: String, acceptOrderTickets: Boolean)
+
+  /**
+    * Describe an item that can be scanned by a configuration
+    * @param scanningConfiguration  the configuration scanning this item (id)
+    * @param acceptedItem           the item scanned (id)
+    */
+  case class ScanningItem(scanningConfiguration: Int, acceptedItem: Int)
+
 
   implicit val eventFormat = Json.format[Event]
   implicit val productFormat = Json.format[Product]

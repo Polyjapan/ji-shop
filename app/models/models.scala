@@ -1,6 +1,7 @@
 import java.sql.Timestamp
 
 import data._
+import models.ScanningConfigurations
 import slick.jdbc.MySQLProfile.api._
 
 /**
@@ -141,4 +142,28 @@ package object models {
   }
 
   private[models] val orderedProducts = TableQuery[OrderedProducts]
+
+
+  private[models] class ScanningConfigurations(tag: Tag) extends Table[ScanningConfiguration](tag, "scanning_configurations") {
+    def id = column[Int]("scanning_configuration_id", O.PrimaryKey, O.AutoInc)
+    def name = column[String]("scanning_configuration_name", O.SqlType("VARCHAR(250)"))
+    def acceptOrderTickets = column[Boolean]("accept_order_tickets")
+
+    def * =
+      (id.?, name, acceptOrderTickets).shaped <> (ScanningConfiguration.tupled, ScanningConfiguration.unapply)
+  }
+  private[models] val scanningConfigurations = TableQuery[ScanningConfigurations]
+
+  private[models] class ScanningItems(tag: Tag) extends Table[ScanningItem](tag, "scanning_items") {
+    def scanningConfigurationId = column[Int]("scanning_configuration_id")
+    def acceptedItemId = column[Int]("scanning_configuration_name")
+
+    def configuration = foreignKey("scanning_items_config_fk", scanningConfigurationId, scanningConfigurations)(_.id)
+    def item = foreignKey("scanning_items_item_fk", acceptedItemId, products)(_.id)
+
+    def * =
+      (scanningConfigurationId, acceptedItemId).shaped <> (ScanningItem.tupled, ScanningItem.unapply)
+  }
+
+  private[models] val scanningItems = TableQuery[ScanningItems]
 }

@@ -58,7 +58,7 @@ class TicketsController @Inject()(cc: ControllerComponents, pdfGen: TicketGenera
       orders.findBarcode(barCode) map {
         case None =>
           NotFound.asError("error.ticket_not_found")
-        case Some((code, client: Client)) =>
+        case Some((code, client: Client, _)) =>
           if (client.id.get != user.get.id && !user.get.hasPerm("admin.view_other_ticket"))
           // Return the same error as if the ticket didn't exist
           // It avoids leaking information about whether or not a ticket exists

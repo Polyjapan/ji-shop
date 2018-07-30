@@ -34,6 +34,10 @@ after year. The goal of this project is to create a new plateform that can be us
 - [ ] (Admin) Read data
   -  [ ] Export all tickets for a given edition to different lists
   -  [ ] Display stats 
+- [ ] (BackOffice) Scan tickets
+  -  [ ] Create scanning configurations, with a list of allowed item types
+  -  [ ] Endpoint to scan a barcode with a given config, checking if it's allowed or not
+  -  [ ] Endpoint to scan an order barcode (with a special config), checking if it's allowed and returning a list of the items it contains
   
 ## Other stuff to do:
 
