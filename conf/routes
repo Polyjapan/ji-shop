@@ -27,3 +27,6 @@ GET         /orders/view/:id                controllers.orders.OrdersController.
 
 +nocsrf
 POST        /admin/orders/validate          controllers.admin.OrdersController.validateOrder
+
++nocsrf
+POST        /scan/process/:id               controllers.scanning.ScanningController.scanCode(id: Int)
