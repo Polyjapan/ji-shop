@@ -7,7 +7,7 @@ import models.{AlreadyValidatedTicketException, OrdersModel, ScanningModel}
 import pdi.jwt.JwtSession._
 import play.api.data.Forms.{mapping, _}
 import play.api.data.{Form, FormError}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.libs.mailer.MailerClient
 import play.api.mvc._
 import utils.Implicits._
@@ -49,8 +49,8 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
                   // We check if this barcode is accepted by this config
                   if (items.map(_.acceptedItem).toSet.contains(product.id.get)) {
                     // Code accepted, we invalidate it and return the item scanned
-                    invalidateCode(codeId, user, Json.toJson(product))
-                  } else MethodNotAllowed.asError("error.product_not_allowed").asFuture
+                    invalidateCode(codeId, user, Json.toJsObject(product))
+                  } else MethodNotAllowed.asFormError(FormError("", "error.product_not_allowed", Seq(Json.toJson(product)))).asFuture
                 case OrdersModel.OrderBarCode(_, products, _, _) =>
                   // We have a OrderBarCode <=> a barcode corresponding to an order (a list of products)
                   // We check if that config accepts order tickets
@@ -75,12 +75,12 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
     * @param data   the data to return if the barcode was still valid
     * @return
     */
-  private def invalidateCode(codeId: Int, user: Option[AuthenticatedUser], data: => JsValue) = {
+  private def invalidateCode(codeId: Int, user: Option[AuthenticatedUser], data: => JsObject) = {
     // Try to invalidate the barcode
     scanModel.invalidateBarcode(codeId, user.get.id).map(rep =>
       // The barcode was valid, check if it was correctly invalidated
       if (rep == 0) InternalServerError.asError("error.insert_failed") // It wasn't.
-      else Ok(data)
+      else Ok(data + ("success" -> Json.toJson(true)))
     ).recoverWith {
       // Something didn't work.
       case AlreadyValidatedTicketException(ticket, claimedBy) =>
