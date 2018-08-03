@@ -105,7 +105,7 @@ class PasswordResetController @Inject()(cc: MessagesControllerComponents, client
     val user = session.getAs[AuthenticatedUser]("user")
 
     if (user.isEmpty)
-      Future(Unauthorized(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.no_auth_token")))))
+      notAuthenticated.asFuture
     else
       form.fold(
         withErrors => formError(withErrors).asFuture,
