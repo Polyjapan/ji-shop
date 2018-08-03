@@ -13,6 +13,8 @@ POST        /users/emailConfirm             controllers.users.EmailConfirmContro
 POST        /users/recoverPassword          controllers.users.PasswordResetController.recoverPasswordSend
 +nocsrf
 POST        /users/resetPassword            controllers.users.PasswordResetController.passwordResetSend
++nocsrf
+POST        /users/passwordChange           controllers.users.PasswordResetController.passwordChange
 
 
 

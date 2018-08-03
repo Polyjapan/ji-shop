@@ -5,7 +5,7 @@ import java.security.SecureRandom
 import java.sql.Timestamp
 
 import javax.inject.Inject
-import models.ClientsModel
+import models.{ClientsModel, JsonOrderData}
 import play.api.Configuration
 import play.api.data.Forms._
 import play.api.data._
@@ -15,10 +15,12 @@ import play.api.libs.mailer._
 import play.api.mvc._
 import utils.Formats._
 import utils.HashHelper
+import pdi.jwt.JwtSession._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
 import constants.results.Errors._
+import data.AuthenticatedUser
 import utils.Implicits._
 /**
   * @author zyuiop
@@ -26,12 +28,13 @@ import utils.Implicits._
 class PasswordResetController @Inject()(cc: MessagesControllerComponents, clients: ClientsModel, hash: HashHelper, mailerClient: MailerClient, config: Configuration)(implicit ec: ExecutionContext) extends MessagesAbstractController(cc) with I18nSupport {
   private val recoverForm = Form(mapping("email" -> email)(e => e)(Some(_)))
   private val resetForm = Form(mapping("email" -> email, "code" -> nonEmptyText, "password" -> nonEmptyText(8))(Tuple3.apply)(Tuple3.unapply))
+  private val changeForm = Form(mapping("password" -> nonEmptyText(8))(e => e)(Some(_)))
 
   private val chars = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9')
   private val random = new Random(new SecureRandom())
 
 
-  def recoverPasswordSend = Action(parse.json) { implicit request =>
+  def recoverPasswordSend: Action[JsValue] = Action(parse.json) { implicit request =>
     recoverForm.bindFromRequest.fold(
       withErrors => Future(BadRequest(Json.obj("success" -> false, "errors" -> withErrors.errors))), email => {
         clients.findClient(email).map {
@@ -65,13 +68,13 @@ class PasswordResetController @Inject()(cc: MessagesControllerComponents, client
         }
       }
     )
-    Ok
+    Ok(Json.obj("success" -> true, "errors" -> JsArray()))
   }
 
   private def checkPasswordRequest(client: data.Client, code: String): Boolean =
     client.passwordReset.contains(code) && client.passwordResetEnd.exists(_.getTime > System.currentTimeMillis)
 
-  def passwordResetSend = Action.async(parse.json) { implicit request =>
+  def passwordResetSend: Action[JsValue] = Action.async(parse.json) { implicit request =>
     val form = resetForm.bindFromRequest
 
     form.fold(
@@ -94,5 +97,29 @@ class PasswordResetController @Inject()(cc: MessagesControllerComponents, client
       })
 
 
+  }
+
+  def passwordChange: Action[JsValue] = Action.async(parse.json) { implicit request =>
+    val form = changeForm.bindFromRequest
+    val session = request.jwtSession
+    val user = session.getAs[AuthenticatedUser]("user")
+
+    if (user.isEmpty)
+      Future(Unauthorized(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.no_auth_token")))))
+    else
+      form.fold(
+        withErrors => formError(withErrors).asFuture,
+        pass =>
+          clients.findClient(user.get.email).map { opt =>
+            if (opt.isEmpty)
+              notFound("email")
+            else {
+              val client = opt.get._1
+              val (algo, hashPass) = hash.hash(pass)
+              clients.updateClient(client.copy(passwordReset = None, passwordResetEnd = None, password = hashPass, passwordAlgo = algo))
+              Ok(Json.obj("success" -> true, "errors" -> JsArray()))
+            }
+          }
+        )
   }
 }
