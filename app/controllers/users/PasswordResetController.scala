@@ -14,7 +14,7 @@ import play.api.libs.json._
 import play.api.libs.mailer._
 import play.api.mvc._
 import utils.Formats._
-import utils.HashHelper
+import utils.{HashHelper, RandomUtils}
 import pdi.jwt.JwtSession._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,16 +30,13 @@ class PasswordResetController @Inject()(cc: MessagesControllerComponents, client
   private val resetForm = Form(mapping("email" -> email, "code" -> nonEmptyText, "password" -> nonEmptyText(8))(Tuple3.apply)(Tuple3.unapply))
   private val changeForm = Form(mapping("password" -> nonEmptyText(8))(e => e)(Some(_)))
 
-  private val chars = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9')
-  private val random = new Random(new SecureRandom())
-
 
   def recoverPasswordSend: Action[JsValue] = Action(parse.json) { implicit request =>
     recoverForm.bindFromRequest.fold(
       withErrors => Future(BadRequest(Json.obj("success" -> false, "errors" -> withErrors.errors))), email => {
         clients.findClient(email).map {
           case Some((client, perms)) =>
-            val resetCode = List.fill(30)(random.nextInt(chars.length)).map(chars).mkString
+            val resetCode = RandomUtils.randomString(30)
             val emailEncoded = URLEncoder.encode(client.email, "UTF-8")
 
             val url = config.get[String]("polyjapan.siteUrl") + "/passwordReset#mail=" + emailEncoded + "&code=" + resetCode

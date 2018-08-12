@@ -10,6 +10,9 @@ import utils.Formats._
 
 import scala.concurrent.{ExecutionContext, Future}
 import constants.results.Errors._
+import data.AuthenticatedUser
+import pdi.jwt.JwtSession
+import pdi.jwt.JwtSession._
 import utils.Implicits._
 /**
   * @author zyuiop
@@ -23,7 +26,8 @@ class EmailConfirmController @Inject()(cc: ControllerComponents, clients: Client
     form.fold(
       withErrors => formError(withErrors).asFuture,
       { case (email, code) =>
-        clients.findClient(email).map { opt =>
+        if (code.length < 30) notFound("code").asFuture
+        else clients.findClient(email).map { opt =>
           if (opt.isEmpty)
             notFound("email")
           else {
@@ -31,8 +35,13 @@ class EmailConfirmController @Inject()(cc: ControllerComponents, clients: Client
             if (!client.emailConfirmKey.contains(code)) {
               notFound("code")
             } else {
-              clients.updateClient(client.copy(emailConfirmKey = None))
-              Ok(Json.obj("success" -> true, "errors" -> JsArray()))
+              val updatedClient = client.copy(emailConfirmKey = None)
+              clients.updateClient(updatedClient)
+
+              // Create the JWT Session
+              // When a user verifies its email we can be sure it is legit, so we return an authentication token
+              val session = JwtSession() + ("user", AuthenticatedUser(updatedClient, opt.get._2))
+              Ok(Json.obj("success" -> true, "errors" -> JsArray())).withJwtSession(session)
             }
           }
         }

@@ -1,4 +1,4 @@
-name := "JIShop"
+name := "jishop"
  
 version := "1.0" 
       

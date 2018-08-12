@@ -1,5 +1,9 @@
 # TODO : replace with CORS checks
 
+OPTIONS /                           controllers.OptionsController.rootOptions
+OPTIONS /*url                       controllers.OptionsController.options(url: String)
+
+
 GET         /shop/items                     controllers.shop.ItemsController.getItems
 GET         /shop/items/all                 controllers.shop.ItemsController.getAllItems
 
