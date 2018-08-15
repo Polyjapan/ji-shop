@@ -126,36 +126,7 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
     * @param result the result of the database insert of the order
     * @return a [[Result]]
     */
-  private def generateResult(result: (Iterable[CheckedOutItem], Int, Double)): Future[Result] = result match {
-    case (list: Iterable[CheckedOutItem], orderId: Int, totalPrice: Double) =>
-
-      // Create a list of [[OrderedProduct]] to insert
-      val items = list.flatMap(coItem =>
-        for (i <- 1 to coItem.itemAmount) // Generate as much ordered products as the quantity requested
-          yield OrderedProduct(Option.empty, coItem.itemId, orderId, coItem.itemPrice.get)
-      )
-
-      // Order them
-      orders.orderProducts(items).flatMap {
-        case Some(v) if v >= items.size =>
-          // TODO: the client should check that the returned ordered list contains the same items that the one requested
-          pb.startPayment(totalPrice, orderId, list).map {
-            case (true, url) =>
-              Ok(Json.obj("ordered" -> list, "success" -> true, "redirect" -> url))
-            case (false, err) =>
-              InternalServerError.asError(ErrorCodes.POLYBANKING(err))
-          }
-        case _ => dbError.asFuture
-      }
-  }
-
-  /**
-    * Get the result from the database insert, insert the products, and generate a Result
-    *
-    * @param result the result of the database insert of the order
-    * @return a [[Result]]
-    */
-  private def generateResult(result: (Iterable[CheckedOutItem], Int, Double), source: Source): Future[Result] = result match {
+  private def generateResult(source: Source)(result: (Iterable[CheckedOutItem], Int, Double)): Future[Result] = result match {
     case (list: Iterable[CheckedOutItem], orderId: Int, totalPrice: Double) =>
 
       // Create a list of [[OrderedProduct]] to insert
@@ -193,7 +164,7 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
       .map(sanitizeInput(items, _, source)) // sanitize the user input using the database
       .map(checkItemAvailability(items, _, source)) // check that items are available
       .flatMap(postOrder(user, _, source))
-      .flatMap(generateResult)
+      .flatMap(generateResult(source))
       .recover {
         case OutOfStockException(items) =>
           NotFound.asFormErrorSeq(
