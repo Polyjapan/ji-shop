@@ -1,6 +1,8 @@
 package controllers.orders
 
+import constants.Permissions
 import constants.emails.OrderEmail
+import constants.results.Errors
 import constants.results.Errors._
 import data._
 import javax.inject.Inject
@@ -57,12 +59,12 @@ class TicketsController @Inject()(cc: ControllerComponents, pdfGen: TicketGenera
     else {
       orders.findBarcode(barCode) map {
         case None =>
-          NotFound.asError("error.ticket_not_found")
+          Errors.notFound()
         case Some((code, client: Client, _)) =>
-          if (client.id.get != user.get.id && !user.get.hasPerm("admin.view_other_ticket"))
+          if (client.id.get != user.get.id && !user.get.hasPerm(Permissions.VIEW_OTHER_TICKET))
           // Return the same error as if the ticket didn't exist
           // It avoids leaking information about whether or not a ticket exists
-            NotFound.asError("error.ticket_not_found")
+            Errors.notFound()
           else {
             // Generate the PDF
             Ok(pdfGen.genPdf(code)._2).as("application/pdf")
@@ -71,5 +73,4 @@ class TicketsController @Inject()(cc: ControllerComponents, pdfGen: TicketGenera
     }
   }
   }
-
 }

@@ -1,5 +1,7 @@
 package controllers.orders
 
+import constants.Permissions
+import constants.results.Errors
 import data._
 import javax.inject.Inject
 import models.{JsonOrder, JsonOrderData, OrdersModel}
@@ -25,7 +27,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel)(
     if (user.isEmpty)
       notAuthenticated.asFuture
     else {
-      orders.loadOrders(user.get.id, user.get.hasPerm("admin.see_all")).map(ords => Ok(
+      orders.loadOrders(user.get.id, user.get.hasPerm(Permissions.SEE_ALL_ORDER_TYPES)).map(ords => Ok(
         JsArray(ords.map(ord => Json.toJson(JsonOrder(ord))))
       ))
     }
@@ -37,11 +39,11 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel)(
     val user = session.getAs[AuthenticatedUser]("user")
 
     if (user.isEmpty)
-      Future(Unauthorized(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.no_auth_token")))))
+      Errors.notAuthenticated.asFuture
     else {
       orders.loadOrder(orderId)
         .map(opt =>
-          opt.filter(data => data.order.clientId == user.get.id || user.get.hasPerm("admin.view_other_order")))
+          opt.filter(data => data.order.clientId == user.get.id || user.get.hasPerm(Permissions.VIEW_OTHER_ORDER)))
         .map {
           case Some(data) => Ok(Json.toJson(JsonOrderData(data)))
           case None => NotFound

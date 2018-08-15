@@ -1,5 +1,6 @@
 package controllers.admin
 
+import constants.{ErrorCodes, Permissions}
 import constants.emails.OrderEmail
 import constants.results.Errors._
 import data.AuthenticatedUser
@@ -31,7 +32,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
   def validateOrder: Action[JsValue] = Action.async(parse.json) { implicit request => {
     val user = request.jwtSession.getAs[AuthenticatedUser]("user")
     if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm("admin.force_validation")) noPermissions.asFuture
+    else if (!user.get.hasPerm(Permissions.FORCE_VALIDATION)) noPermissions.asFuture
     else validationRequest.bindFromRequest.fold(err =>
       formError(err).asFuture, {
       case (orderId, None) =>
@@ -59,7 +60,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
 
   private def processOrder(orderId: Int, mailSender: MailSender) = {
     orders.acceptOrder(orderId).map {
-      case (Seq(), _) => NotFound.asError("error.already_accepted")
+      case (Seq(), _) => NotFound.asError(ErrorCodes.ALREADY_ACCEPTED)
       case (oldSeq, client) if oldSeq.nonEmpty =>
         val attachments: Seq[AttachmentData] =
           oldSeq.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))

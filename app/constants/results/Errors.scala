@@ -5,6 +5,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Result
 import play.api.mvc.Results._
 import utils.Formats._
+import constants.ErrorCodes
 
 /**
   * @author zyuiop
@@ -28,14 +29,14 @@ object Errors {
 
   def formError(err: Form[_]): Result = BadRequest.asFormErrorSeq(err.errors)
 
-  def notAuthenticated: Result = Forbidden.asError("error.no_auth_token")
+  def notAuthenticated: Result = Forbidden.asError(ErrorCodes.AUTH_MISSING)
 
-  def dbError: Result = InternalServerError.asError("error.db_error")
+  def dbError: Result = InternalServerError.asError(ErrorCodes.DATABASE)
 
-  def noPermissions: Result = Unauthorized.asError("error.no_permissions")
+  def noPermissions: Result = Unauthorized.asError(ErrorCodes.PERMS_MISSING)
 
-  def unknownError: Result = InternalServerError.asError("error.exception")
+  def unknownError: Result = InternalServerError.asError(ErrorCodes.UNKNOWN)
 
-  def notFound(field: String = ""): Result = NotFound.asFormError(FormError(field, "error.not_found"))
+  def notFound(field: String = ""): Result = NotFound.asFormError(FormError(field, ErrorCodes.NOT_FOUND))
 
 }

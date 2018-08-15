@@ -2,6 +2,7 @@ package controllers.orders
 
 import java.sql.Timestamp
 
+import constants.{ErrorCodes, Permissions}
 import constants.results.Errors._
 import data._
 import exceptions.OutOfStockException
@@ -28,16 +29,16 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
   def checkout: Action[JsValue] = Action.async(parse.json) { implicit request =>
     (request.jwtSession.getAs[AuthenticatedUser]("user"), request.body.asOpt[CheckedOutOrder]) match {
       case (None, _) => notAuthenticated.asFuture
-      case (_, None) | (_, Some(Seq())) => BadRequest.asError("error.no_requested_item").asFuture
+      case (_, None) | (_, Some(Seq())) => BadRequest.asError(ErrorCodes.NO_REQUESTED_ITEM).asFuture
       case (Some(user), Some(order)) => parseOrder(order, user)
     }
   }
 
   private def checkPermissions(source: Option[Source], user: AuthenticatedUser): Boolean = source match {
     case None | Some(Web) => true
-    case Some(OnSite) if user.hasPerm("staff.sell_on_site") => true
-    case Some(Reseller) if user.hasPerm("admin.import_external") => true
-    case Some(Gift) if user.hasPerm("admin.give_for_free") => true
+    case Some(OnSite) if user.hasPerm(Permissions.SELL_ON_SITE) => true
+    case Some(Reseller) if user.hasPerm(Permissions.IMPORT_EXTERNAL) => true
+    case Some(Gift) if user.hasPerm(Permissions.GIVE_FOR_FREE) => true
     case _ => false
   }
 
@@ -142,7 +143,7 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
             case (true, url) =>
               Ok(Json.obj("ordered" -> list, "success" -> true, "redirect" -> url))
             case (false, err) =>
-              InternalServerError.asError(s"error.polybanking.$err")
+              InternalServerError.asError(ErrorCodes.POLYBANKING(err))
           }
         case _ => dbError.asFuture
       }
@@ -170,7 +171,7 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
           // If the user comes from the site, we generate a payment link and make him pay
           if (source == Web) pb.startPayment(totalPrice, orderId, list).map {
             case (true, url) => Ok(Json.obj("ordered" -> list, "success" -> true, "redirect" -> url))
-            case (false, err) => InternalServerError.asError(s"error.polybanking.$err")
+            case (false, err) => InternalServerError.asError(ErrorCodes.POLYBANKING(err))
           }
           else Future(Ok(Json.obj("ordered" -> list, "success" -> true, "orderId" -> orderId)))
 
@@ -197,11 +198,11 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
         case OutOfStockException(items) =>
           NotFound.asFormErrorSeq(
             Seq(
-              FormError("", "error.item_out_of_stock",
+              FormError("", ErrorCodes.OUT_OF_STOCK,
                 items.map(it => Json.obj("itemId" -> it.id, "itemName" -> it.name)).toSeq) // return a list of items missing in the error
             ))
         case _: NoSuchElementException =>
-          NotFound.asError("error.missing_item")
+          NotFound.asError(ErrorCodes.MISSING_ITEM)
         case _: Throwable =>
           unknownError
       }

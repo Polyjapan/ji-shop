@@ -1,5 +1,7 @@
 package controllers.scanning
 
+import constants.{ErrorCodes, Permissions}
+import constants.results.Errors
 import constants.results.Errors._
 import data._
 import javax.inject.Inject
@@ -25,7 +27,7 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
     val user = session.getAs[AuthenticatedUser]("user")
 
     if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm("admin.scan_ticket")) noPermissions.asFuture
+    else if (!user.get.hasPerm(Permissions.SCAN_TICKET)) noPermissions.asFuture
     else {
       scanForm.bindFromRequest().fold(
         withErrors => {
@@ -38,9 +40,9 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
           // processing times]
           scanModel.getConfig(configId).flatMap(model => orders.findBarcode(barcode).map((model, _))).flatMap {
             case (None, _) =>
-              NotFound.asError("error.scanning_config_not_found").asFuture
+              Errors.notFound("config").asFuture
             case (_, None) =>
-              NotFound.asError("error.ticket_not_found").asFuture
+              Errors.notFound("barcode").asFuture
             case (Some((config, items)), Some((code, client, codeId))) =>
               // We've found both the config and the code
               code match {
@@ -50,7 +52,7 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
                   if (items.map(_.acceptedItem).toSet.contains(product.id.get)) {
                     // Code accepted, we invalidate it and return the item scanned
                     invalidateCode(codeId, user, Json.toJsObject(product))
-                  } else MethodNotAllowed.asFormError(FormError("", "error.product_not_allowed", Seq(Json.toJson(product)))).asFuture
+                  } else MethodNotAllowed.asFormError(FormError("", ErrorCodes.PRODUCT_NOT_ALLOWED, Seq(Json.toJson(product)))).asFuture
                 case OrdersModel.OrderBarCode(_, products, _, _) =>
                   // We have a OrderBarCode <=> a barcode corresponding to an order (a list of products)
                   // We check if that config accepts order tickets
@@ -58,7 +60,7 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
                     // Code accepted, we invalidate it and return the list of items
                     invalidateCode(codeId, user, Json.obj("products" -> products, "user" -> (client.firstname + " " + client.lastname)))
 
-                  } else MethodNotAllowed.asError("error.product_only_configuration").asFuture
+                  } else MethodNotAllowed.asError(ErrorCodes.PRODUCTS_ONLY).asFuture
               }
           }
         })
@@ -79,14 +81,14 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
     // Try to invalidate the barcode
     scanModel.invalidateBarcode(codeId, user.get.id).map(rep =>
       // The barcode was valid, check if it was correctly invalidated
-      if (rep == 0) InternalServerError.asError("error.insert_failed") // It wasn't.
+      if (rep == 0) Errors.dbError // It wasn't.
       else Ok(data + ("success" -> Json.toJson(true)))
     ).recoverWith {
       // Something didn't work.
       case AlreadyValidatedTicketException(ticket, claimedBy) =>
         // The barcode was not valid anymore, we return an error with all the details
         MethodNotAllowed.asFormError(
-          new FormError("", "error.ticket_already_scanned",
+          new FormError("", ErrorCodes.ALREADY_SCANNED,
             Seq(Json.obj(
               "scanedAt" -> ticket.claimedAt,
               "scannedBy" -> (claimedBy.firstname + " " + claimedBy.lastname

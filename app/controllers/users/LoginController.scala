@@ -1,5 +1,6 @@
 package controllers.users
 
+import constants.ErrorCodes
 import constants.emails.EmailVerifyEmail
 import data.AuthenticatedUser
 import javax.inject.Inject
@@ -53,7 +54,7 @@ class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel,
                   EmailVerifyEmail.sendVerifyEmail(client.email, code)
                 }
 
-                BadRequest.asError("error.email_not_confirmed")
+                BadRequest.asError(ErrorCodes.EMAIL_NOT_CONFIRMED)
               } else {
                 // We try to upgrade the password of the user if it's using an insecure algo
                 val newPasword = hash.upgrade(client.passwordAlgo, userData._2)

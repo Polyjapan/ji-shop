@@ -4,6 +4,7 @@ import java.net.URLEncoder
 import java.security.SecureRandom
 import java.sql.Timestamp
 
+import constants.ErrorCodes
 import constants.emails.EmailVerifyEmail
 import javax.inject.Inject
 import models.ClientsModel
@@ -37,7 +38,7 @@ class RegisterController @Inject()(cc: MessagesControllerComponents, clients: Cl
         // If we have no error in the form itself we try to find the user data
         clients.findClient(userData._1).map { opt =>
           if (opt.isDefined) {
-            BadRequest(Json.obj("success" -> false, "errors" -> Seq(FormError("", "error.user_exists"))))
+            BadRequest.asError(ErrorCodes.USER_EXISTS)
           } else {
             val hashed = hash.hash(userData._2)
             val emailCode = RandomUtils.randomString(30)

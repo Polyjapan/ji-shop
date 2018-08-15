@@ -1,5 +1,6 @@
 package controllers.shop
 
+import constants.Permissions
 import constants.results.Errors._
 import data._
 import javax.inject.Inject
@@ -46,7 +47,7 @@ class ItemsController @Inject()(cc: MessagesControllerComponents, pdfGen: Ticket
     */
   def getAllItems: Action[AnyContent] = Action.async { implicit request => {
     request.jwtSession.getAs[AuthenticatedUser]("user") match {
-      case Some(user) if user.hasPerm("admin.see_invisible_items") => sqlGetItems(_.getProductsAdmin)
+      case Some(user) if user.hasPerm(Permissions.SEE_INVISIBLE_ITEMS) => sqlGetItems(_.getProductsAdmin)
       case _ => noPermissions.asFuture
     }
   }
