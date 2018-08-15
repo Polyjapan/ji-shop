@@ -47,7 +47,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
     mailerClient.send(Email(
       "Vos invitations JapanImpact",
       "Comité JapanImpact <comite@japan-impact.ch>",
-      Seq(client.email),
+      Seq(email),
       bodyText = Some("Bonjour, " +
         "\nLe comité JapanImpact a le plaisir de vous faire parvenir vos invitations à notre événement." +
         "\nVous trouverez en pièce jointe vos billets. Vous pouvez les imprimer ou les présenter sur smartphone." +
