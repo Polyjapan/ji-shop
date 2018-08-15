@@ -12,7 +12,7 @@ object EmailVerifyEmail {
   def sendVerifyEmail(email: String, code: String)(implicit mailerClient: MailerClient, config: Configuration): String = {
     val emailEncoded = URLEncoder.encode(email, "UTF-8")
 
-    val url = config.get[String]("polyjapan.siteUrl") + "/emailConfirm#mail=" + emailEncoded + "&code=" + code
+    val url = config.get[String]("polyjapan.siteUrl") + "/emailConfirm/" + emailEncoded + "/" + code
 
     // Send an email
     mailerClient.send(Email(

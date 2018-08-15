@@ -41,7 +41,7 @@ class EmailConfirmController @Inject()(cc: ControllerComponents, clients: Client
               // Create the JWT Session
               // When a user verifies its email we can be sure it is legit, so we return an authentication token
               val session = JwtSession() + ("user", AuthenticatedUser(updatedClient, opt.get._2))
-              Ok(Json.obj("success" -> true, "errors" -> JsArray())).withJwtSession(session)
+              Ok(Json.obj("success" -> true, "errors" -> JsArray(), "token" -> session.serialize)).withJwtSession(session)
             }
           }
         }
