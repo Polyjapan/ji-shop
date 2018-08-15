@@ -69,7 +69,7 @@ class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel,
 
                 // Create the JWT Session
                 val session = JwtSession() + ("user", AuthenticatedUser(client, perms))
-                Ok(Json.obj("success" -> true, "errors" -> JsArray())).withJwtSession(session)
+                Ok(Json.obj("success" -> true, "errors" -> JsArray(), "token" -> session.serialize)).withJwtSession(session)
               }
             } else notFound()
           } else notFound()
