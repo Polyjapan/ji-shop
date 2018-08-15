@@ -50,18 +50,26 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
     * @param source  the order source (if source is not [[Web]] or [[OnSite]], the user will be given fullrights on the prices applied)
     * @return a map of the product and their corresponding checkedOutItem
     */
-  private def sanitizeInput(items: Map[Int, Seq[CheckedOutItem]], dbItems: Seq[data.Product], source: Source): Map[Product, CheckedOutItem] =
+  private def sanitizeInput(items: Map[Int, Seq[CheckedOutItem]], dbItems: Seq[data.Product], source: Source): Map[Product, Seq[CheckedOutItem]] =
     dbItems.map(p => (p, items.get(p.id.get))).toMap // map the DB product to the one in the order
       .filter { case (_, Some(seq)) if seq.nonEmpty => true; case _ => false } // remove the DB products that are not in the order
-      .mapValues(s => s.get.head) // there is only a single item in each sequence
+      .mapValues(s => s.get) // we get the option
+      .toSeq
+      .flatMap { case (product, checkedOutItems) => checkedOutItems.map(item => (product, item)) } // we create pairs
       .map { // Check the item prices
-      case (product, coItem) if source == Gift => (product, coItem.copy(itemPrice = Some(0D))) // in case of gift, it's free
-      case pair@_ if source == Reseller => pair // if imported, we leave the provided price
-      case (product, coItem) if product.freePrice => // if the product has a freeprice, we check that user input is > than the freeprice
-        if (coItem.itemPrice.isEmpty || coItem.itemPrice.get < product.price) (product, coItem.copy(itemPrice = Some(product.price)))
-        else (product, coItem)
-      case (product, coItem) => (product, coItem.copy(itemPrice = Some(product.price))) // if price is not free, we replace with db price, just in case
-    }.mapValues(coItem => coItem.copy(itemPrice = coItem.itemPrice.map(d => math.round(d * 100) / 100D))) // round the prices to 2 decimals
+        case (product, coItem) if source == Gift => (product, coItem.copy(itemPrice = Some(0D))) // in case of gift, it's free
+        case pair@_ if source == Reseller => pair // if imported, we leave the provided price
+        case (product, coItem) if product.freePrice => // if the product has a freeprice, we check that user input is > than the freeprice
+          if (coItem.itemPrice.isEmpty || coItem.itemPrice.get < product.price) (product, coItem.copy(itemPrice = Some(product.price)))
+          else (product, coItem)
+        case (product, coItem) => (product, coItem.copy(itemPrice = Some(product.price)))
+       // if price is not free, we replace with db price, just in case
+      }
+      .map {
+        // round the prices to 2 decimals
+        case (product, coItem) => (product, coItem.copy(itemPrice = coItem.itemPrice.map(d => math.round(d * 100) / 100D)))
+      }
+      .groupBy(_._1).mapValues(_.map(_._2)) // change the output form
 
   /**
     * Check that the items in the order are available, i.e. that they exist and that there are sufficient quantities remaining
@@ -73,13 +81,16 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
     * @throws NoSuchElementException if an item in the order isn't available
     * @throws OutOfStockException    if an item in the order is not available in sufficient quantity
     */
-  private def checkItemAvailability(items: Map[Int, Seq[CheckedOutItem]], map: Map[Product, CheckedOutItem], source: Source) = {
-    val byId = map.map { case (_, coItem) => coItem.itemId }.toSet // Create a set of all item ids
+  private def checkItemAvailability(items: Map[Int, Seq[CheckedOutItem]], map: Map[Product, Seq[CheckedOutItem]], source: Source) = {
+    val byId = map.flatMap { case (_, coItems) => coItems.map(_.itemId) }.toSet // Create a set of all item ids
 
     if (items.forall(i => byId(i._1))) { // Check that all items in the order correspond to available items
       if (source != Web) map // if source is not web, we don't check quantities
       else {
-        val oos = map.filter(p => p._1.maxItems >= 0 && p._1.maxItems < p._2.itemAmount).keys // Get all the out of stock items
+        val oos = map.filter {
+          case (product, coItems) => product.maxItems >= 0 && // this item needs stock
+            product.maxItems < coItems.map(_.itemAmount).sum // we ordered more than max allowed
+        }.keys // Get all the out of stock items
         if (oos.isEmpty) map // Check that all the items are available
         else throw OutOfStockException(oos)
       }
@@ -93,11 +104,11 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
     * @param user the user making the request
     * @return a future holding all the [[CheckedOutItem]], as well as the inserted order ID and the total price
     */
-  private def postOrder(user: AuthenticatedUser, map: Map[Product, CheckedOutItem], source: Source): Future[(Iterable[CheckedOutItem], Int, Double)] = {
+  private def postOrder(user: AuthenticatedUser, map: Map[Product, Seq[CheckedOutItem]], source: Source): Future[(Iterable[CheckedOutItem], Int, Double)] = {
     def sumPrice(list: Iterable[CheckedOutItem]) = list.map(p => p.itemPrice.get * p.itemAmount).sum
 
-    val ticketsPrice = sumPrice(map filter { case (product, _) => product.isTicket } values)
-    val totalPrice = sumPrice(map.values)
+    val ticketsPrice = sumPrice(map.filter{ case (product, _) => product.isTicket }.values.flatten)
+    val totalPrice = sumPrice(map.values.flatten)
 
     val order =
       if (source == Gift) Order(Option.empty, user.id, 0D, 0D, source = Gift)
@@ -105,7 +116,7 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
       else if (source == Reseller || source == OnSite) Order(Option.empty, user.id, ticketsPrice, totalPrice, source = source, paymentConfirmed = Some(new Timestamp(System.currentTimeMillis())))
       else Order(Option.empty, user.id, ticketsPrice, totalPrice, source = source)
 
-    orders.createOrder(order).map((map.values, _, totalPrice))
+    orders.createOrder(order).map((map.values.flatten, _, totalPrice))
   }
 
   /**
@@ -176,10 +187,6 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
 
     val items = order.items.groupBy(_.itemId)
     val source = order.orderType.getOrElse(Web)
-
-    if (items.exists(pair => pair._2.size > 1)) {
-      return BadRequest.asError("error.multiple_instances_of_single_item").asFuture
-    }
 
     products.getMergedProducts(source != Web) // get all the products in database, including the hidden ones if the source is not _Web_
       .map(sanitizeInput(items, _, source)) // sanitize the user input using the database
