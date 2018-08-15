@@ -215,17 +215,21 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       .result
 
     // This query inserts a single ticket for the order and return its barcode
-    val orderBarcodeQuery = (otherProducts filter (_.nonEmpty) flatMap (r => {
+    val orderBarcodeQuery = (otherProducts flatMap (r => {
+      if (r.nonEmpty) {
 
-      val event = r.headOption.map { case (_, _, pairEvent) => pairEvent }.getOrElse(data.Event(None, "unknown_event", "unknown_location", visible = false))
-      val products = r.map { case (_, product, _) => product }.groupBy(p => p).mapValues(_.size)
-      // If we have items:
-      // Create a ticket
-      val ticket = Ticket(Option.empty, barcodeGen(OrderCode))
-      ((tickets returning tickets.map(_.id)) += ticket)
-        // Link it to the order
-        .flatMap(ticketId => orderTickets += (order, ticketId))
-        .flatMap(_ => DBIO.successful(OrderBarCode(order, products, ticket.barCode, event)))
+        val event = r.headOption.map { case (_, _, pairEvent) => pairEvent }.getOrElse(data.Event(None, "unknown_event", "unknown_location", visible = false))
+        val products = r.map { case (_, product, _) => product }.groupBy(p => p).mapValues(_.size)
+        // If we have items:
+        // Create a ticket
+        val ticket = Ticket(Option.empty, barcodeGen(OrderCode))
+        ((tickets returning tickets.map(_.id)) += ticket)
+          // Link it to the order
+          .flatMap(ticketId => orderTickets += (order, ticketId))
+          .flatMap(_ => DBIO.successful(OrderBarCode(order, products, ticket.barCode, event)))
+      } else {
+        DBIO.successful(null)
+      }
     })).transactionally
 
     val orderQuery = orderJoin.filter(_._1.id === order).take(1).result
@@ -241,7 +245,10 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       )) // decrease the maxItems value
 
     val computeResult = orderedTicketsBarcodesQuery flatMap
-      (seq => orderBarcodeQuery.flatMap(code => DBIO.successful(seq :+ code))) flatMap // get the order code
+      (seq => orderBarcodeQuery.flatMap(code => {
+        if (code != null) DBIO.successful(seq :+ code)
+        else DBIO.successful(seq)
+      })) flatMap // get the order code
       (seq => orderQuery.flatMap(cli => DBIO.successful((seq, cli.head._2)))) flatMap // get the client
       (res => updateRemainingStockQuery.flatMap(_ => DBIO.successful(res))) // execute the 4th request, ignoring its result
 

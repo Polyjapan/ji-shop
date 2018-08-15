@@ -8,7 +8,7 @@ import javax.inject.Inject
 import models.OrdersModel
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.libs.mailer.{AttachmentData, Email, MailerClient}
 import play.api.mvc.{AbstractController, Action, ControllerComponents}
 import services.TicketGenerator
@@ -68,7 +68,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
 
         Future(mailSender(attachments, client))
 
-        Ok
+        Ok(Json.obj("success" -> true, "errors" -> JsArray()))
       case _ => dbError
     }
   }
