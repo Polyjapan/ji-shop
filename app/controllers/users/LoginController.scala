@@ -11,10 +11,9 @@ import play.api.data.Forms._
 import play.api.data._
 import play.api.libs.json._
 import play.api.mvc._
-import utils.Formats._
 import utils.{HashHelper, RandomUtils}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import constants.results.Errors._
 import play.api.Configuration
 import play.api.libs.mailer.MailerClient

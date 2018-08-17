@@ -68,4 +68,6 @@ object ErrorCodes {
     */
   def POLYBANKING(polybankingError: String) = s"error.polybanking.$polybankingError"
 
+  val CAPTCHA = "error.captcha"
+
 }
