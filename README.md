@@ -25,8 +25,8 @@ after year. The goal of this project is to create a new plateform that can be us
     -  [x] Get an URL to generate again a given ticket
   -  [x] Avoid selling [too much] more than max allowed
 - [ ] (Admin) Manage the shop
-  -  [ ] Create and update events `POST /admin/events`
-  -  [ ] Deep clone events `GET /admin/events/copy/:id`
+  -  [ ] Create and update events `POST /admin/events` and `PUT /admin/events/:id`
+  -  [ ] Deep clone events `POST /admin/events` with `cloneEvent: <id>`
   -  [ ] Create and update products within events `POST /admin/events/:id/products` and `PUT /admin/events/:id/products/:id`
   -  [x] Create free tickets of any kind of item `/orders/create` and `/admin/orders/validate`
   -  [ ] Sell tickets with real money `(use JI10 code)` and `/orders/create`
