@@ -26,4 +26,21 @@ object EmailVerifyEmail {
         "\nLe Comité PolyJapan")
     ))
   }
+
+  def sendAccountExistsEmail(email: String)(implicit mailerClient: MailerClient): Unit = {
+      // Send an email
+      mailerClient.send(Email(
+        "Votre compte JapanImpact",
+        "Ne pas répondre <noreply@japan-impact.ch>",
+        Seq(email),
+        bodyText = Some("Bonjour, \n" +
+          "\nVous avez tenté il y a quelques instants de vous inscrire à la boutique Japan Impact avec cette adresse email. " +
+          "Toutefois, nous avons détecté que vous aviez déjà un compte enregistré avec cette adresse. " +
+          "En conséquence, nous n'avons pas touché à votre compte. Si vous avez oublié votre mot de passe, vous pouvez " +
+          "le réinitialiser depuis la page de connexion." +
+          "\n\nCordialement, " +
+          "\nLe Comité PolyJapan")
+      ))
+
+  }
 }

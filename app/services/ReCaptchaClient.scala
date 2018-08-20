@@ -31,6 +31,15 @@ class ReCaptchaClient @Inject()(config: Configuration, ws: WSClient)(implicit ec
     ws.url("https://www.google.com/recaptcha/api/siteverify").post(params).map(resp => resp.json.as[ReCaptchaResponse])
   }
 
+  def checkCaptchaWithExpiration(response: String, hours: Int = 6): Future[ReCaptchaResponse] = {
+    val nowMinus6 = new Date(System.currentTimeMillis() - (6 * 60 * 60 * 1000))
+
+    checkCaptcha(response).map(r => {
+      if (r.success && r.challenge_ts.toDate.before(nowMinus6)) r.copy(success = false)
+      else r
+    })
+  }
+
   case class ReCaptchaResponse(success: Boolean, challenge_ts: DateTime, hostname: String) // We can get the errors too
 }
 

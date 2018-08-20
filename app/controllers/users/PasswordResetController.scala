@@ -38,14 +38,9 @@ class PasswordResetController @Inject()(cc: MessagesControllerComponents, client
     recoverForm.bindFromRequest.fold(
       withErrors => BadRequest.asFormErrorSeq(withErrors.errors).asFuture,
       { case (email, captcha) =>
-        captchaClient.checkCaptcha(captcha).flatMap(captchaResponse => {
-          println("Captcha " + captcha)
-          println("Captcha response " + captchaResponse)
-
-          val nowMinus6 = new Date(System.currentTimeMillis() - (6 * 60 * 60 * 1000))
-
+        captchaClient.checkCaptchaWithExpiration(captcha).flatMap(captchaResponse => {
           // We consider that a captcha that was validated more than 6hrs ago is too old
-          if (!captchaResponse.success || captchaResponse.challenge_ts.toDate.before(nowMinus6)) BadRequest.asError(ErrorCodes.CAPTCHA).asFuture
+          if (!captchaResponse.success) BadRequest.asError(ErrorCodes.CAPTCHA).asFuture
           else clients.findClient(email).map {
             case Some((client, perms)) =>
               val resetCode = RandomUtils.randomString(30)
