@@ -46,9 +46,7 @@ class PasswordResetController @Inject()(cc: MessagesControllerComponents, client
               val resetCode = RandomUtils.randomString(30)
               val emailEncoded = URLEncoder.encode(client.email, "UTF-8")
 
-              val url = config.get[String]("polyjapan.siteUrl") + "/passwordReset#mail=" + emailEncoded + "&code=" + resetCode
-
-              // TODO captcha
+              val url = config.get[String]("polyjapan.siteUrl") + "/passwordReset/" + emailEncoded + "/" + resetCode
 
               clients.updateClient(client.copy(
                 passwordReset = Some(resetCode),
@@ -92,11 +90,11 @@ class PasswordResetController @Inject()(cc: MessagesControllerComponents, client
       { case (email, code, pass) =>
         clients.findClient(email).map { opt =>
           if (opt.isEmpty)
-            notFound("email")
+            notFound()
           else {
             val client = opt.get._1
             if (!checkPasswordRequest(client, code)) {
-              notFound("code")
+              notFound()
             } else {
               val (algo, hashPass) = hash.hash(pass)
               clients.updateClient(client.copy(passwordReset = None, passwordResetEnd = None, password = hashPass, passwordAlgo = algo))
