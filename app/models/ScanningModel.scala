@@ -18,12 +18,12 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
 
   import profile.api._
 
-  private val configJoin = scanningConfigurations join scanningItems on (_.id === _.scanningConfigurationId)
+  private val configJoin = scanningConfigurations joinLeft scanningItems on (_.id === _.scanningConfigurationId)
   private val productsJoin = scanningConfigurations join scanningItems on (_.id === _.scanningConfigurationId) join products on (_._2.acceptedItemId === _.id)
 
-  private def joinToPair(seq: Seq[(ScanningConfiguration, ScanningItem)]): Option[(ScanningConfiguration, Seq[ScanningItem])] = {
+  private def joinToPair(seq: Seq[(ScanningConfiguration, Option[ScanningItem])]): Option[(ScanningConfiguration, Seq[ScanningItem])] = {
     if (seq.isEmpty) None
-    else Some(seq.head._1, seq.map(_._2))
+    else Some(seq.head._1, seq.map(_._2).filter(_.isDefined).map(_.get))
   }
 
   private def joinToPairWithProduct(seq: Seq[((ScanningConfiguration, ScanningItem), Product)]): Option[(ScanningConfiguration, Seq[Product])] = {
@@ -33,9 +33,9 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
 
   def getConfigs: Future[Seq[ScanningConfiguration]] = db.run(scanningConfigurations.result)
 
-  def getConfig(id: Int): Future[Option[(ScanningConfiguration, Seq[ScanningItem])]] = db.run(configJoin.result).map(joinToPair)
+  def getConfig(id: Int): Future[Option[(ScanningConfiguration, Seq[ScanningItem])]] = db.run(configJoin.filter(el => el._1.id === id).result).map(joinToPair)
 
-  def getFullConfig(id: Int): Future[Option[(ScanningConfiguration, Seq[Product])]] = db.run(productsJoin.result).map(joinToPairWithProduct)
+  def getFullConfig(id: Int): Future[Option[(ScanningConfiguration, Seq[Product])]] = db.run(productsJoin.filter(el => el._1._1.id === id).result).map(joinToPairWithProduct)
 
   def invalidateBarcode(ticketId: Int, userId: Int): Future[Int] = {
     val checkCodeStillValid = (claimedTickets join clients on (_.claimedBy === _.id)) // we join with the clients so that we can return useful information in the exception (i.e. the name)

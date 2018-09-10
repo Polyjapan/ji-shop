@@ -51,7 +51,7 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
                   // We check if this barcode is accepted by this config
                   if (items.map(_.acceptedItem).toSet.contains(product.id.get)) {
                     // Code accepted, we invalidate it and return the item scanned
-                    invalidateCode(codeId, user, Json.toJsObject(product))
+                    invalidateCode(codeId, user, Json.obj("product" -> Json.toJsObject(product)))
                   } else MethodNotAllowed.asFormError(FormError("", ErrorCodes.PRODUCT_NOT_ALLOWED, Seq(Json.toJson(product)))).asFuture
                 case OrdersModel.OrderBarCode(_, products, _, _) =>
                   // We have a OrderBarCode <=> a barcode corresponding to an order (a list of products)
@@ -90,7 +90,7 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
         MethodNotAllowed.asFormError(
           new FormError("", ErrorCodes.ALREADY_SCANNED,
             Seq(Json.obj(
-              "scanedAt" -> ticket.claimedAt,
+              "scannedAt" -> ticket.claimedAt,
               "scannedBy" -> (claimedBy.firstname + " " + claimedBy.lastname
                 ))))
         ).asFuture

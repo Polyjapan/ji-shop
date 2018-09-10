@@ -1,6 +1,7 @@
 package utils
 
 import play.api.data.FormError
+import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json.{JsValue, Json, Writes}
 
 /**
@@ -10,7 +11,8 @@ package object Formats {
   implicit object FormErrorWrites extends Writes[FormError] {
     override def writes(o: FormError): JsValue = Json.obj(
       "key" -> Json.toJson(o.key),
-      "messages" -> Json.toJson(o.messages)
+      "messages" -> Json.toJson(o.messages),
+      "args" -> o.args.asInstanceOf[Seq[JsValue]]
     )
   }
 }
