@@ -1,24 +1,19 @@
 package controllers.admin
 
-import java.sql.Timestamp
-import java.time.Instant
-
-import constants.{ErrorCodes, Permissions}
 import constants.emails.OrderEmail
 import constants.results.Errors._
+import constants.{ErrorCodes, Permissions}
 import data.{AuthenticatedUser, Order, OrderedProduct, Reseller}
 import javax.inject.Inject
-import models.OrdersModel.TicketBarCode
 import models.{OrdersModel, ProductsModel}
+import pdi.jwt.JwtSession._
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
 import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.libs.mailer.{AttachmentData, Email, MailerClient}
-import play.api.mvc.{AbstractController, Action, ControllerComponents, Result}
+import play.api.mvc.{AbstractController, Action, ControllerComponents}
 import services.TicketGenerator
 import utils.Implicits._
-import pdi.jwt.JwtSession._
-import utils.Timings
 
 import scala.concurrent.{ExecutionContext, Future}
 
