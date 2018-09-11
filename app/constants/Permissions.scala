@@ -53,4 +53,9 @@ object Permissions {
     * Permission to see items that are marked as not visible
     */
   val SEE_INVISIBLE_ITEMS = "admin.see_invisible_items"
+
+  /**
+    * Permission to access the admin area
+    */
+  val ADMIN_ACCESS = "admin.access_dashboard"
 }
