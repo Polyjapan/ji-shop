@@ -150,4 +150,5 @@ package object data {
 
   implicit val eventFormat = Json.format[Event]
   implicit val productFormat = Json.format[Product]
+  implicit val scanningConfigurationFormat = Json.format[ScanningConfiguration]
 }

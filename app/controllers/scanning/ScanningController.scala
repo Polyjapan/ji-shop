@@ -22,7 +22,7 @@ import scala.concurrent.ExecutionContext
 class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel, scanModel: ScanningModel)(implicit ec: ExecutionContext, mailerClient: MailerClient) extends AbstractController(cc) {
   private val scanForm = Form(mapping("barcode" -> nonEmptyText)(e => e)(Some(_)))
 
-  def scanCode(configId: Int) = Action.async { implicit request => {
+  def scanCode(configId: Int): Action[AnyContent] = Action.async { implicit request => {
     val session = request.jwtSession
     val user = session.getAs[AuthenticatedUser]("user")
 
@@ -67,6 +67,20 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
     }
   }
   }
+
+  def getConfigs: Action[AnyContent] = Action.async { implicit request => {
+    val session = request.jwtSession
+    val user = session.getAs[AuthenticatedUser]("user")
+
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.SCAN_TICKET)) noPermissions.asFuture
+    else {
+      scanModel.getConfigs.map(result => Ok(Json.toJson(result)))
+    }
+  }
+  }
+
+
 
 
   /**

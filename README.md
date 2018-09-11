@@ -36,7 +36,7 @@ after year. The goal of this project is to create a new plateform that can be us
   -  [ ] Display stats 
 - [ ] (BackOffice) Scan tickets
   -  [ ] Create scanning configurations, with a list of allowed item types
-  -  [x] Endpoint to scan a barcode with a given config, checking if it's allowed or not `/scan/process/:configId`
+  -  [x] Endpoint to scan a barcode with a given config, checking if it's allowed or not `/scan/process/:configId`
   -  [x] Endpoint to scan an order barcode (with a special config), checking if it's allowed and returning a list of the items it contains `/scan/process/:configId`
   
 ## Other stuff to do:
