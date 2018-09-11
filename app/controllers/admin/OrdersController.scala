@@ -54,6 +54,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
     // 3. Create an order and get its id
     // 4. Created OrderedProducts with the obtained item IDs
     // 5. Insert the OrderedProducts, along with their barcodes
+    // 6. If everything worked fine, mark the order as paid
     // Because we use "DBIO.sequence" in the logic, it's not possible to send the same file twice
     // Any duplicated barcode in the file will cause the whole upload to fail.
     // I don't consider this an issue for now, but we might need to evaluate this
@@ -95,14 +96,16 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
 
         // We query the items corresponding to these categories, and insert them if they don't exist
         products.getOrInsert(event, categories).flatMap(map => {
-          orders.createOrder(Order(None, user.get.id, price, price, Option(Timestamp.from(Instant.now())), source = Reseller)).map(orderId => (map, orderId))
+          orders.createOrder(Order(None, user.get.id, price, price, source = Reseller)).map(orderId => (map, orderId))
         }).flatMap({
           case (idMap, orderId) =>
             val products = data.map(ticket => {
               (OrderedProduct(None, idMap(ticket.category), orderId, ticket.price.getOrElse(0)), ticket.barcode)
             })
 
-            orders.fillImportedOrder(products).map(_ => Ok).recover{ case _ => InternalServerError.asError(ErrorCodes.DATABASE) }
+            orders.fillImportedOrder(products)
+              .flatMap(res => orders.acceptOrder(orderId)) // mark the order as paid in the end
+              .map(_ => Ok).recover{ case _ => InternalServerError.asError(ErrorCodes.DATABASE) }
         })
       }
     }

@@ -136,7 +136,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     // I wanted to do it in only 3 requests but sadly it seems hard to do because we can only return the id from the insert command
     // Let's burn the database with 3 * n requests then :)
 
-    db.run(DBIO.sequence(seq))
+    db.run(DBIO.sequence(seq).transactionally)
   }
 
   /**
@@ -193,6 +193,21 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
           case (((_, (_, p, e)), _), client) => (p, e, client) } // keep only product, event and client
 
     join.result.map(_ map { case (p, e, client) => (TicketBarCode(p, barcode, e), client, barcodeId) } headOption)
+  }
+
+  /**
+    * Mark an order as paid
+    * @param order the order to mark as paid
+    * @return a future, containing 1 or an error
+    */
+  def markAsPaid(order: Int): Future[Int] = {
+    db.run(
+      orders
+        .filter(_.id === order)
+        .map(_.paymentConfirmed)
+        .update(Some(new Timestamp(System.currentTimeMillis())))
+        .filter(r => r == 1) // ensure we updated only one item
+    )
   }
 
   /**
