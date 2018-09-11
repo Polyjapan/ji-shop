@@ -20,6 +20,11 @@ object Permissions {
   val IMPORT_EXTERNAL = "admin.import_external"
 
   /**
+    * Permission to export all tickets for an event to a FNAC-compatible list
+    */
+  val EXPORT_TICKETS = "admin.export_tickets"
+
+  /**
     * Permission to generate free orders (gifts)
     */
   val GIVE_FOR_FREE = "admin.give_for_free"

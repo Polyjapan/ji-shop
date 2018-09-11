@@ -86,6 +86,27 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   }
 
   /**
+    * Dump a whole event
+    * @param event the id of the event to dump
+    * @param date the fnac date of the event (YYYYMMDD HH :MM)
+    * @return the dump of the event, as list of semicolon separated values
+    */
+  def dumpEvent(event: Int, date: String): Future[List[String]] = {
+    val join =
+      productJoin
+        .join(orderedProductTickets).on(_._1.id === _.orderedProductId)
+        .join(tickets).on(_._2.ticketId === _.id)
+        .map { case (((ordered, product, ev), _), ticket) => (ev, product, ordered, ticket)}
+
+
+    db.run(join.filter(_._1.id === event).filter(_._2.isTicket === true).result).map(
+      seq => "Evenement;Representation;Code Barre;Tarif;Prix" :: seq.map( {
+        case (ev, product, ordered, ticket) =>
+          ev.name + ";" + date + ";" + ticket.barCode + ";" + product.name + ";" + ordered.paidPrice
+      }).toList)
+  }
+
+  /**
     * Read an order by its id and return it. The caller should check that the user requesting the order has indeed the
     * right to read it.
     *

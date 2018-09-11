@@ -32,7 +32,7 @@ after year. The goal of this project is to create a new plateform that can be us
   -  [ ] Sell tickets with real money `(use JI10 code)` and `/orders/create`
   -  [x] Import fnac dump `/orders/create` is **not suitable**. We need an endpoint that inserts the barcodes at the same time (one single order for each import)
 - [ ] (Admin) Read data
-  -  [ ] Export all tickets for a given edition to different lists
+  -  [x] Export all tickets for a given edition to different lists
   -  [ ] Display stats 
 - [ ] (BackOffice) Scan tickets
   -  [ ] Create scanning configurations, with a list of allowed item types

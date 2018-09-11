@@ -39,3 +39,5 @@ POST        /scan/process/:id               controllers.scanning.ScanningControl
 
 +nocsrf
 POST        /admin/orders/import/:event     controllers.admin.OrdersController.importOrder(event: Int)
+
+GET        /admin/orders/export/:event/:date     controllers.admin.OrdersController.export(event: Int, date: String)

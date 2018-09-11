@@ -42,6 +42,17 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
   }
   }
 
+  def export(event: Int, date: String) = Action.async { implicit request => {
+    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.EXPORT_TICKETS)) noPermissions.asFuture
+    else {
+      // Hardcoded time 10 :00 as we don't care about it anyway
+      orders.dumpEvent(event, date + " 10 :00").map(list => Ok(list.mkString("\n")))
+    }
+  }
+  }
+
   def importOrder(event: Int) = Action.async(parse.text) { implicit request => {
     // Logic of this endpoint:
     // 1. Parse the file and extract the data
