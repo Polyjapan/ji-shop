@@ -36,3 +36,6 @@ POST        /admin/orders/validate          controllers.admin.OrdersController.v
 
 +nocsrf
 POST        /scan/process/:id               controllers.scanning.ScanningController.scanCode(id: Int)
+
++nocsrf
+POST        /admin/orders/import/:event     controllers.admin.OrdersController.importOrder(event: Int)

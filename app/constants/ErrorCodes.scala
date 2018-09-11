@@ -64,6 +64,11 @@ object ErrorCodes {
   val USER_EXISTS = "error.user_exists"
 
   /**
+    * There are fields missing in the CSV file
+    */
+  val MISSING_FIELDS = "error.missing_fields"
+
+  /**
     * An error regarding PolyBanking
     */
   def POLYBANKING(polybankingError: String) = s"error.polybanking.$polybankingError"

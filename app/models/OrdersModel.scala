@@ -122,6 +122,24 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   }
 
   /**
+    * Inserts in the database all barcodes from an imported order
+    * @param input an iterable of ordered products to be inserted with the barcode they are supposed to have
+    */
+  def fillImportedOrder(input: Iterable[(OrderedProduct, String)]): Future[Iterable[Int]] = {
+    val seq = input.map({ case (orderedProduct, barcode) =>
+      (orderedProducts.returning(orderedProducts.map(_.id)) += orderedProduct)
+        .flatMap(orderedProductId => (tickets.returning(tickets.map(_.id)) += Ticket(None, barcode)).map(ticketId => (orderedProductId, ticketId)))
+        .flatMap(pair => orderedProductTickets += pair)
+    })
+
+
+    // I wanted to do it in only 3 requests but sadly it seems hard to do because we can only return the id from the insert command
+    // Let's burn the database with 3 * n requests then :)
+
+    db.run(DBIO.sequence(seq))
+  }
+
+  /**
     * Find a given barcode and return it, along with the client that created it
     *
     * @param barcode the barcode to look for
@@ -132,7 +150,14 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       Barcodes.parseCode(barcode) match {
         case ProductCode => findProduct(barcode, barcodeId)
         case OrderCode => findOrder(barcode, barcodeId)
-        case _ => DBIO.failed(new UnknownError)
+        case _ =>
+          // We try to find a product then an order
+          // Some barcodes (like the one imported from resellers) might not follow the format and therefore not be
+          // recognized
+          findProduct(barcode, barcodeId).flatMap(result => {
+            if (result.isDefined) DBIO.successful(result)
+            else findOrder(barcode, barcodeId)
+          })
       }
     })
 
