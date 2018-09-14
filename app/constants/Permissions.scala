@@ -50,6 +50,11 @@ object Permissions {
   val SCAN_TICKET = "staff.scan_ticket"
 
   /**
+    * Permission to scan a ticket
+    */
+  val CHANGE_SCANNING_CONFIGURATIONS = "admin.change_scanning_configurations"
+
+  /**
     * Permission to see items that are marked as not visible
     */
   val SEE_INVISIBLE_ITEMS = "admin.see_invisible_items"

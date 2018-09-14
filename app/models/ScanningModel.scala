@@ -6,6 +6,7 @@ import java.time.Instant
 import data.{ClaimedTicket, Client, Event, ScanningConfiguration, ScanningItem}
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import play.api.mvc.Result
 import slick.jdbc.MySQLProfile
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -16,10 +17,21 @@ import scala.concurrent.{ExecutionContext, Future}
 class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
   extends HasDatabaseConfigProvider[MySQLProfile] {
 
+
   import profile.api._
 
   private val configJoin = scanningConfigurations joinLeft scanningItems on (_.id === _.scanningConfigurationId)
   private val productsJoin = scanningConfigurations join scanningItems on (_.id === _.scanningConfigurationId) join products on (_._2.acceptedItemId === _.id)
+
+  def createConfig(config: ScanningConfiguration): Future[Int] = db.run(scanningConfigurations += config)
+
+  def updateConfig(id: Int, config: ScanningConfiguration): Future[Int] = db.run(scanningConfigurations.filter(_.id === id).update(config))
+
+  def addProduct(id: Int, productId: Int): Future[Int] = db.run(scanningItems += ScanningItem(id, productId))
+
+  def removeProduct(id: Int, productId: Int): Future[Int] = db.run(scanningItems
+    .filter(_.scanningConfigurationId === id)
+    .filter(_.acceptedItemId === productId).delete)
 
   private def joinToPair(seq: Seq[(ScanningConfiguration, Option[ScanningItem])]): Option[(ScanningConfiguration, Seq[ScanningItem])] = {
     if (seq.isEmpty) None

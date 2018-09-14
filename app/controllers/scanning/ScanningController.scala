@@ -14,13 +14,14 @@ import play.api.libs.mailer.MailerClient
 import play.api.mvc._
 import utils.Implicits._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * @author zyuiop
   */
 class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel, scanModel: ScanningModel)(implicit ec: ExecutionContext, mailerClient: MailerClient) extends AbstractController(cc) {
   private val scanForm = Form(mapping("barcode" -> nonEmptyText)(e => e)(Some(_)))
+  private val configForm = Form(mapping("name" -> nonEmptyText, "acceptGoodies" -> boolean)(Tuple2.apply)(Tuple2.unapply))
 
   def scanCode(configId: Int): Action[AnyContent] = Action.async { implicit request => {
     val session = request.jwtSession
@@ -80,6 +81,76 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
   }
   }
 
+  def createConfig: Action[JsValue] = Action.async(parse.json) { implicit request => {
+    handleConfig(config => {
+      scanModel.createConfig(config)
+        .map(inserted => if (inserted == 1) Ok(Json.obj("success" -> true)) else dbError)
+        .recover { case _ => dbError }
+    })
+  }
+  }
+
+  def updateConfig(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request => {
+    handleConfig(config => {
+      scanModel.updateConfig(id, config)
+        .map(inserted => if (inserted == 1) Ok(Json.obj("success" -> true)) else notFound("id"))
+        .recover { case _ => dbError }
+    })
+  }
+  }
+
+  def addProductToConfig(id: Int): Action[String] = Action.async(parse.text) { implicit r =>
+    addOrRemoveProduct(id, remove = false)
+  }
+
+  def removeProductFromConfig(id: Int): Action[String] = Action.async(parse.text) { implicit r =>
+    addOrRemoveProduct(id, remove = true)
+  }
+
+  private def addOrRemoveProduct(id: Int, remove: Boolean)(implicit request: Request[String]): Future[Result] = {
+    val session = request.jwtSession
+    val user = session.getAs[AuthenticatedUser]("user")
+
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.CHANGE_SCANNING_CONFIGURATIONS)) noPermissions.asFuture
+    else {
+      try {
+        val productId = request.body.toInt
+
+        scanModel.getConfig(id).flatMap(opt => {
+          if (opt.isDefined) {
+            if (remove) {
+              if (opt.get._2.exists(e => e.acceptedItem == productId)) scanModel.removeProduct(id, productId).map(r => if (r == 1) success else dbError).recover { case _ => dbError }
+              else success.asFuture // We don't have to remove, it's not there anymore
+            } else {
+              if (opt.get._2.exists(e => e.acceptedItem == productId)) success.asFuture // We don't have to insert, it's already there
+              else scanModel.addProduct(id, productId).map(r => if (r == 1) success else dbError).recover { case _ => dbError } // insert
+            }
+          } else notFound("config").asFuture
+        })
+      } catch {
+        case _: NumberFormatException => BadRequest.asError("expected a number").asFuture
+        case _ => unknownError.asFuture
+      }
+    }
+  }
+
+  private def handleConfig(saver: ScanningConfiguration => Future[Result])(implicit request: Request[JsValue]): Future[Result] = {
+    val session = request.jwtSession
+    val user = session.getAs[AuthenticatedUser]("user")
+
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.CHANGE_SCANNING_CONFIGURATIONS)) noPermissions.asFuture
+    else {
+      configForm.bindFromRequest().fold(withErrors => {
+        formError(withErrors).asFuture // If the code is absent from the request
+      }, form => {
+        val config = data.ScanningConfiguration(None, form._1, form._2)
+
+        saver(config)
+      })
+    }
+  }
 
 
 

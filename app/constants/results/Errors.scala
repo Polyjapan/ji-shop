@@ -25,6 +25,13 @@ object Errors {
     implicit def asFormError(err: FormError*): Result = asFormErrorSeq(err.toSeq)
 
     implicit def asError(err: String*): Result = asFormErrorSeq(err.toSeq.map(FormError("", _)))
+
+    implicit def asSuccess: Result = {
+      if (result.isInstanceOf[Status]) {
+        val r = result.asInstanceOf[Status]
+        r(Json.obj("success" -> true))
+      } else result
+    }
   }
 
   def formError(err: Form[_]): Result = BadRequest.asFormErrorSeq(err.errors)
@@ -38,5 +45,7 @@ object Errors {
   def unknownError: Result = InternalServerError.asError(ErrorCodes.UNKNOWN)
 
   def notFound(field: String = ""): Result = NotFound.asFormError(FormError(field, ErrorCodes.NOT_FOUND))
+
+  def success: Result = Ok.asSuccess
 
 }
