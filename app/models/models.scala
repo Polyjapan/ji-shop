@@ -181,7 +181,7 @@ package object models {
   private[models] val posConfigurations = TableQuery[PosConfigurations]
 
   private[models] class PosConfigItems(tag: Tag) extends Table[PosConfigItem](tag, "pos_items") {
-    def configId = column[Int]("scanning_configuration_id")
+    def configId = column[Int]("pos_configuration_id")
     def itemId = column[Int]("product_id")
     def row = column[Int]("row")
     def col = column[Int]("col")
