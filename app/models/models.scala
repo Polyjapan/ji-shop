@@ -160,10 +160,41 @@ package object models {
 
     def configuration = foreignKey("scanning_items_config_fk", scanningConfigurationId, scanningConfigurations)(_.id)
     def item = foreignKey("scanning_items_item_fk", acceptedItemId, products)(_.id)
+    def primary = primaryKey("scanning_items_pk", (scanningConfigurationId, acceptedItemId))
 
     def * =
       (scanningConfigurationId, acceptedItemId).shaped <> (ScanningItem.tupled, ScanningItem.unapply)
   }
 
   private[models] val scanningItems = TableQuery[ScanningItems]
+
+
+
+  private[models] class PosConfigurations(tag: Tag) extends Table[PosConfiguration](tag, "pos_configurations") {
+    def id = column[Int]("pos_configuration_id", O.PrimaryKey, O.AutoInc)
+    def name = column[String]("pos_configuration_name", O.SqlType("VARCHAR(250)"))
+
+    def * =
+      (id.?, name).shaped <> (PosConfiguration.tupled, PosConfiguration.unapply)
+  }
+
+  private[models] val posConfigurations = TableQuery[PosConfigurations]
+
+  private[models] class PosConfigItems(tag: Tag) extends Table[PosConfigItem](tag, "pos_items") {
+    def configId = column[Int]("scanning_configuration_id")
+    def itemId = column[Int]("product_id")
+    def row = column[Int]("row")
+    def col = column[Int]("col")
+    def color = column[String]("color", O.SqlType("VARCHAR(50)"))
+    def fontColor = column[String]("font_color", O.SqlType("VARCHAR(50)"))
+
+    def primary = primaryKey("pos_items_pk", (configId, itemId))
+    def configuration = foreignKey("pos_items_config_fk", configId, posConfigurations)(_.id)
+    def item = foreignKey("pos_items_item_fk", itemId, products)(_.id)
+
+    def * =
+      (configId, itemId, row, col, color, fontColor).shaped <> (PosConfigItem.tupled, PosConfigItem.unapply)
+  }
+
+  private[models] val posConfigItems = TableQuery[PosConfigItems]
 }

@@ -47,6 +47,16 @@ POST        /scan/configurations/:id/addProduct controllers.scanning.ScanningCon
 +nocsrf
 POST        /scan/configurations/:id/removeProduct controllers.scanning.ScanningController.removeProductFromConfig(id: Int)
 
+
+
++nocsrf
+GET         /pos/configurations            controllers.pos.PosController.getConfigs
+GET         /pos/configurations/:id        controllers.pos.PosController.getConfig(id: Int)
++nocsrf
+POST        /pos/configurations            controllers.pos.PosController.createConfig
++nocsrf
+PUT         /pos/configurations/:id        controllers.pos.PosController.updateConfig(id: Int)
+
 +nocsrf
 POST        /admin/orders/import/:event     controllers.admin.OrdersController.importOrder(event: Int)
 

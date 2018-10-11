@@ -124,7 +124,7 @@ package object data {
   case class Ticket(id: Option[Int], barCode: String, createdAt: Option[Timestamp] = Option.empty)
 
   /**
-    * Describe the event that a ticket was claimed. A claimed ticket was scanned and cannot be scanned anymore
+    * Describes the event that a ticket was claimed. A claimed ticket was scanned and cannot be scanned anymore
     *
     * @param ticketId  the id of the ticket that was claimed
     * @param claimedAt the time at which the ticket was claimed
@@ -133,7 +133,7 @@ package object data {
   case class ClaimedTicket(ticketId: Int, claimedAt: Timestamp, claimedBy: Int)
 
   /**
-    * Describe a scanning configuration, i.e. a group of accepted barcode types
+    * Describes a scanning configuration, i.e. a group of accepted barcode types
     * @param id                 the unique id of this configuration
     * @param name               a name identifying the configuration
     * @param acceptOrderTickets if true, order barcodes will be accepted by this configuration
@@ -141,14 +141,33 @@ package object data {
   case class ScanningConfiguration(id: Option[Int], name: String, acceptOrderTickets: Boolean)
 
   /**
-    * Describe an item that can be scanned by a configuration
+    * Describes an item that can be scanned by a configuration
     * @param scanningConfiguration  the configuration scanning this item (id)
     * @param acceptedItem           the item scanned (id)
     */
   case class ScanningItem(scanningConfiguration: Int, acceptedItem: Int)
 
+  /**
+    * Describes a PointOfSale configuration
+    * @param id the id of the configuration
+    * @param name the name of the configuration
+    */
+  case class PosConfiguration(id: Option[Int], name: String)
+
+  /**
+    * Describes an item in a PointOfSale configuration
+    * @param configurationId the id of the pos configuration
+    * @param productId the id of the product
+    * @param row the row in the grid (starting at 0)
+    * @param col the col in the grid (starting at 0)
+    * @param color the bootstrap class for the background color of the square
+    * @param fontColor the bootstrap class for the font color of the square
+    */
+  case class PosConfigItem(configurationId: Int, productId: Int, row: Int, col: Int, color: String, fontColor: String)
+
 
   implicit val eventFormat = Json.format[Event]
   implicit val productFormat = Json.format[Product]
   implicit val scanningConfigurationFormat = Json.format[ScanningConfiguration]
+  implicit val posConfigurationFormat = Json.format[PosConfiguration]
 }
