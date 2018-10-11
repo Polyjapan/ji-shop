@@ -13,7 +13,7 @@ CREATE TABLE pos_items
   row int,
   col int,
   color VARCHAR(50), -- the bootstrap class for background color
-  font_color VARCHAR(50) -- the bootstrap class for font color
+  font_color VARCHAR(50), -- the bootstrap class for font color
 
   -- position
   CONSTRAINT pos_items_pk PRIMARY KEY (product_id, pos_configuration_id),
