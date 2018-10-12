@@ -118,7 +118,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     )
 
     orderProducts(items).map {
-      case Some(num) => num > items.size
+      case Some(num) => num >= items.size
       case None => false
     }
   }
