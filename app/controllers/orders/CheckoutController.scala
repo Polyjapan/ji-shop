@@ -113,9 +113,8 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
           yield OrderedProduct(Option.empty, coItem.itemId, orderId, coItem.itemPrice.get)
       )
 
-      // Order them
-      orders.orderProducts(items).flatMap {
-        case Some(v) if v >= items.size =>
+      orders.insertProducts(list, orderId).flatMap(success => {
+        if (success) {
           // TODO: the client should check that the returned ordered list contains the same items that the one requested
           // If the user comes from the site, we generate a payment link and make him pay
           if (source == Web) pb.startPayment(totalPrice, orderId, list).map {
@@ -124,9 +123,9 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
           }
           else Future(Ok(Json.obj("ordered" -> list, "success" -> true, "orderId" -> orderId)))
 
-        case _ =>
-          dbError.asFuture
-      }
+        } else dbError.asFuture
+      })
+
   }
 
 

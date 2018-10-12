@@ -157,16 +157,26 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
       .flatMap { case (product, checkedOutItems) => checkedOutItems.map(item => (product, item)) }
       .groupBy(_._1).mapValues(_.map(_._2))
 
+  private def insertProducts(result: (Iterable[CheckedOutItem], Int, Double)): Future[Result] = result match {
+    case (list: Iterable[CheckedOutItem], orderId: Int, totalPrice: Double) =>
+
+      implicit val format: OFormat[OnSiteOrderResponse] = Json.format[OnSiteOrderResponse]
+
+      orders.insertProducts(list, orderId).map(success => {
+        if (success) Ok(Json.toJson(OnSiteOrderResponse(orderId, totalPrice)))
+        else dbError
+      })
+
+  }
 
   private def parseOrder(order: CheckedOutOrder, user: AuthenticatedUser): Future[Result] = {
     // Check that the user can post the order
     val items = order.items.groupBy(_.itemId)
-    implicit val format: OFormat[OnSiteOrderResponse] = Json.format[OnSiteOrderResponse]
 
     products.getMergedProducts(includeHidden = true, includeHiddenEvents = true) // get all the products in database
       .map(getProducts(items, _)) // we create pairs
       .flatMap(orders.postOrder(user, _, OnSite))
-      .map(result => Ok(Json.toJson(OnSiteOrderResponse(result._2, result._3))))
+      .flatMap(insertProducts)
       .recover {
         case _: NoSuchElementException =>
           NotFound.asError(ErrorCodes.MISSING_ITEM)

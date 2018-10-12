@@ -110,6 +110,19 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     db.run(orders.filter(_.id === orderId).result.headOption)
   }
 
+  def insertProducts(list: Iterable[CheckedOutItem], orderId: Int): Future[Boolean] = {
+    // Create a list of [[OrderedProduct]] to insert
+    val items = list.flatMap(coItem =>
+      for (i <- 1 to coItem.itemAmount) // Generate as much ordered products as the quantity requested
+        yield OrderedProduct(Option.empty, coItem.itemId, orderId, coItem.itemPrice.get)
+    )
+
+    orderProducts(items).map {
+      case Some(num) => num > items.size
+      case None => false
+    }
+  }
+
   /**
     * Read an order by its id and return it. The caller should check that the user requesting the order has indeed the
     * right to read it.
