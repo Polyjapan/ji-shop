@@ -3,7 +3,7 @@ package models
 import java.security.SecureRandom
 import java.sql.{SQLIntegrityConstraintViolationException, Timestamp}
 
-import data.{Order, OrderedProduct, Ticket}
+import data.{AuthenticatedUser, CheckedOutItem, Gift, OnSite, Order, OrderedProduct, Product, Source, Ticket}
 import javax.inject.Inject
 import models.OrdersModel.{GeneratedBarCode, OrderBarCode, TicketBarCode}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -104,6 +104,10 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
         case (ev, product, ordered, ticket) =>
           ev.name + ";" + date + ";" + ticket.barCode + ";" + product.name + ";" + ordered.paidPrice
       }).toList)
+  }
+
+  def getOrder(orderId: Int): Future[Option[Order]] = {
+    db.run(orders.filter(_.id === orderId).result.headOption)
   }
 
   /**
@@ -229,6 +233,30 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
         .update(Some(new Timestamp(System.currentTimeMillis())))
         .filter(r => r == 1) // ensure we updated only one item
     )
+  }
+
+  /**
+    * Create an order, then insert it in the database, and return its id as well as the total order price
+    *
+    * @param map  the sanitized & checked map of the order
+    * @param user the user making the request
+    * @param source the source of the order
+    * @return a future holding all the [[CheckedOutItem]], as well as the inserted order ID and the total price
+    */
+  def postOrder(user: AuthenticatedUser, map: Map[Product, Seq[CheckedOutItem]], source: Source): Future[(Iterable[CheckedOutItem], Int, Double)] = {
+    def sumPrice(list: Iterable[CheckedOutItem]) = list.map(p => p.itemPrice.get * p.itemAmount).sum
+
+    if (source == data.Reseller)
+      throw new IllegalArgumentException("Order source cannot be Reseller")
+
+    val ticketsPrice = sumPrice(map.filter{ case (product, _) => product.isTicket }.values.flatten)
+    val totalPrice = sumPrice(map.values.flatten)
+
+    val order =
+      if (source == Gift) Order(Option.empty, user.id, 0D, 0D, source = Gift)
+      else Order(Option.empty, user.id, ticketsPrice, totalPrice, source = source)
+
+    createOrder(order).map((map.values.flatten, _, totalPrice))
   }
 
   /**

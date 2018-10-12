@@ -75,4 +75,9 @@ object ErrorCodes {
 
   val CAPTCHA = "error.captcha"
 
+  /**
+    * This order was not an on site order
+    */
+  val NOT_ON_SITE = "error.not_on_site"
+
 }

@@ -1,6 +1,6 @@
 package models
 
-import data.{PosConfigItem, PosConfiguration}
+import data.{PosConfigItem, PosConfiguration, PosPaymentLog}
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.{Json, OFormat}
@@ -23,6 +23,8 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
   def createConfig(config: PosConfiguration): Future[Int] = db.run(posConfigurations += config)
 
   def updateConfig(id: Int, config: PosConfiguration): Future[Int] = db.run(posConfigurations.filter(_.id === id).update(config))
+
+  def insertLog(dbItem: PosPaymentLog): Future[Int] = db.run(posPaymentLogs += dbItem)
 
   def addProduct(item: PosConfigItem): Future[Int] = db.run(posConfigItems += item)
 

@@ -1,16 +1,15 @@
 package controllers.pos
 
-import constants.Permissions
 import constants.results.Errors
 import constants.results.Errors._
+import constants.{ErrorCodes, Permissions}
 import data._
 import javax.inject.Inject
-import models.OrdersModel
-import models.PosModel
+import models.{OrdersModel, PosModel, ProductsModel}
 import pdi.jwt.JwtSession._
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsValue, Json, OFormat}
 import play.api.libs.mailer.MailerClient
 import play.api.mvc._
 import utils.Implicits._
@@ -20,8 +19,9 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, model: PosModel)(implicit ec: ExecutionContext, mailerClient: MailerClient) extends AbstractController(cc) {
+class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, model: PosModel, products: ProductsModel)(implicit ec: ExecutionContext, mailerClient: MailerClient) extends AbstractController(cc) {
   private val configForm = Form(mapping("name" -> nonEmptyText)(e => e)(Some(_)))
+  private val paymentForm = Form(mapping("name" -> nonEmptyText)(e => e)(Some(_)))
 
   def getConfigs: Action[AnyContent] = Action.async { implicit request => {
     val session = request.jwtSession
@@ -88,4 +88,94 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
       })
     }
   }
+
+  def checkout: Action[JsValue] = Action.async(parse.json) { implicit request =>
+    (request.jwtSession.getAs[AuthenticatedUser]("user"), request.body.asOpt[CheckedOutOrder]) match {
+      case (None, _) => notAuthenticated.asFuture
+      case (Some(user), _) if !user.hasPerm(Permissions.SELL_ON_SITE) => noPermissions.asFuture
+      case (_, None) | (_, Some(CheckedOutOrder(Seq(), _))) => BadRequest.asError(ErrorCodes.NO_REQUESTED_ITEM).asFuture
+      case (Some(user), Some(order)) => parseOrder(order, user)
+    }
+  }
+
+  def processPayment(orderId: Int): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    (request.jwtSession.getAs[AuthenticatedUser]("user"), request.body.asOpt[PaymentLog]) match {
+      case (None, _) => notAuthenticated.asFuture
+      case (Some(user), _) if !user.hasPerm(Permissions.SELL_ON_SITE) => noPermissions.asFuture
+      case (_, None) => BadRequest.asFuture
+      case (Some(user), Some(log)) =>
+        // Check order source
+        orders.getOrder(orderId)
+          .flatMap {
+            case Some(Order(_, _, _, _, None, _, OnSite)) =>
+              // This is an on-site order
+              // We can insert the log
+
+              model.insertLog(log.toDbItem(orderId))
+                .flatMap(inserted => {
+                  if (log.accepted && inserted > 0) {
+                    // We need to mark the order as paid
+                    orders.markAsPaid(orderId).map(_ > 0)
+                  } else {
+                    Future.successful(inserted > 0)
+                  }
+                })
+                .map(succ =>
+                  if (succ) Ok.asSuccess
+                  else dbError)
+            case Some(Order(_, _, _, _, None, _, _)) => BadRequest.asError(ErrorCodes.NOT_ON_SITE).asFuture
+            case Some(_) => BadRequest.asError(ErrorCodes.ALREADY_ACCEPTED).asFuture
+            case None => notFound("orderId").asFuture
+          }
+    }
+  }
+
+  /*
+  Workflow:
+   CLIENT: enters order
+   CLIENT: sends order (/checkout)
+   SERVER: inserts order or REJECT (/checkout)
+   CLIENT: sends payment type
+   SERVER: inserts payment type
+
+   if cash:
+   CLIENT: sends confirmation with details
+   SERVER: marks order as paid
+
+   if bank: (if not possible to use directly the client to handle sumup callbacks)
+   CLIENT: listens for confirmation
+   SERVER: waits for endpoint to be called
+   SERVER: stores all bank transaction details
+
+   */
+
+  private def getProducts(items: Map[Int, Seq[CheckedOutItem]], dbItems: Seq[data.Product]): Map[Product, Seq[CheckedOutItem]] =
+    dbItems.map(p => (p, items.get(p.id.get))).toMap // map the DB product to the one in the order
+      .filter { case (_, Some(seq)) if seq.nonEmpty => true; case _ => false } // remove the DB products that are not in the order
+      .mapValues(s => s.get) // we get the option
+      .toSeq
+      .flatMap { case (product, checkedOutItems) => checkedOutItems.map(item => (product, item)) }
+      .groupBy(_._1).mapValues(_.map(_._2))
+
+
+  private def parseOrder(order: CheckedOutOrder, user: AuthenticatedUser): Future[Result] = {
+    // Check that the user can post the order
+    val items = order.items.groupBy(_.itemId)
+    implicit val format: OFormat[OnSiteOrderResponse] = Json.format[OnSiteOrderResponse]
+
+    products.getMergedProducts(includeHidden = true) // get all the products in database
+      .map(getProducts(items, _)) // we create pairs
+      .flatMap(orders.postOrder(user, _, OnSite))
+      .map(result => Ok(Json.toJson(OnSiteOrderResponse(result._2, result._3))))
+      .recover {
+        case _: NoSuchElementException =>
+          NotFound.asError(ErrorCodes.MISSING_ITEM)
+        case _: Throwable =>
+          unknownError
+      }
+  }
+
+  case class OnSiteOrderResponse(orderId: Int, price: Double)
+
+
 }

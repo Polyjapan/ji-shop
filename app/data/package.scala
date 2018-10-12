@@ -166,6 +166,29 @@ package object data {
   case class PosConfigItem(configurationId: Int, productId: Int, row: Int, col: Int, color: String, fontColor: String)
 
 
+  sealed trait PaymentMethod
+  case object Cash extends PaymentMethod
+  case object Card extends PaymentMethod
+
+  object PaymentMethod {
+    def unapply(arg: PaymentMethod): String = arg.toString.toUpperCase
+
+    def apply(string: String): PaymentMethod = string.toUpperCase match {
+      case "CASH" => Cash
+      case "CARD" => Card
+    }
+  }
+
+  case class PosPaymentLog(id: Option[Int],
+                            orderId: Int,
+                            paymentMethod: PaymentMethod,
+                            logDate: Timestamp,
+                            accepted: Boolean,
+                            cardTransactionCode: Option[Int],
+                            cardTransactionResultCode: Option[Int],
+                            cartReceiptSend: Option[Boolean],
+                            cardTransactionMessage: Option[String])
+
   implicit val eventFormat = Json.format[Event]
   implicit val productFormat = Json.format[Product]
   implicit val scanningConfigurationFormat = Json.format[ScanningConfiguration]

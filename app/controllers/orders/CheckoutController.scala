@@ -29,15 +29,15 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
   def checkout: Action[JsValue] = Action.async(parse.json) { implicit request =>
     (request.jwtSession.getAs[AuthenticatedUser]("user"), request.body.asOpt[CheckedOutOrder]) match {
       case (None, _) => notAuthenticated.asFuture
-      case (_, None) | (_, Some(Seq())) => BadRequest.asError(ErrorCodes.NO_REQUESTED_ITEM).asFuture
+      case (_, None) | (_, Some(CheckedOutOrder(Seq(), _))) => BadRequest.asError(ErrorCodes.NO_REQUESTED_ITEM).asFuture
       case (Some(user), Some(order)) => parseOrder(order, user)
     }
   }
 
   private def checkPermissions(source: Option[Source], user: AuthenticatedUser): Boolean = source match {
     case None | Some(Web) => true
-    case Some(OnSite) if user.hasPerm(Permissions.SELL_ON_SITE) => true
-    case Some(Reseller) if user.hasPerm(Permissions.IMPORT_EXTERNAL) => true
+    case Some(OnSite) => false // use dedicated endpoint!
+    case Some(Reseller) => false // use dedicated endpoint!
     case Some(Gift) if user.hasPerm(Permissions.GIVE_FOR_FREE) => true
     case _ => false
   }
@@ -99,28 +99,6 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
   }
 
   /**
-    * Create an order, then insert it in the database, and return its id as well as the total order price
-    *
-    * @param map  the sanitized & checked map of the order
-    * @param user the user making the request
-    * @return a future holding all the [[CheckedOutItem]], as well as the inserted order ID and the total price
-    */
-  private def postOrder(user: AuthenticatedUser, map: Map[Product, Seq[CheckedOutItem]], source: Source): Future[(Iterable[CheckedOutItem], Int, Double)] = {
-    def sumPrice(list: Iterable[CheckedOutItem]) = list.map(p => p.itemPrice.get * p.itemAmount).sum
-
-    val ticketsPrice = sumPrice(map.filter{ case (product, _) => product.isTicket }.values.flatten)
-    val totalPrice = sumPrice(map.values.flatten)
-
-    val order =
-      if (source == Gift) Order(Option.empty, user.id, 0D, 0D, source = Gift)
-      // If the source is a reseller or onsite, then the order has already been paid and we don't want to generate tickets, so we set the paymentConfirmed date
-      else if (source == Reseller || source == OnSite) Order(Option.empty, user.id, ticketsPrice, totalPrice, source = source, paymentConfirmed = Some(new Timestamp(System.currentTimeMillis())))
-      else Order(Option.empty, user.id, ticketsPrice, totalPrice, source = source)
-
-    orders.createOrder(order).map((map.values.flatten, _, totalPrice))
-  }
-
-  /**
     * Get the result from the database insert, insert the products, and generate a Result
     *
     * @param result the result of the database insert of the order
@@ -163,7 +141,7 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
     products.getMergedProducts(source != Web) // get all the products in database, including the hidden ones if the source is not _Web_
       .map(sanitizeInput(items, _, source)) // sanitize the user input using the database
       .map(checkItemAvailability(items, _, source)) // check that items are available
-      .flatMap(postOrder(user, _, source))
+      .flatMap(orders.postOrder(user, _, source))
       .flatMap(generateResult(source))
       .recover {
         case OutOfStockException(items) =>
