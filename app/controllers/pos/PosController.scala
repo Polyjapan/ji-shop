@@ -163,7 +163,7 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
     val items = order.items.groupBy(_.itemId)
     implicit val format: OFormat[OnSiteOrderResponse] = Json.format[OnSiteOrderResponse]
 
-    products.getMergedProducts(includeHidden = true) // get all the products in database
+    products.getMergedProducts(includeHidden = true, includeHiddenEvents = true) // get all the products in database
       .map(getProducts(items, _)) // we create pairs
       .flatMap(orders.postOrder(user, _, OnSite))
       .map(result => Ok(Json.toJson(OnSiteOrderResponse(result._2, result._3))))
