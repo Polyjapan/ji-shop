@@ -7,8 +7,8 @@ CREATE TABLE pos_payment_logs
   pos_payment_method SET('CASH', 'CARD'),
   log_date TIMESTAMP DEFAULT NOW(),
   accepted BOOLEAN DEFAULT false,
-  card_transaction_code INT DEFAULT -1,
-  card_transaction_result_code INT DEFAULT -1,
+  card_transaction_code VARCHAR(250) NULL,
+  card_transaction_failure_cause VARCHAR(250) NULL,
   card_receipt_sent BOOLEAN DEFAULT false,
   card_transaction_message VARCHAR(250) NULL,
 

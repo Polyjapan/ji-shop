@@ -3,18 +3,16 @@ package data
 import play.api.libs.json._
 
 case class PaymentLog(paymentMethod: PaymentMethod, accepted: Boolean,
-                    cardTransactionCode: Option[Int],
-                    cardTransactionResultCode: Option[Int],
-                    cardReceiptSend: Option[Boolean],
-                    cardTransactionMessage: Option[String]) {
+                      cardTransactionMessage: Option[String],
+                      cardTransactionCode: Option[String],
+                      cardReceiptSend: Option[Boolean],
+                      cardFailureCause: Option[String]) {
 
   def toDbItem(orderId: Int): PosPaymentLog = PosPaymentLog(None, orderId, paymentMethod, null, accepted,
-    cardTransactionCode, cardTransactionResultCode, cardReceiptSend, cardTransactionMessage)
+    cardTransactionMessage, cardTransactionCode, cardReceiptSend, cardFailureCause)
 }
 
 object PaymentLog {
-  implicit val format = Json.format[PaymentLog]
-
   implicit val methodFormat = new Format[PaymentMethod] {
     override def reads(json: JsValue): JsResult[PaymentMethod] = json match {
       case JsString(str) => JsSuccess(PaymentMethod(str))
@@ -23,4 +21,6 @@ object PaymentLog {
 
     override def writes(o: PaymentMethod): JsValue = JsString(PaymentMethod.unapply(o))
   }
+
+  implicit val format = Json.format[PaymentLog]
 }

@@ -134,6 +134,7 @@ package object data {
 
   /**
     * Describes a scanning configuration, i.e. a group of accepted barcode types
+    *
     * @param id                 the unique id of this configuration
     * @param name               a name identifying the configuration
     * @param acceptOrderTickets if true, order barcodes will be accepted by this configuration
@@ -142,32 +143,37 @@ package object data {
 
   /**
     * Describes an item that can be scanned by a configuration
-    * @param scanningConfiguration  the configuration scanning this item (id)
-    * @param acceptedItem           the item scanned (id)
+    *
+    * @param scanningConfiguration the configuration scanning this item (id)
+    * @param acceptedItem          the item scanned (id)
     */
   case class ScanningItem(scanningConfiguration: Int, acceptedItem: Int)
 
   /**
     * Describes a PointOfSale configuration
-    * @param id the id of the configuration
+    *
+    * @param id   the id of the configuration
     * @param name the name of the configuration
     */
   case class PosConfiguration(id: Option[Int], name: String)
 
   /**
     * Describes an item in a PointOfSale configuration
+    *
     * @param configurationId the id of the pos configuration
-    * @param productId the id of the product
-    * @param row the row in the grid (starting at 0)
-    * @param col the col in the grid (starting at 0)
-    * @param color the bootstrap class for the background color of the square
-    * @param fontColor the bootstrap class for the font color of the square
+    * @param productId       the id of the product
+    * @param row             the row in the grid (starting at 0)
+    * @param col             the col in the grid (starting at 0)
+    * @param color           the bootstrap class for the background color of the square
+    * @param fontColor       the bootstrap class for the font color of the square
     */
   case class PosConfigItem(configurationId: Int, productId: Int, row: Int, col: Int, color: String, fontColor: String)
 
 
   sealed trait PaymentMethod
+
   case object Cash extends PaymentMethod
+
   case object Card extends PaymentMethod
 
   object PaymentMethod {
@@ -180,14 +186,14 @@ package object data {
   }
 
   case class PosPaymentLog(id: Option[Int],
-                            orderId: Int,
-                            paymentMethod: PaymentMethod,
-                            logDate: Timestamp,
-                            accepted: Boolean,
-                            cardTransactionCode: Option[Int],
-                            cardTransactionResultCode: Option[Int],
-                            cartReceiptSend: Option[Boolean],
-                            cardTransactionMessage: Option[String])
+                           orderId: Int,
+                           paymentMethod: PaymentMethod,
+                           logDate: Timestamp,
+                           accepted: Boolean,
+                           cardTransactionMessage: Option[String],
+                           cardTransactionCode: Option[String],
+                           cardReceiptSend: Option[Boolean],
+                           cardFailureCause: Option[String])
 
   implicit val eventFormat = Json.format[Event]
   implicit val productFormat = Json.format[Product]

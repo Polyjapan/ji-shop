@@ -200,6 +200,13 @@ package object models {
 
   implicit val methodMap = MappedColumnType.base[PaymentMethod, String](PaymentMethod.unapply, PaymentMethod.apply)
 
+  /*
+  cardTransactionMessage: Option[String],
+                           cardTransactionCode: Option[String],
+                           cardReceiptSend: Option[Boolean],
+                           cardFailureCause: Option[String]
+   */
+
   private[models] class PosPaymentLogs(tag: Tag) extends Table[PosPaymentLog](tag, "pos_payment_logs") {
     def id = column[Int]("id", O.PrimaryKey)
     def orderId = column[Int]("order_id")
@@ -207,8 +214,8 @@ package object models {
     def logDate = column[Timestamp]("log_date", O.SqlType("TIMESTAMP DEFAULT now()"))
     def accepted = column[Boolean]("accepted")
 
-    def cardTransactionCode = column[Option[Int]]("card_transaction_code", O.Default(Some(-1)))
-    def cardTransactionResultCode = column[Option[Int]]("card_transaction_result_code", O.Default(Some(-1)))
+    def cardTransactionCode = column[Option[String]]("card_transaction_code", O.SqlType("VARCHAR(250) NULL"))
+    def cardTransactionFailureCause = column[Option[String]]("card_transaction_failure_cause", O.SqlType("VARCHAR(250) NULL"))
     def cardReceiptSent = column[Option[Boolean]]("card_receipt_sent", O.Default(Some(false)))
     def cardTransactionMessage = column[Option[String]]("card_transaction_message", O.SqlType("VARCHAR(250) NULL"))
 
@@ -218,8 +225,8 @@ package object models {
     def ordersFk = foreignKey("pos_payment_logs_fk", orderId, orders)(_.id)
 
     def * =
-      (id.?, orderId, paymentMethod, logDate, accepted, cardTransactionCode,
-        cardTransactionResultCode, cardReceiptSent, cardTransactionMessage)
+      (id.?, orderId, paymentMethod, logDate, accepted, cardTransactionMessage, cardTransactionCode,
+        cardReceiptSent, cardTransactionFailureCause)
         .shaped <> (PosPaymentLog.tupled, PosPaymentLog.unapply)
   }
 
