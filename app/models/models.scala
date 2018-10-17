@@ -208,7 +208,7 @@ package object models {
    */
 
   private[models] class PosPaymentLogs(tag: Tag) extends Table[PosPaymentLog](tag, "pos_payment_logs") {
-    def id = column[Int]("id", O.PrimaryKey)
+    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def orderId = column[Int]("order_id")
     def paymentMethod = column[PaymentMethod]("pos_payment_method", O.SqlType("SET('CASH', 'CARD')"))
     def logDate = column[Timestamp]("log_date", O.SqlType("TIMESTAMP DEFAULT now()"))

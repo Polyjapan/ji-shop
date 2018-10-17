@@ -2,7 +2,7 @@
 
 CREATE TABLE pos_payment_logs
 (
-  id INT PRIMARY KEY,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   order_id INT,
   pos_payment_method SET('CASH', 'CARD'),
   log_date TIMESTAMP DEFAULT NOW(),
