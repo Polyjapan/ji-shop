@@ -68,4 +68,9 @@ object Permissions {
     * Permission to access the admin area
     */
   val ADMIN_ACCESS = "admin.access_dashboard"
+
+  /**
+    * Permission to view sales statistics of an event
+    */
+  val ADMIN_VIEW_STATS = "admin.view_stats"
 }

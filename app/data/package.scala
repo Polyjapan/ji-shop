@@ -1,6 +1,6 @@
 import java.sql.Timestamp
 
-import play.api.libs.json.Json
+import play.api.libs.json._
 
 /**
   * @author zyuiop
@@ -66,6 +66,16 @@ package object data {
       case "WEB" => Web
       case "GIFT" => Gift
     }
+
+    implicit val sourceFormat: Format[Source] = new Format[Source] {
+      override def reads(json: JsValue): JsResult[Source] = json match {
+        case JsString(str) => JsSuccess(Source(str))
+        case _ => JsError("Invalid type")
+      }
+
+      override def writes(o: Source): JsValue = JsString(Source.unapply(o))
+    }
+
   }
 
   /**

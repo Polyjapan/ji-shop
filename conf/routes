@@ -66,3 +66,5 @@ POST        /admin/orders/import/:event     controllers.admin.OrdersController.i
 
 GET        /admin/orders/export/:event/:date     controllers.admin.OrdersController.export(event: Int, date: String)
 
+GET         /admin/stats                    controllers.admin.StatsController.getEvents
+GET         /admin/stats/:event             controllers.admin.StatsController.getSales(event: Int, start: Long ?= 0, end: Long ?= 0)
