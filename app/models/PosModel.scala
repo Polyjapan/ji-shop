@@ -50,7 +50,6 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
   def getFullConfig(id: Int): Future[Option[JsonGetConfigResponse]] = db.run(productsJoin.filter(el => el._1._1.id === id).result)
     .map(joinToPairWithProduct)
     .map(opt => opt.map(pair => JsonGetConfigResponse(pair._1, pair._2)))
-
 }
 
 

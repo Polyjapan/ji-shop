@@ -19,7 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class EventsController @Inject()(cc: ControllerComponents, events: EventsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext) extends AbstractController(cc) {
+class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext) extends AbstractController(cc) {
 
   def getEvents: Action[AnyContent] = Action.async { implicit request => {
     val user = request.jwtSession.getAs[AuthenticatedUser]("user")
@@ -62,6 +62,14 @@ class EventsController @Inject()(cc: ControllerComponents, events: EventsModel)(
 
   def createEvent: Action[JsValue] = createOrUpdateEvent(
     ev => events.createEvent(ev.copy(Option.empty)).map(id => Ok(Json.toJson(id))))
+
+  def cloneEvent(id: Int): Action[JsValue] = createOrUpdateEvent(
+    ev => events.createEvent(ev.copy(Option.empty))
+      .flatMap(newEvent => {
+        products.cloneProducts(id, newEvent)
+          .map(_ => newEvent) // ignore result and just return the new event id
+
+      }).map(id => Ok(Json.toJson(id))))
 
   def updateEvent(id: Int): Action[JsValue] = createOrUpdateEvent(
     ev => events.updateEvent(id, ev.copy(Some(id))).map(_ => Ok(Json.toJson(id))))

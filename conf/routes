@@ -74,6 +74,8 @@ GET            /admin/events/:event                          controllers.admin.E
 +nocsrf
 POST           /admin/events                                 controllers.admin.EventsController.createEvent
 +nocsrf
+POST           /admin/events/clone/:id                       controllers.admin.EventsController.cloneEvent(id: Int)
++nocsrf
 PUT            /admin/events/:id                             controllers.admin.EventsController.updateEvent(id: Int)
 
 

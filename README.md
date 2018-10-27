@@ -24,16 +24,22 @@ after year. The goal of this project is to create a new plateform that can be us
   -  [x] Display bought tickets on the user page `/users/orders` and `/users/tickets`
     -  [x] Get an URL to generate again a given ticket
   -  [x] Avoid selling [too much] more than max allowed
-- [ ] (Admin) Manage the shop
+- [x] (Admin) Manage the shop
   -  [x] Create and update events `POST /admin/events` and `PUT /admin/events/:id`
-  -  [ ] Deep clone events `POST /admin/events` with `cloneEvent: <id>`
+  -  [x] Deep clone events `POST /admin/events` with `cloneEvent: <id>`
   -  [x] Create and update products within events `POST /admin/events/:id/products` and `PUT /admin/events/:id/products/:id`
   -  [x] Create free tickets of any kind of item `/orders/create` and `/admin/orders/validate`
   -  [x] Sell tickets with real money `(use JI10 code)` and `/orders/create`
   -  [x] Import fnac dump `/orders/create` is **not suitable**. We need an endpoint that inserts the barcodes at the same time (one single order for each import)
 - [ ] (Admin) Read data
   -  [x] Export all tickets for a given edition to different lists
-  -  [ ] Display stats 
+  -  [ ] Display scan stats
+  -  [x] Display sales stats 
+  -  [ ] See all clients
+  -  [ ] Update clients permissions
+  -  [ ] See all orders
+  -  [ ] Re-send emails from an order view
+  -  [ ] Force acceptation of an order
 - [ ] (BackOffice) Scan tickets
   -  [ ] Create scanning configurations, with a list of allowed item types
   -  [x] Endpoint to scan a barcode with a given config, checking if it's allowed or not `/scan/process/:configId`

@@ -1,6 +1,6 @@
 package models
 
-import data.{Event}
+import data.Event
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.MySQLProfile
@@ -25,7 +25,7 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
     db.run(productsJoin.filter(_._1.visible === true).filter(_._2.isVisible === true).result).map(joinToMap)
 
   def getProductsAdmin: Future[Map[Event, Seq[data.Product]]] =
-    // Here we allow invisible products to be displayed
+  // Here we allow invisible products to be displayed
     db.run(productsJoin.filter(_._1.visible === true).result).map(joinToMap)
 
   def getMergedProducts(includeHidden: Boolean, includeHiddenEvents: Boolean = false): Future[Seq[data.Product]] =
@@ -47,10 +47,17 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
   def updateProduct(event: Int, id: Int, product: data.Product): Future[Int] =
     db.run(products.filter(p => p.id === id && p.eventId === event).update(product))
 
+  def cloneProducts(sourceEvent: Int, targetEvent: Int): Future[Int] =
+    db.run(products.filter(p => p.eventId === sourceEvent).result
+      .map(list => list.map(prod => prod.copy(Option.empty, eventId = targetEvent)))
+      .flatMap(list => products ++= list)
+      .map(res => res.getOrElse(0)))
+
   /**
     * Get or insert a map of product names to their ids. The names that are not found will be inserted and their ID will
     * be returned.
-    * @param event the event id, used to filter the items and to insert new ones if needed
+    *
+    * @param event     the event id, used to filter the items and to insert new ones if needed
     * @param itemNames the names of the items
     * @return a map of the item name to its id, containing all keys present in the itemNames argument
     */
@@ -71,10 +78,10 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
           "Automatic insert from external dump", -1, event, isTicket = true, freePrice = false, isVisible = false))
 
         if (toInsert.nonEmpty)
-          // We insert them one by one
+        // We insert them one by one
           db.run(DBIO.sequence(toInsert.map(item => (products.returning(products.map(p => p.id)) += item).map(id => (item.name, id))))).map(res => res.toMap ++ map)
-          // db.run(products.returning(products.map(p => (p.name, p.id))) ++= toInsert).map(res => res.seq.toMap ++ map)
-          // Commented out: illegal in mysql
+        // db.run(products.returning(products.map(p => (p.name, p.id))) ++= toInsert).map(res => res.seq.toMap ++ map)
+        // Commented out: illegal in mysql
         else Future(map)
     }
   }
