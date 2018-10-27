@@ -1,5 +1,6 @@
 import java.sql.Timestamp
 
+import models.OrderData
 import play.api.libs.json._
 
 /**
@@ -93,6 +94,7 @@ package object data {
     */
   case class Order(id: Option[Int], clientId: Int, ticketsPrice: Double, totalPrice: Double,
                    paymentConfirmed: Option[Timestamp] = Option.empty, enterDate: Option[Timestamp] = Option.empty, source: Source = Web)
+
 
   /**
     * Describes a product that can be bought
@@ -210,4 +212,25 @@ package object data {
   implicit val productFormat = Json.format[Product]
   implicit val scanningConfigurationFormat = Json.format[ScanningConfiguration]
   implicit val posConfigurationFormat = Json.format[PosConfiguration]
+
+  implicit val tsFormat: Format[Timestamp] = new Format[Timestamp] {
+    override def reads(json: JsValue): JsResult[Timestamp] = json match {
+      case JsNumber(num) => JsSuccess(new Timestamp(num.longValue()))
+      case _ => JsError("Invalid type")
+    }
+
+    override def writes(o: Timestamp): JsValue = JsNumber(BigDecimal(o.getTime))
+  }
+
+  implicit val methodFormat = new Format[PaymentMethod] {
+    override def reads(json: JsValue): JsResult[PaymentMethod] = json match {
+      case JsString(str) => JsSuccess(PaymentMethod(str))
+      case _ => JsError("Invalid type")
+    }
+
+    override def writes(o: PaymentMethod): JsValue = JsString(PaymentMethod.unapply(o))
+  }
+
+  implicit val orderFormat = Json.format[Order]
+  implicit val logFormat = Json.format[PosPaymentLog]
 }

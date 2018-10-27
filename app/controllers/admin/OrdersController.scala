@@ -13,7 +13,7 @@ import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
 import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.libs.mailer.{AttachmentData, Email, MailerClient}
-import play.api.mvc.{AbstractController, Action, ControllerComponents}
+import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import services.TicketGenerator
 import utils.Implicits._
 
@@ -148,6 +148,37 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
         Ok(Json.obj("success" -> true, "errors" -> JsArray()))
       case _ => dbError
     }
+  }
+
+
+  def getOrders(event: Int): Action[AnyContent] = Action.async { implicit request => {
+    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.ADMIN_ACCESS)) noPermissions.asFuture
+    else {
+      orders.ordersByEvent(event).map(seq => Ok(Json.toJson(seq)))
+    }
+  }
+  }
+
+  def getOrderUserInfo(order: Int): Action[AnyContent] = Action.async { implicit request => {
+    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.ADMIN_ACCESS)) noPermissions.asFuture
+    else {
+      orders.userFromOrder(order).map(user => Ok(Json.toJson(user)))
+    }
+  }
+  }
+
+  def getOrderLogs(order: Int): Action[AnyContent] = Action.async { implicit request => {
+    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.ADMIN_ACCESS)) noPermissions.asFuture
+    else {
+      orders.getOrderLogs(order).map(seq => Ok(Json.toJson(seq)))
+    }
+  }
   }
 
 

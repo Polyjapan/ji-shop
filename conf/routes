@@ -65,6 +65,9 @@ POST           /pos/paymentLog/:orderId                      controllers.pos.Pos
 POST           /admin/orders/import/:event                   controllers.admin.OrdersController.importOrder(event: Int)
 
 GET            /admin/orders/export/:event/:date             controllers.admin.OrdersController.export(event: Int, date: String)
+GET            /admin/orders/:event                          controllers.admin.OrdersController.getOrders(event: Int)
+GET            /admin/orders/userInfo/:id                    controllers.admin.OrdersController.getOrderUserInfo(id: Int)
+GET            /admin/orders/logs/:id                        controllers.admin.OrdersController.getOrderLogs(id: Int)
 
 GET            /admin/stats/:event                           controllers.admin.StatsController.getSales(event: Int, start: Long ?= 0, end: Long ?= 0)
 

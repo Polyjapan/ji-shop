@@ -3,7 +3,7 @@ package models
 import java.security.SecureRandom
 import java.sql.{SQLIntegrityConstraintViolationException, Timestamp}
 
-import data.{AuthenticatedUser, CheckedOutItem, Gift, OnSite, Order, OrderedProduct, Product, Source, Ticket}
+import data.{AuthenticatedUser, CheckedOutItem, Client, Gift, Order, OrderedProduct, Product, Source, Ticket}
 import javax.inject.Inject
 import models.OrdersModel.{GeneratedBarCode, OrderBarCode, TicketBarCode}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -19,6 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
   extends HasDatabaseConfigProvider[MySQLProfile] {
+
 
   import profile.api._
 
@@ -85,10 +86,34 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       .map(_.filter(_.source == data.Web || isAdmin)))
   }
 
+  def userFromOrder(order: Int): Future[JsonClient] =
+    db.run(orderJoin.filter(_._1.id === order).map(_._2).result.head).map(client => JsonClient(client))
+
+  def getOrderLogs(order: Int): Future[Seq[data.PosPaymentLog]] =
+    db.run(posPaymentLogs.filter(_.orderId === order).result)
+
+  /**
+    * Get all the orders in a given event
+    *
+    * @param eventId the id of the event to look for
+    * @return the orders in this event
+    */
+  def ordersByEvent(eventId: Int): Future[Seq[data.Order]] = {
+    db.run(
+      orders
+        .join(productJoin).on(_.id === _._1.orderId) // join with products and events
+        .filter(_._2._3.id === eventId) // get only this event id
+        .map(_._1) // get only the order
+        .distinctOn(_.id) // distinct ids
+        .result
+    )
+  }
+
   /**
     * Dump a whole event
+    *
     * @param event the id of the event to dump
-    * @param date the fnac date of the event (YYYYMMDD HH :MM)
+    * @param date  the fnac date of the event (YYYYMMDD HH :MM)
     * @return the dump of the event, as list of semicolon separated values
     */
   def dumpEvent(event: Int, date: String): Future[List[String]] = {
@@ -96,11 +121,11 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       productJoin
         .join(orderedProductTickets).on(_._1.id === _.orderedProductId)
         .join(tickets).on(_._2.ticketId === _.id)
-        .map { case (((ordered, product, ev), _), ticket) => (ev, product, ordered, ticket)}
+        .map { case (((ordered, product, ev), _), ticket) => (ev, product, ordered, ticket) }
 
 
     db.run(join.filter(_._1.id === event).filter(_._2.isTicket === true).result).map(
-      seq => "Evenement;Representation;Code Barre;Tarif;Prix" :: seq.map( {
+      seq => "Evenement;Representation;Code Barre;Tarif;Prix" :: seq.map({
         case (ev, product, ordered, ticket) =>
           ev.name + ";" + date + ";" + ticket.barCode + ";" + product.name + ";" + ordered.paidPrice
       }).toList)
@@ -122,6 +147,42 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       case None => false
     }
   }
+/*
+  def getBarcodes(orderId: Int): Future[Seq[GeneratedBarCode]] = {
+    def getBarCode(ticket: Ticket): DBIOAction[Option[(GeneratedBarCode, Client, Int)], NoStream, Effect.Read] = ticket match {
+      case Ticket(Some(barcodeId), barcode, _) =>
+        Barcodes.parseCode(barcode) match {
+          case ProductCode => findProduct(barcode, barcodeId)
+          case OrderCode => findOrder(barcode, barcodeId)
+          case _ =>
+            // We try to find a product then an order
+            // Some barcodes (like the one imported from resellers) might not follow the format and therefore not be
+            // recognized
+            findProduct(barcode, barcodeId).flatMap(result => {
+              if (result.isDefined) DBIO.successful(result)
+              else findOrder(barcode, barcodeId)
+            })
+        }
+    }
+
+    db.run(orders.filter(_.id === orderId)
+      .join(orderedProducts).on(_.id === _.orderId)
+      .joinLeft(orderedProductTickets).on(_._2.id === _.orderedProductId)
+      .joinLeft(orderTickets).on(_._1._1.id === _.orderId)
+      .map {
+        case (((_, _), optProductTicket), optOrderTicket) => (optProductTicket.map(_.ticketId), optOrderTicket.map(_.ticketId))
+      }
+      .filter(pair => pair._1.isDefined || pair._2.isDefined)
+      .map(pair => pair._1.getOrElse(pair._2.get)) // merge all ids
+      .distinct
+      .join(tickets)
+      .on(_ === _.id)
+      .map(_._2)
+      .result
+        .flatMap(list => DBIO.sequence(list.map(ticket => getBarCode(ticket))))
+        .map(seq => seq.filter(opt => opt.isDefined).map(opt => opt.get._1))
+    )
+  }*/
 
   /**
     * Read an order by its id and return it. The caller should check that the user requesting the order has indeed the
@@ -161,6 +222,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
 
   /**
     * Inserts in the database all barcodes from an imported order
+    *
     * @param input an iterable of ordered products to be inserted with the barcode they are supposed to have
     */
   def fillImportedOrder(input: Iterable[(OrderedProduct, String)]): Future[Iterable[Int]] = {
@@ -211,10 +273,11 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
         orders on (_.orderId === _.id) map (_._2) join // find the order by its ticket
         clients on (_.clientId === _.id) join // find the client who made the order
         productJoin on (_._1.id === _._1.orderId) map { // find products in the order
-          case ((order, client), (_, product, event)) => (order.id, product, event, client) }
+        case ((order, client), (_, product, event)) => (order.id, product, event, client)
+      }
 
     join.result.map(seq => {
-      val products = seq.map{ case (_, product, _, _) => product }.groupBy(p => p).mapValues(_.size)
+      val products = seq.map { case (_, product, _, _) => product }.groupBy(p => p).mapValues(_.size)
 
       seq.headOption.map {
         case (orderId, _, event, client) => (OrderBarCode(orderId, products, barcode, event), client, barcodeId)
@@ -228,13 +291,15 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
         productJoin on (_.orderedProductId === _._1.id) join // find the product by its ticket
         orders on (_._2._1.orderId === _.id) join // find the order corresponding to the products
         clients on (_._2.clientId === _.id) map { // find the client who made the order
-          case (((_, (_, p, e)), _), client) => (p, e, client) } // keep only product, event and client
+        case (((_, (_, p, e)), _), client) => (p, e, client)
+      } // keep only product, event and client
 
     join.result.map(_ map { case (p, e, client) => (TicketBarCode(p, barcode, e), client, barcodeId) } headOption)
   }
 
   /**
     * Mark an order as paid
+    *
     * @param order the order to mark as paid
     * @return a future, containing 1 or an error
     */
@@ -251,8 +316,8 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   /**
     * Create an order, then insert it in the database, and return its id as well as the total order price
     *
-    * @param map  the sanitized & checked map of the order
-    * @param user the user making the request
+    * @param map    the sanitized & checked map of the order
+    * @param user   the user making the request
     * @param source the source of the order
     * @return a future holding all the [[CheckedOutItem]], as well as the inserted order ID and the total price
     */
@@ -262,7 +327,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     if (source == data.Reseller)
       throw new IllegalArgumentException("Order source cannot be Reseller")
 
-    val ticketsPrice = sumPrice(map.filter{ case (product, _) => product.isTicket }.values.flatten)
+    val ticketsPrice = sumPrice(map.filter { case (product, _) => product.isTicket }.values.flatten)
     val totalPrice = sumPrice(map.values.flatten)
 
     val order =
@@ -468,4 +533,17 @@ case object JsonOrderData {
   }
 
   implicit val format = Json.format[JsonOrderData]
+}
+
+case class JsonClient(id: Option[Int], lastname: String, firstname: String, email: String, emailConfirmed: Boolean,
+                      passwordAlgo: String, passwordResetEnd: Option[Timestamp] = Option.empty,
+                      acceptNewsletter: Boolean)
+
+case object JsonClient {
+  def apply(data: Client): JsonClient =
+    JsonClient(data.id, data.lastname, data.firstname, data.email, data.emailConfirmKey.isEmpty, data.passwordAlgo, data.passwordResetEnd, data.acceptNewsletter)
+
+  implicit val tsFormat = data.tsFormat
+
+  implicit val format = Json.format[JsonClient]
 }

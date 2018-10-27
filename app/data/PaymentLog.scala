@@ -13,14 +13,7 @@ case class PaymentLog(paymentMethod: PaymentMethod, accepted: Boolean,
 }
 
 object PaymentLog {
-  implicit val methodFormat = new Format[PaymentMethod] {
-    override def reads(json: JsValue): JsResult[PaymentMethod] = json match {
-      case JsString(str) => JsSuccess(PaymentMethod(str))
-      case _ => JsError("Invalid type")
-    }
 
-    override def writes(o: PaymentMethod): JsValue = JsString(PaymentMethod.unapply(o))
-  }
 
   implicit val format = Json.format[PaymentLog]
 }
