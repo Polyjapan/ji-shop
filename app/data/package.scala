@@ -22,7 +22,8 @@ package object data {
     *                         If absent, the password reset key is considered invalid
     */
   case class Client(id: Option[Int], lastname: String, firstname: String, email: String, emailConfirmKey: Option[String], password: String,
-                    passwordAlgo: String, passwordReset: Option[String] = Option.empty, passwordResetEnd: Option[Timestamp] = Option.empty)
+                    passwordAlgo: String, passwordReset: Option[String] = Option.empty, passwordResetEnd: Option[Timestamp] = Option.empty,
+                    acceptNewsletter: Boolean)
 
   /**
     * Defines an Event, in general it will be a Japan Impact edition, but who knows what could come next?

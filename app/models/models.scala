@@ -19,9 +19,10 @@ package object models {
     def passwordAlgo = column[String]("client_password_algo", O.SqlType("VARCHAR(15)"))
     def passwordReset = column[Option[String]]("client_password_reset", O.SqlType("VARCHAR(250)"))
     def passwordResetEnd = column[Option[Timestamp]]("client_password_reset_end")
+    def acceptNews = column[Boolean]("client_accept_newsletter", O.Default(false))
 
     def * =
-      (id.?, firstname, lastname, email, emailConfirmKey, password, passwordAlgo, passwordReset, passwordResetEnd).shaped <> (Client.tupled, Client.unapply)
+      (id.?, firstname, lastname, email, emailConfirmKey, password, passwordAlgo, passwordReset, passwordResetEnd, acceptNews).shaped <> (Client.tupled, Client.unapply)
   }
 
   private[models] val clients = TableQuery[Clients]
