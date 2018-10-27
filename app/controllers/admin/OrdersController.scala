@@ -44,6 +44,40 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
   }
   }
 
+  def resendEmail(orderId: Int)  = Action.async { implicit request => {
+    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.FORCE_VALIDATION)) noPermissions.asFuture
+    else orders.getBarcodes(orderId).map{
+      case (codes, Some(client)) if codes.nonEmpty =>
+        val attachments: Seq[AttachmentData] =
+          codes.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))
+
+        Future(OrderEmail.sendOrderEmail(attachments, client))
+
+        Ok.asSuccess
+      case (_, None) =>
+        notFound("order")
+    }
+  }
+  }
+
+  /*
+  orders.acceptOrder(orderId).map {
+      case (Seq(), _) => NotFound.asError(ErrorCodes.ALREADY_ACCEPTED)
+      case (oldSeq, client) if oldSeq.nonEmpty =>
+        val attachments: Seq[AttachmentData] =
+          oldSeq.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))
+
+
+        Future(mailSender(attachments, client))
+
+        Ok(Json.obj("success" -> true, "errors" -> JsArray()))
+      case _ => dbError
+    }
+   */
+
+
   def export(event: Int, date: String) = Action.async { implicit request => {
     val user = request.jwtSession.getAs[AuthenticatedUser]("user")
     if (user.isEmpty) notAuthenticated.asFuture

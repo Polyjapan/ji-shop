@@ -34,6 +34,8 @@ GET            /orders/view/:id                              controllers.orders.
 +nocsrf
 POST           /admin/orders/validate                        controllers.admin.OrdersController.validateOrder
 
+GET            /admin/orders/resend/:id                      controllers.admin.OrdersController.resendEmail(id: Int)
+
 +nocsrf
 POST           /scan/process/:id                             controllers.scanning.ScanningController.scanCode(id: Int)
 GET            /scan/configurations                          controllers.scanning.ScanningController.getConfigs
