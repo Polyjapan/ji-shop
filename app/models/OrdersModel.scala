@@ -272,6 +272,15 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     createOrder(order).map((map.values.flatten, _, totalPrice))
   }
 
+  def setOrderAccepted(order: Int) = {
+    db.run(orders
+      .filter(_.id === order)
+      .map(_.paymentConfirmed)
+      .filter(_.isEmpty)
+      .update(Some(new Timestamp(System.currentTimeMillis())))
+      .flatMap(r => if (r >= 1) DBIO.successful(Unit) else DBIO.failed(new IllegalStateException())));
+  }
+
   /**
     * Accept an order by its id, generating barcodes and returning them.
     *

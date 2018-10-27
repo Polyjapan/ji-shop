@@ -1,5 +1,7 @@
 package controllers.admin
 
+import java.sql.Timestamp
+
 import constants.emails.OrderEmail
 import constants.results.Errors._
 import constants.{ErrorCodes, Permissions}
@@ -110,7 +112,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
             })
 
             orders.fillImportedOrder(products)
-              .flatMap(res => orders.acceptOrder(orderId)) // mark the order as paid in the end
+              .flatMap(res => orders.markAsPaid(orderId)) // mark the order as paid in the end
               .map(_ => Ok).recover{ case _ => InternalServerError.asError(ErrorCodes.DATABASE) }
         })
       }
