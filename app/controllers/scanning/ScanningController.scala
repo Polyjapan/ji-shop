@@ -59,7 +59,7 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
                   // We check if that config accepts order tickets
                   if (config.acceptOrderTickets) {
                     // Code accepted, we invalidate it and return the list of items
-                    invalidateCode(codeId, user, Json.obj("products" -> products, "user" -> (client.firstname + " " + client.lastname)))
+                    invalidateCode(codeId, user, Json.obj("products" -> products.filterNot(pair => pair._1.isTicket), "user" -> (client.firstname + " " + client.lastname)))
 
                   } else MethodNotAllowed.asError(ErrorCodes.PRODUCTS_ONLY).asFuture
               }
