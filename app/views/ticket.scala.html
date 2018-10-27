@@ -4,7 +4,7 @@
 
         <h3>@product.name</h3>
 
-        <p>@product.longDescription</p>
+        <p>@Html(product.longDescription.replaceAll("\n", "<br>"))</p>
 
         <h2>How to get there?</h2>
         <p>
