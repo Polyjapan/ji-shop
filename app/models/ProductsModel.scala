@@ -37,6 +37,16 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
   def getProducts(event: Int): Future[Seq[data.Product]] =
     db.run(products.filter(_.eventId === event).result)
 
+
+  def getProduct(event: Int, id: Int): Future[data.Product] =
+    db.run(products.filter(p => p.id === id && p.eventId === event).result.head)
+
+  def createProduct(event: Int, product: data.Product): Future[Int] =
+    db.run(products += product)
+
+  def updateProduct(event: Int, id: Int, product: data.Product): Future[Int] =
+    db.run(products.filter(p => p.id === id && p.eventId === event).update(product))
+
   /**
     * Get or insert a map of product names to their ids. The names that are not found will be inserted and their ID will
     * be returned.

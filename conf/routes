@@ -76,3 +76,12 @@ POST           /admin/events                                 controllers.admin.E
 +nocsrf
 PUT            /admin/events/:id                             controllers.admin.EventsController.updateEvent(id: Int)
 
+
+GET            /admin/events/:event/products                 controllers.admin.ProductsController.getProducts(event: Int)
+GET            /admin/events/:event/products/:product        controllers.admin.ProductsController.getProduct(event: Int, product: Int)
+
++nocsrf
+POST           /admin/events/:event/products                 controllers.admin.ProductsController.createProduct(event: Int)
++nocsrf
+PUT            /admin/events/:event/products/:id             controllers.admin.ProductsController.updateProduct(event: Int, id: Int)
+
