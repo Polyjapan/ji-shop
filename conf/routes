@@ -1,70 +1,78 @@
 # TODO : replace with CORS checks
 
-OPTIONS /                           controllers.OptionsController.rootOptions
-OPTIONS /*url                       controllers.OptionsController.options(url: String)
+OPTIONS        /                                             controllers.OptionsController.rootOptions
+OPTIONS        /*url                                         controllers.OptionsController.options(url: String)
 
 
-GET         /shop/items                     controllers.shop.ItemsController.getItems
-GET         /shop/items/all                 controllers.shop.ItemsController.getAllItems
+GET            /shop/items                                   controllers.shop.ItemsController.getItems
+GET            /shop/items/all                               controllers.shop.ItemsController.getAllItems
 
 +nocsrf
-POST        /users/login                    controllers.users.LoginController.postLogin
+POST           /users/login                                  controllers.users.LoginController.postLogin
 +nocsrf
-POST        /users/signup                   controllers.users.RegisterController.postSignup
+POST           /users/signup                                 controllers.users.RegisterController.postSignup
 +nocsrf
-POST        /users/emailConfirm             controllers.users.EmailConfirmController.emailConfirmProcess
+POST           /users/emailConfirm                           controllers.users.EmailConfirmController.emailConfirmProcess
 +nocsrf
-POST        /users/recoverPassword          controllers.users.PasswordResetController.recoverPasswordSend
+POST           /users/recoverPassword                        controllers.users.PasswordResetController.recoverPasswordSend
 +nocsrf
-POST        /users/resetPassword            controllers.users.PasswordResetController.passwordResetSend
+POST           /users/resetPassword                          controllers.users.PasswordResetController.passwordResetSend
 +nocsrf
-POST        /users/passwordChange           controllers.users.PasswordResetController.passwordChange
-
-
-
-+nocsrf
-POST        /orders/create                  controllers.orders.CheckoutController.checkout
-+nocsrf
-POST        /orders/ipn                     controllers.orders.TicketsController.ipn
-
-GET         /orders/download/:barcode.pdf   controllers.orders.TicketsController.getTicket(barcode: String)
-GET         /orders/view                    controllers.orders.OrdersController.getOrders
-GET         /orders/view/:id                controllers.orders.OrdersController.getOrder(id: Int)
-
-+nocsrf
-POST        /admin/orders/validate          controllers.admin.OrdersController.validateOrder
-
-+nocsrf
-POST        /scan/process/:id               controllers.scanning.ScanningController.scanCode(id: Int)
-GET         /scan/configurations            controllers.scanning.ScanningController.getConfigs
-
-+nocsrf
-POST        /scan/configurations            controllers.scanning.ScanningController.createConfig
-+nocsrf
-PUT         /scan/configurations/:id        controllers.scanning.ScanningController.updateConfig(id: Int)
-+nocsrf
-POST        /scan/configurations/:id/addProduct controllers.scanning.ScanningController.addProductToConfig(id: Int)
-+nocsrf
-POST        /scan/configurations/:id/removeProduct controllers.scanning.ScanningController.removeProductFromConfig(id: Int)
+POST           /users/passwordChange                         controllers.users.PasswordResetController.passwordChange
 
 
 
 +nocsrf
-GET         /pos/configurations            controllers.pos.PosController.getConfigs
-GET         /pos/configurations/:id        controllers.pos.PosController.getConfig(id: Int)
+POST           /orders/create                                controllers.orders.CheckoutController.checkout
 +nocsrf
-POST        /pos/configurations            controllers.pos.PosController.createConfig
-+nocsrf
-PUT         /pos/configurations/:id        controllers.pos.PosController.updateConfig(id: Int)
-+nocsrf
-POST        /pos/checkout                  controllers.pos.PosController.checkout
-+nocsrf
-POST        /pos/paymentLog/:orderId       controllers.pos.PosController.processPayment(orderId: Int)
+POST           /orders/ipn                                   controllers.orders.TicketsController.ipn
+
+GET            /orders/download/:barcode.pdf                 controllers.orders.TicketsController.getTicket(barcode: String)
+GET            /orders/view                                  controllers.orders.OrdersController.getOrders
+GET            /orders/view/:id                              controllers.orders.OrdersController.getOrder(id: Int)
 
 +nocsrf
-POST        /admin/orders/import/:event     controllers.admin.OrdersController.importOrder(event: Int)
+POST           /admin/orders/validate                        controllers.admin.OrdersController.validateOrder
 
-GET        /admin/orders/export/:event/:date     controllers.admin.OrdersController.export(event: Int, date: String)
++nocsrf
+POST           /scan/process/:id                             controllers.scanning.ScanningController.scanCode(id: Int)
+GET            /scan/configurations                          controllers.scanning.ScanningController.getConfigs
 
-GET         /admin/stats                    controllers.admin.StatsController.getEvents
-GET         /admin/stats/:event             controllers.admin.StatsController.getSales(event: Int, start: Long ?= 0, end: Long ?= 0)
++nocsrf
+POST           /scan/configurations                          controllers.scanning.ScanningController.createConfig
++nocsrf
+PUT            /scan/configurations/:id                      controllers.scanning.ScanningController.updateConfig(id: Int)
++nocsrf
+POST           /scan/configurations/:id/addProduct           controllers.scanning.ScanningController.addProductToConfig(id: Int)
++nocsrf
+POST           /scan/configurations/:id/removeProduct        controllers.scanning.ScanningController.removeProductFromConfig(id: Int)
+
+
+
++nocsrf
+GET            /pos/configurations                           controllers.pos.PosController.getConfigs
+GET            /pos/configurations/:id                       controllers.pos.PosController.getConfig(id: Int)
++nocsrf
+POST           /pos/configurations                           controllers.pos.PosController.createConfig
++nocsrf
+PUT            /pos/configurations/:id                       controllers.pos.PosController.updateConfig(id: Int)
++nocsrf
+POST           /pos/checkout                                 controllers.pos.PosController.checkout
++nocsrf
+POST           /pos/paymentLog/:orderId                      controllers.pos.PosController.processPayment(orderId: Int)
+
++nocsrf
+POST           /admin/orders/import/:event                   controllers.admin.OrdersController.importOrder(event: Int)
+
+GET            /admin/orders/export/:event/:date             controllers.admin.OrdersController.export(event: Int, date: String)
+
+GET            /admin/stats/:event                           controllers.admin.StatsController.getSales(event: Int, start: Long ?= 0, end: Long ?= 0)
+
+GET            /admin/events                                 controllers.admin.EventsController.getEvents
+GET            /admin/events/:event                          controllers.admin.EventsController.getEvent(event: Int)
+
++nocsrf
+POST           /admin/events                                 controllers.admin.EventsController.createEvent
++nocsrf
+PUT            /admin/events/:id                             controllers.admin.EventsController.updateEvent(id: Int)
+

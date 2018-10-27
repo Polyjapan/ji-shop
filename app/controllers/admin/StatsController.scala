@@ -18,16 +18,6 @@ import scala.concurrent.ExecutionContext
   */
 class StatsController @Inject()(cc: ControllerComponents, orders: OrdersModel, stats: StatsModel, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext) extends AbstractController(cc) {
 
-  def getEvents: Action[AnyContent] = Action.async { implicit request => {
-    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
-    if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm(Permissions.ADMIN_VIEW_STATS)) noPermissions.asFuture
-    else {
-      stats.getEvents.map(e => Ok(Json.toJson(e)))
-    }
-  }
-  }
-
   def getSales(event: Int, start: Long = 0, end: Long = 0): Action[AnyContent] = Action.async { implicit request => {
     val user = request.jwtSession.getAs[AuthenticatedUser]("user")
     if (user.isEmpty) notAuthenticated.asFuture

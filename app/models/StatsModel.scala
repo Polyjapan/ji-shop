@@ -20,9 +20,6 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
 
   type OrdersFilter = Query[Orders, data.Order, Seq] => Query[Orders, data.Order, Seq]
 
-  def getEvents: Future[Seq[data.Event]] =
-    db.run(events.result)
-
   private val confirmedOrders: Query[Orders, data.Order, Seq] = orders
     .filter(order => order.paymentConfirmed.isDefined)
 
