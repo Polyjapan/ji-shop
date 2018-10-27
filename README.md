@@ -37,9 +37,9 @@ after year. The goal of this project is to create a new plateform that can be us
   -  [x] Display sales stats 
   -  [ ] See all clients
   -  [ ] Update clients permissions
-  -  [ ] See all orders
-  -  [ ] Re-send emails from an order view
-  -  [ ] Force acceptation of an order
+  -  [x] See all orders
+  -  [x] Re-send emails from an order view
+  -  [x] Force acceptation of an order
 - [ ] (BackOffice) Scan tickets
   -  [ ] Create scanning configurations, with a list of allowed item types
   -  [x] Endpoint to scan a barcode with a given config, checking if it's allowed or not `/scan/process/:configId`
