@@ -266,6 +266,16 @@ package object data {
     */
   case object Dropped extends TaskState
 
+
+  object TaskState {
+    def unapply(arg: TaskState): String = arg.toString.toUpperCase
+
+    def apply(string: String): TaskState = string.toUpperCase match {
+      case "INPROGRESS" => InProgress
+      case str => getClass.getClassLoader.loadClass("data." + str.toLowerCase.capitalize).newInstance().asInstanceOf[TaskState]
+    }
+  }
+
   /**
     * A task in the intranet
     *
