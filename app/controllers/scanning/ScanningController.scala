@@ -5,7 +5,7 @@ import constants.results.Errors
 import constants.results.Errors._
 import data._
 import javax.inject.Inject
-import models.{AlreadyValidatedTicketException, OrdersModel, ScanningModel}
+import models.{AlreadyValidatedTicketException, OrdersModel, ProductsModel, ScanningModel}
 import pdi.jwt.JwtSession._
 import play.api.data.Forms.{mapping, _}
 import play.api.data.{Form, FormError}
@@ -19,9 +19,9 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel, scanModel: ScanningModel)(implicit ec: ExecutionContext, mailerClient: MailerClient) extends AbstractController(cc) {
+class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel, scanModel: ScanningModel, products: ProductsModel)(implicit ec: ExecutionContext, mailerClient: MailerClient) extends AbstractController(cc) {
   private val scanForm = Form(mapping("barcode" -> nonEmptyText)(e => e)(Some(_)))
-  private val configForm = Form(mapping("name" -> nonEmptyText, "acceptGoodies" -> boolean)(Tuple2.apply)(Tuple2.unapply))
+  private val configForm = Form(mapping("name" -> nonEmptyText, "acceptOrderTickets" -> boolean)(Tuple2.apply)(Tuple2.unapply))
 
   def scanCode(configId: Int): Action[AnyContent] = Action.async { implicit request => {
     val session = request.jwtSession
@@ -81,10 +81,37 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
   }
   }
 
+  def getConfig(id: Int): Action[AnyContent] = Action.async { implicit request => {
+    val session = request.jwtSession
+    val user = session.getAs[AuthenticatedUser]("user")
+
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.SCAN_TICKET)) noPermissions.asFuture
+    else {
+      scanModel.getConfig(id).map(result => if (result.isDefined) Ok(Json.toJson(result.get._1)) else notFound("id"))
+    }
+  }
+  }
+
+  def getFullConfig(id: Int): Action[AnyContent] = Action.async { implicit request => {
+    val session = request.jwtSession
+    val user = session.getAs[AuthenticatedUser]("user")
+
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.SCAN_TICKET)) noPermissions.asFuture
+    else {
+      scanModel.getFullConfig(id).map(result => {
+        if (result.isDefined) Ok(Json.toJson(result.map(pair => (pair._1, products.buildItemList(pair._2))).get))
+        else notFound("id")
+      })
+    }
+  }
+  }
+
   def createConfig: Action[JsValue] = Action.async(parse.json) { implicit request => {
     handleConfig(config => {
       scanModel.createConfig(config)
-        .map(inserted => if (inserted == 1) Ok(Json.obj("success" -> true)) else dbError)
+        .map(inserted => Ok(Json.toJson(inserted)))
         .recover { case _ => dbError }
     })
   }
@@ -92,8 +119,8 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
 
   def updateConfig(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request => {
     handleConfig(config => {
-      scanModel.updateConfig(id, config)
-        .map(inserted => if (inserted == 1) Ok(Json.obj("success" -> true)) else notFound("id"))
+      scanModel.updateConfig(id, config.copy(Some(id)))
+        .map(inserted => if (inserted == 1) Ok(Json.toJson(id)) else notFound("id"))
         .recover { case _ => dbError }
     })
   }

@@ -26,10 +26,7 @@ class ItemsController @Inject()(cc: MessagesControllerComponents, pdfGen: Ticket
       val tickets = common.mapValues(_._1)
       val goodies = common.mapValues(_._2)
 
-      def remap(map: Map[Event, Seq[Product]]) =
-        map.filter(_._2.nonEmpty).map(pair => Json.obj("event" -> pair._1, "items" -> pair._2)).toList
-
-      val json = Json.obj("tickets" -> remap(tickets), "goodies" -> remap(goodies))
+      val json = Json.obj("tickets" -> products.buildItemList(tickets), "goodies" -> products.buildItemList(goodies))
 
       Ok(json)
     })
@@ -48,6 +45,17 @@ class ItemsController @Inject()(cc: MessagesControllerComponents, pdfGen: Ticket
   def getAllItems: Action[AnyContent] = Action.async { implicit request => {
     request.jwtSession.getAs[AuthenticatedUser]("user") match {
       case Some(user) if user.hasPerm(Permissions.SEE_INVISIBLE_ITEMS) => sqlGetItems(_.getProductsAdmin)
+      case _ => noPermissions.asFuture
+    }
+  }
+  }
+
+  /**
+    * Get all the items in all the editions, even if they are not visible to the public
+    */
+  def getInvisibleItems: Action[AnyContent] = Action.async { implicit request => {
+    request.jwtSession.getAs[AuthenticatedUser]("user") match {
+      case Some(user) if user.hasPerm(Permissions.SEE_INVISIBLE_ITEMS) => sqlGetItems(_.getAllProducts)
       case _ => noPermissions.asFuture
     }
   }

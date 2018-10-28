@@ -1,8 +1,9 @@
 package models
 
-import data.Event
+import data.{Event, Product}
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.MySQLProfile
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -21,12 +22,19 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
     _.groupBy(_._1).mapValues(_.map(_._2))
 
 
+  def buildItemList(map: Map[Event, Seq[Product]]): List[JsObject] =
+    map.filter(_._2.nonEmpty).map(pair => Json.obj("event" -> pair._1, "items" -> pair._2)).toList
+
   def getProducts: Future[Map[Event, Seq[data.Product]]] =
     db.run(productsJoin.filter(_._1.visible === true).filter(_._2.isVisible === true).result).map(joinToMap)
 
   def getProductsAdmin: Future[Map[Event, Seq[data.Product]]] =
   // Here we allow invisible products to be displayed
     db.run(productsJoin.filter(_._1.visible === true).result).map(joinToMap)
+
+  def getAllProducts: Future[Map[Event, Seq[data.Product]]] =
+  // Here we allow invisible products to be displayed
+    db.run(productsJoin.result).map(joinToMap)
 
   def getMergedProducts(includeHidden: Boolean, includeHiddenEvents: Boolean = false): Future[Seq[data.Product]] =
     db.run(productsJoin.filter(_._1.visible === true || includeHiddenEvents).filter(_._2.isVisible === true || includeHidden).result).map(_.map(_._2))

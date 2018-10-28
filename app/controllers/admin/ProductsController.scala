@@ -4,7 +4,7 @@ import constants.Permissions
 import constants.results.Errors._
 import data.{AuthenticatedUser, Product}
 import javax.inject.Inject
-import models.{EventsModel, ProductsModel}
+import models.{EventsModel, ProductsModel, ScanningModel}
 import pdi.jwt.JwtSession._
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
@@ -19,7 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class ProductsController @Inject()(cc: ControllerComponents, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext) extends AbstractController(cc) {
+class ProductsController @Inject()(cc: ControllerComponents, products: ProductsModel, configs: ScanningModel)(implicit mailerClient: MailerClient, ec: ExecutionContext) extends AbstractController(cc) {
 
   def getProducts(event: Int): Action[AnyContent] = Action.async { implicit request => {
     val user = request.jwtSession.getAs[AuthenticatedUser]("user")
@@ -37,6 +37,16 @@ class ProductsController @Inject()(cc: ControllerComponents, products: ProductsM
     else if (!user.get.hasPerm(Permissions.ADMIN_ACCESS)) noPermissions.asFuture
     else {
       products.getProduct(event, id).map(e => Ok(Json.toJson(e)))
+    }
+  }
+  }
+
+  def getAcceptingConfigs(event: Int, id: Int): Action[AnyContent] = Action.async { implicit request => {
+    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.ADMIN_ACCESS)) noPermissions.asFuture
+    else {
+      configs.getConfigsAcceptingProduct(event, id).map(e => Ok(Json.toJson(e)))
     }
   }
   }

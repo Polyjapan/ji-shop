@@ -23,7 +23,7 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
   private val configJoin = scanningConfigurations joinLeft scanningItems on (_.id === _.scanningConfigurationId)
   private val productsJoin = scanningConfigurations join scanningItems on (_.id === _.scanningConfigurationId) join products on (_._2.acceptedItemId === _.id)
 
-  def createConfig(config: ScanningConfiguration): Future[Int] = db.run(scanningConfigurations += config)
+  def createConfig(config: ScanningConfiguration): Future[Int] = db.run(scanningConfigurations.returning(scanningConfigurations.map(_.id)) += config)
 
   def updateConfig(id: Int, config: ScanningConfiguration): Future[Int] = db.run(scanningConfigurations.filter(_.id === id).update(config))
 
@@ -38,16 +38,21 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
     else Some(seq.head._1, seq.map(_._2).filter(_.isDefined).map(_.get))
   }
 
-  private def joinToPairWithProduct(seq: Seq[((ScanningConfiguration, ScanningItem), Product)]): Option[(ScanningConfiguration, Seq[Product])] = {
+  private def joinToPairWithProduct(seq: Seq[(((ScanningConfiguration, ScanningItem), data.Product), data.Event)]): Option[(ScanningConfiguration, Map[data.Event, Seq[data.Product]])] = {
     if (seq.isEmpty) None
-    else Some(seq.head._1._1, seq.map(_._2))
+    else Some(seq.head._1._1._1, seq.groupBy(_._2).mapValues(seq => seq.map(_._1._2)))
   }
+
+
+  def getConfigsAcceptingProduct(event: Int, id: Int): Future[Seq[ScanningConfiguration]] =
+    db.run(productsJoin.filter(pair => pair._2.id  === id && pair._2.eventId === id).map(_._1._1).distinct.result)
 
   def getConfigs: Future[Seq[ScanningConfiguration]] = db.run(scanningConfigurations.result)
 
   def getConfig(id: Int): Future[Option[(ScanningConfiguration, Seq[ScanningItem])]] = db.run(configJoin.filter(el => el._1.id === id).result).map(joinToPair)
 
-  def getFullConfig(id: Int): Future[Option[(ScanningConfiguration, Seq[Product])]] = db.run(productsJoin.filter(el => el._1._1.id === id).result).map(joinToPairWithProduct)
+  def getFullConfig(id: Int): Future[Option[(ScanningConfiguration, Map[Event, Seq[data.Product]])]] =
+    db.run(productsJoin.filter(el => el._1._1.id === id).join(events).on(_._2.eventId === _.id).result).map(joinToPairWithProduct)
 
   def invalidateBarcode(ticketId: Int, userId: Int): Future[Int] = {
     val checkCodeStillValid = (claimedTickets join clients on (_.claimedBy === _.id)) // we join with the clients so that we can return useful information in the exception (i.e. the name)
