@@ -19,8 +19,9 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
 
   private val configJoin = posConfigurations joinLeft posConfigItems on (_.id === _.configId)
   private val productsJoin = posConfigurations join posConfigItems on (_.id === _.configId) join products on (_._2.itemId === _.id)
+  private val productsLeftJoin = posConfigurations joinLeft posConfigItems on (_.id === _.configId) joinLeft products on (_._2.map(_.itemId) === _.id)
 
-  def createConfig(config: PosConfiguration): Future[Int] = db.run(posConfigurations += config)
+  def createConfig(config: PosConfiguration): Future[Int] = db.run(posConfigurations.returning(posConfigurations.map(_.id)) += config)
 
   def updateConfig(id: Int, config: PosConfiguration): Future[Int] = db.run(posConfigurations.filter(_.id === id).update(config))
 
@@ -38,22 +39,26 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
     else Some(seq.head._1, seq.map(_._2).filter(_.isDefined).map(_.get))
   }
 
-  private def joinToPairWithProduct(seq: Seq[((PosConfiguration, PosConfigItem), data.Product)]): Option[(PosConfiguration, Seq[JsonPosConfigItem])] = {
+  private def joinToPairWithProduct(seq: Seq[((PosConfiguration, Option[PosConfigItem]), Option[data.Product])]): Option[(PosConfiguration, Seq[JsonPosConfigItem])] = {
     if (seq.isEmpty) None
-    else Some(seq.head._1._1, seq.map(pair => JsonPosConfigItem(pair._1._2, pair._2)))
+    else Some((seq.head._1._1, seq
+      .filter(pair => pair._1._2.isDefined && pair._2.isDefined)
+      .map(pair => JsonPosConfigItem(pair._1._2.get, pair._2.get))))
   }
 
   def getConfigs: Future[Seq[PosConfiguration]] = db.run(posConfigurations.result)
 
   def getConfig(id: Int): Future[Option[(PosConfiguration, Seq[PosConfigItem])]] = db.run(configJoin.filter(el => el._1.id === id).result).map(joinToPair)
 
-  def getFullConfig(id: Int): Future[Option[JsonGetConfigResponse]] = db.run(productsJoin.filter(el => el._1._1.id === id).result)
-    .map(joinToPairWithProduct)
-    .map(opt => opt.map(pair => JsonGetConfigResponse(pair._1, pair._2)))
+  def getFullConfig(id: Int): Future[Option[JsonGetConfigResponse]] =
+    db.run(productsLeftJoin.filter(el => el._1._1.id === id).result)
+      .map(joinToPairWithProduct)
+      .map(opt => opt.map(pair => JsonGetConfigResponse(pair._1, pair._2)))
 }
 
 
 case class JsonPosConfigItem(item: data.Product, row: Int, col: Int, color: String, fontColor: String)
+
 case class JsonGetConfigResponse(config: PosConfiguration, items: Seq[JsonPosConfigItem])
 
 object JsonPosConfigItem {

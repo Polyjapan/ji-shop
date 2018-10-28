@@ -52,12 +52,60 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
   }
   }
 
-  // TODO: create endpoints to add/remove/move items
+
+  def addProductToConfig(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    val session = request.jwtSession
+    val user = session.getAs[AuthenticatedUser]("user")
+
+    val addProductForm = Form(
+      mapping("productId" -> number, "row" -> number, "col" -> number, "color" -> nonEmptyText, "textColor" -> nonEmptyText)(Tuple5.apply)(Tuple5.unapply))
+
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.CHANGE_POS_CONFIGURATIONS)) noPermissions.asFuture
+    else {
+      addProductForm.bindFromRequest().fold(withErrors => {
+        formError(withErrors).asFuture // If the name is absent from the request
+      }, form => {
+        val config = PosConfigItem(id, form._1, form._2, form._3, form._4, form._5)
+
+        model.getConfig(id).flatMap(opt => {
+          if (opt.isDefined) {
+            if (opt.get._2.exists(e => e.productId == form._1)) success.asFuture // We don't have to insert, it's already there
+            else model.addProduct(config).map(r => if (r == 1) success else dbError).recover { case _ => dbError } // insert
+
+          } else notFound("config").asFuture
+        })
+
+      })
+
+    }
+  }
+
+  def removeProductFromConfig(id: Int): Action[String] = Action.async(parse.text) { implicit request => {
+    val session = request.jwtSession
+    val user = session.getAs[AuthenticatedUser]("user")
+
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.CHANGE_POS_CONFIGURATIONS)) noPermissions.asFuture
+    else {
+      try {
+        val productId = request.body.toInt
+
+        model.getConfig(id).flatMap(opt => {
+          if (opt.isDefined) {
+            if (opt.get._2.exists(e => e.productId == productId)) model.removeProduct(id, productId).map(r => if (r == 1) success else dbError).recover { case _ => dbError }
+            else success.asFuture // We don't have to remove, it's not there anymore
+          } else notFound("config").asFuture
+        })
+      }
+    }
+  }
+  }
 
   def createConfig: Action[JsValue] = Action.async(parse.json) { implicit request => {
     handleConfig(config => {
       model.createConfig(config)
-        .map(inserted => if (inserted == 1) Ok(Json.obj("success" -> true)) else dbError)
+        .map(inserted => Ok(Json.toJson(inserted)))
         .recover { case _ => dbError }
     })
   }
@@ -65,8 +113,8 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
 
   def updateConfig(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request => {
     handleConfig(config => {
-      model.updateConfig(id, config)
-        .map(inserted => if (inserted == 1) Ok(Json.obj("success" -> true)) else notFound("id"))
+      model.updateConfig(id, config.copy(Some(id)))
+        .map(_ => Ok(Json.toJson(id)))
         .recover { case _ => dbError }
     })
   }

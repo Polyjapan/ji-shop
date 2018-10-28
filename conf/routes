@@ -65,6 +65,10 @@ PUT            /pos/configurations/:id                             controllers.p
 POST           /pos/checkout                                       controllers.pos.PosController.checkout
 +nocsrf
 POST           /pos/paymentLog/:orderId                            controllers.pos.PosController.processPayment(orderId: Int)
++nocsrf
+POST           /pos/configurations/:id/addProduct                 controllers.pos.PosController.addProductToConfig(id: Int)
++nocsrf
+POST           /pos/configurations/:id/removeProduct              controllers.pos.PosController.removeProductFromConfig(id: Int)
 
 +nocsrf
 POST           /admin/orders/import/:event                         controllers.admin.OrdersController.importOrder(event: Int)
