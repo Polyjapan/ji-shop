@@ -195,6 +195,16 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
   }
   }
 
+  def getOrdersByUser(userId: Int): Action[AnyContent] = Action.async { implicit request => {
+    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.VIEW_OTHER_ORDER)) noPermissions.asFuture
+    else {
+      orders.loadOrders(userId, isAdmin = true).map(seq => Ok(Json.toJson(seq)))
+    }
+  }
+  }
+
   def getOrderUserInfo(order: Int): Action[AnyContent] = Action.async { implicit request => {
     val user = request.jwtSession.getAs[AuthenticatedUser]("user")
     if (user.isEmpty) notAuthenticated.asFuture

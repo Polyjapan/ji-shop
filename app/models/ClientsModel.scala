@@ -45,7 +45,7 @@ class ClientsModel @Inject() (protected val dbConfigProvider: DatabaseConfigProv
     * Query all the clients registered in database
     * @return a future holding a [[Seq]] of all registered [[Client]] and their permissions as a [[Seq]] of [[String]]
     */
-  def allClients: Future[Seq[ClientAndPermissions]] = db.run(clientsJoin.result).map(permsJoinMapper)
+  def allClients: Future[Seq[Client]] = db.run(clients.result)
 
   /**
     * Query a client by its email
@@ -53,6 +53,17 @@ class ClientsModel @Inject() (protected val dbConfigProvider: DatabaseConfigProv
   def findClient(email: String): Future[Option[ClientAndPermissions]] =
     db.run(clientsJoin.filter(_._1.email === email).result).map(singleClientPermsJoinMapper)
 
+  def getClient(id: Int): Future[Option[ClientAndPermissions]] =
+    db.run(clientsJoin.filter(_._1.id === id).result).map(singleClientPermsJoinMapper)
+
+  def addPermission(id: Int, permission: String): Future[Int] =
+    db.run(permissions += (id, permission))
+
+  def removePermission(id: Int, permission: String): Future[Int] =
+    db.run(permissions.filter(pair => pair.permission === permission && pair.userId === id).delete)
+
+  def forceEmailConfirm(id: Int): Future[Int] =
+    db.run(clients.filter(_.id === id).map(_.emailConfirmKey).update(Option.empty))
 
   /**
     * Create a client

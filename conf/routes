@@ -70,6 +70,7 @@ GET            /admin/orders/export/:event/:date             controllers.admin.O
 GET            /admin/orders/:event                          controllers.admin.OrdersController.getOrders(event: Int)
 GET            /admin/orders/userInfo/:id                    controllers.admin.OrdersController.getOrderUserInfo(id: Int)
 GET            /admin/orders/logs/:id                        controllers.admin.OrdersController.getOrderLogs(id: Int)
+GET            /admin/orders/byUser/:id                      controllers.admin.OrdersController.getOrdersByUser(id: Int)
 
 GET            /admin/stats/:event                           controllers.admin.StatsController.getSales(event: Int, start: Long ?= 0, end: Long ?= 0)
 
@@ -91,4 +92,15 @@ GET            /admin/events/:event/products/:product        controllers.admin.P
 POST           /admin/events/:event/products                 controllers.admin.ProductsController.createProduct(event: Int)
 +nocsrf
 PUT            /admin/events/:event/products/:id             controllers.admin.ProductsController.updateProduct(event: Int, id: Int)
+
+
+
+GET            /admin/users                                  controllers.admin.UsersController.getUsers
+GET            /admin/users/:user                            controllers.admin.UsersController.getUser(user: Int)
+GET            /admin/users/:user/acceptEmail                controllers.admin.UsersController.acceptEmail(user: Int)
+
++nocsrf
+POST           /admin/users/:user/permissions/add            controllers.admin.UsersController.addPermission(user: Int)
++nocsrf
+POST           /admin/users/:user/permissions/remove         controllers.admin.UsersController.removePermission(user: Int)
 

@@ -35,8 +35,8 @@ after year. The goal of this project is to create a new plateform that can be us
   -  [x] Export all tickets for a given edition to different lists
   -  [ ] Display scan stats
   -  [x] Display sales stats 
-  -  [ ] See all clients
-  -  [ ] Update clients permissions
+  -  [x] See all clients
+  -  [x] Update clients permissions
   -  [x] See all orders
   -  [x] Re-send emails from an order view
   -  [x] Force acceptation of an order
