@@ -6,7 +6,6 @@ import java.time.Instant
 import data.{ClaimedTicket, Client, Event, ScanningConfiguration, ScanningItem}
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
-import play.api.mvc.Result
 import slick.jdbc.MySQLProfile
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -22,6 +21,9 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
 
   private val configJoin = scanningConfigurations joinLeft scanningItems on (_.id === _.scanningConfigurationId)
   private val productsJoin = scanningConfigurations join scanningItems on (_.id === _.scanningConfigurationId) join products on (_._2.acceptedItemId === _.id)
+  private val productsLeftJoin = scanningConfigurations
+    .joinLeft(scanningItems).on(_.id === _.scanningConfigurationId)
+    .joinLeft(products).on(_._2.map(_.acceptedItemId) === _.id)
 
   def createConfig(config: ScanningConfiguration): Future[Int] = db.run(scanningConfigurations.returning(scanningConfigurations.map(_.id)) += config)
 
@@ -38,21 +40,26 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
     else Some(seq.head._1, seq.map(_._2).filter(_.isDefined).map(_.get))
   }
 
-  private def joinToPairWithProduct(seq: Seq[(((ScanningConfiguration, ScanningItem), data.Product), data.Event)]): Option[(ScanningConfiguration, Map[data.Event, Seq[data.Product]])] = {
+  private def joinToPairWithProduct(seq: Seq[(((ScanningConfiguration, Option[ScanningItem]), Option[data.Product]), Option[data.Event])]): Option[(ScanningConfiguration, Map[data.Event, Seq[data.Product]])] = {
     if (seq.isEmpty) None
-    else Some(seq.head._1._1._1, seq.groupBy(_._2).mapValues(seq => seq.map(_._1._2)))
+    else {
+      val map = seq.groupBy(_._2).filterKeys(opt => opt.isDefined).map(pair => (pair._1.get, pair._2))
+      Some((seq.head._1._1._1, map.mapValues(seq => seq.map(_._1._2).filter(opt => opt.isDefined).map(_.get))))
+    }
   }
 
 
   def getConfigsAcceptingProduct(event: Int, id: Int): Future[Seq[ScanningConfiguration]] =
-    db.run(productsJoin.filter(pair => pair._2.id  === id && pair._2.eventId === id).map(_._1._1).distinct.result)
+    db.run(productsJoin.filter(pair => pair._2.id === id && pair._2.eventId === id).map(_._1._1).distinct.result)
 
   def getConfigs: Future[Seq[ScanningConfiguration]] = db.run(scanningConfigurations.result)
 
   def getConfig(id: Int): Future[Option[(ScanningConfiguration, Seq[ScanningItem])]] = db.run(configJoin.filter(el => el._1.id === id).result).map(joinToPair)
 
   def getFullConfig(id: Int): Future[Option[(ScanningConfiguration, Map[Event, Seq[data.Product]])]] =
-    db.run(productsJoin.filter(el => el._1._1.id === id).join(events).on(_._2.eventId === _.id).result).map(joinToPairWithProduct)
+    db.run(
+      productsLeftJoin.filter(el => el._1._1.id === id)
+        .joinLeft(events).on(_._2.map(_.eventId) === _.id).result).map(joinToPairWithProduct)
 
   def invalidateBarcode(ticketId: Int, userId: Int): Future[Int] = {
     val checkCodeStillValid = (claimedTickets join clients on (_.claimedBy === _.id)) // we join with the clients so that we can return useful information in the exception (i.e. the name)
