@@ -115,8 +115,8 @@ POST           /admin/users/:user/permissions/remove               controllers.a
 
 # Intranet stuff
 +nocsrf
-POST           /intranet/tasks/inEvent/:event                      controllers.intranet.IntranetController.createTask(event: Int)
-GET            /intranet/tasks/inEvent/:event                      controllers.intranet.IntranetController.getTasks(event: Int)
+POST           /intranet/tasks/byEvent/:event                      controllers.intranet.IntranetController.createTask(event: Int)
+GET            /intranet/tasks/byEvent/:event                      controllers.intranet.IntranetController.getTasks(event: Int)
 
 +nocsrf
 PUT            /intranet/tasks/byId/:task/priority                 controllers.intranet.IntranetController.updatePriority(task: Int)
