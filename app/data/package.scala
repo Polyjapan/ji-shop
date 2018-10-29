@@ -275,7 +275,11 @@ package object data {
 
     def apply(string: String): TaskState = string.toUpperCase match {
       case "INPROGRESS" => InProgress
-      case str => getClass.getClassLoader.loadClass("data." + str.toLowerCase.capitalize).newInstance().asInstanceOf[TaskState]
+      case "SENT" => Sent
+      case "REFUSED" => Refused
+      case "WAITING" => Waiting
+      case "DONE" => Done
+      case "DROPPED" => Dropped
     }
 
     val formatter: Formatter[TaskState] = new Formatter[TaskState] {
