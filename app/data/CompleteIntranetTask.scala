@@ -9,7 +9,8 @@ import play.api.libs.json.Json
 /**
   * @author Louis Vialar
   */
-case class PartialIntranetTask(name: String,
+case class PartialIntranetTask(id: Int,
+                               name: String,
                                priority: Int,
                                state: TaskState,
                                createdBy: JsonClient,
@@ -18,7 +19,7 @@ case class PartialIntranetTask(name: String,
 
 object PartialIntranetTask {
   def apply(task: IntranetTask, client: Client, tags: Seq[String]): PartialIntranetTask =
-    new PartialIntranetTask(task.name, task.priority, task.state, JsonClient(client), task.createdAt.get, tags)
+    new PartialIntranetTask(task.id.get, task.name, task.priority, task.state, JsonClient(client), task.createdAt.get, tags)
 
   implicit val format = Json.format[PartialIntranetTask]
 }
@@ -48,7 +49,9 @@ object CompleteTaskComment {
 
   implicit val format = Json.format[CompleteTaskComment]
 }
-case class CompleteIntranetTask(name: String,
+
+case class CompleteIntranetTask(id: Int,
+                                name: String,
                                 priority: Int,
                                 state: TaskState,
                                 createdBy: JsonClient,
@@ -65,7 +68,7 @@ object CompleteIntranetTask {
             assignationLogs: Seq[CompleteTaskAssignationLog],
             assignees: Seq[Client],
             tags: Seq[String]): CompleteIntranetTask =
-    CompleteIntranetTask(task.name, task.priority, task.state, JsonClient(client), task.createdAt.get, comments, logs, assignationLogs, assignees.map(c => JsonClient(c)), tags)
+    CompleteIntranetTask(task.id.get, task.name, task.priority, task.state, JsonClient(client), task.createdAt.get, comments, logs, assignationLogs, assignees.map(c => JsonClient(c)), tags)
 
   implicit val format = Json.format[CompleteIntranetTask]
 
