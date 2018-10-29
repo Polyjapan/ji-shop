@@ -1,5 +1,8 @@
 import java.sql.Timestamp
 
+import constants.ErrorCodes
+import play.api.data.FormError
+import play.api.data.format.Formatter
 import play.api.libs.json._
 
 /**
@@ -274,6 +277,31 @@ package object data {
       case "INPROGRESS" => InProgress
       case str => getClass.getClassLoader.loadClass("data." + str.toLowerCase.capitalize).newInstance().asInstanceOf[TaskState]
     }
+
+    val formatter: Formatter[TaskState] = new Formatter[TaskState] {
+      override def bind(key: String, data: Map[String, String]): Either[Seq[FormError], TaskState] =
+        try {
+          Right(apply(data(key)))
+        } catch {
+          case e: NoClassDefFoundError => Left(Seq(FormError(key, ErrorCodes.INVALID_STATE)))
+        }
+
+      override def unbind(key: String, value: TaskState): Map[String, String] =
+        Map(key -> unapply(value))
+    }
+
+    implicit val taskStateFormat: Format[TaskState] = new Format[TaskState] {
+      override def reads(json: JsValue): JsResult[TaskState] = json match {
+        case JsString(v) => try {
+          JsSuccess(apply(v))
+        } catch {
+          case e: NoClassDefFoundError => JsError("Invalid task state")
+        }
+        case _ => JsError("Invalid type")
+      }
+
+      override def writes(o: TaskState): JsValue = JsString(unapply(o))
+    }
   }
 
   /**
@@ -285,7 +313,7 @@ package object data {
     * @param createdBy the client who opened the request
     * @param event     the event this task belongs to
     */
-  case class IntranetTask(id: Option[Int], name: String, priority: Int, state: TaskState, createdBy: Int, createdAt: Timestamp, event: Int)
+  case class IntranetTask(id: Option[Int], name: String, priority: Int, state: TaskState, createdBy: Int, createdAt: Option[Timestamp], event: Int)
 
   /**
     * A comment on a task
@@ -296,7 +324,7 @@ package object data {
     * @param createdBy the user who commented
     * @param createdAt the date this comment was created
     */
-  case class IntranetTaskComment(id: Option[Int], taskId: Int, content: String, createdBy: Int, createdAt: Timestamp)
+  case class IntranetTaskComment(id: Option[Int], taskId: Int, content: String, createdBy: Int, createdAt: Option[Timestamp])
 
   /**
     * A task state change
@@ -307,7 +335,19 @@ package object data {
     * @param createdBy   the user who made the change
     * @param createdAt   the time this change was made
     */
-  case class IntranetTaskLog(id: Option[Int], taskId: Int, targetState: TaskState, createdBy: Int, createdAt: Timestamp)
+  case class IntranetTaskLog(id: Option[Int], taskId: Int, targetState: TaskState, createdBy: Int, createdAt: Option[Timestamp])
+
+  /**
+    * An assignation change
+    *
+    * @param id          the id of this change
+    * @param taskId      the task this change happened to
+    * @param assignee    the user assigned to the task
+    * @param deleted     if true, the assignee was removed from the task
+    * @param createdBy   the user who made the change
+    * @param createdAt   the time this change was made
+    */
+  case class IntranetTaskAssignationLog(id: Option[Int], taskId: Int, assignee: Int, deleted: Boolean, createdBy: Int, createdAt: Option[Timestamp])
 
   /**
     * A tag (i.e. #security) associated with a task

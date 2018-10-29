@@ -66,9 +66,9 @@ POST           /pos/checkout                                       controllers.p
 +nocsrf
 POST           /pos/paymentLog/:orderId                            controllers.pos.PosController.processPayment(orderId: Int)
 +nocsrf
-POST           /pos/configurations/:id/addProduct                 controllers.pos.PosController.addProductToConfig(id: Int)
+POST           /pos/configurations/:id/addProduct                  controllers.pos.PosController.addProductToConfig(id: Int)
 +nocsrf
-POST           /pos/configurations/:id/removeProduct              controllers.pos.PosController.removeProductFromConfig(id: Int)
+POST           /pos/configurations/:id/removeProduct               controllers.pos.PosController.removeProductFromConfig(id: Int)
 
 +nocsrf
 POST           /admin/orders/import/:event                         controllers.admin.OrdersController.importOrder(event: Int)
@@ -104,6 +104,7 @@ GET            /admin/events/:event/products/:id/acceptedBy        controllers.a
 
 
 GET            /admin/users                                        controllers.admin.UsersController.getUsers
+GET            /admin/users/withPerm/:perm                         controllers.admin.UsersController.getUsersWithPermission(perm: String)
 GET            /admin/users/:user                                  controllers.admin.UsersController.getUser(user: Int)
 GET            /admin/users/:user/acceptEmail                      controllers.admin.UsersController.acceptEmail(user: Int)
 
@@ -112,3 +113,23 @@ POST           /admin/users/:user/permissions/add                  controllers.a
 +nocsrf
 POST           /admin/users/:user/permissions/remove               controllers.admin.UsersController.removePermission(user: Int)
 
+# Intranet stuff
++nocsrf
+POST           /intranet/tasks/inEvent/:event                      controllers.intranet.IntranetController.createTask(event: Int)
+GET            /intranet/tasks/inEvent/:event                      controllers.intranet.IntranetController.getTasks(event: Int)
+
++nocsrf
+PUT            /intranet/tasks/byId/:task/priority                 controllers.intranet.IntranetController.updatePriority(task: Int)
++nocsrf
+PUT            /intranet/tasks/byId/:task/state                    controllers.intranet.IntranetController.updateState(task: Int)
+GET            /intranet/tasks/byId/:task                          controllers.intranet.IntranetController.getTask(task: Int)
++nocsrf
+POST           /intranet/tasks/byId/:task/comments                 controllers.intranet.IntranetController.addComment(task: Int)
++nocsrf
+POST           /intranet/tasks/byId/:task/tags/add                 controllers.intranet.IntranetController.addTags(task: Int)
++nocsrf
+POST           /intranet/tasks/byId/:task/tags/remove              controllers.intranet.IntranetController.removeTags(task: Int)
++nocsrf
+POST           /intranet/tasks/byId/:task/assignees/add            controllers.intranet.IntranetController.addAssignee(task: Int)
++nocsrf
+POST           /intranet/tasks/byId/:task/assignees/remove         controllers.intranet.IntranetController.removeAssignee(task: Int)

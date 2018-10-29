@@ -32,6 +32,16 @@ class UsersController @Inject()(cc: ControllerComponents, users: ClientsModel)(i
   }
   }
 
+  def getUsersWithPermission(perm: String): Action[AnyContent] = Action.async { implicit request => {
+    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
+    if (user.isEmpty) notAuthenticated.asFuture
+    else if (!user.get.hasPerm(Permissions.ADMIN_ACCESS)) noPermissions.asFuture
+    else {
+      users.allClientsWithPermission(perm).map(e => Ok(Json.toJson(e.map(pair => JsonClient(pair)))))
+    }
+  }
+  }
+
   def getUser(id: Int): Action[AnyContent] = Action.async { implicit request => {
     val user = request.jwtSession.getAs[AuthenticatedUser]("user")
     if (user.isEmpty) notAuthenticated.asFuture

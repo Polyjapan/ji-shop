@@ -1,6 +1,6 @@
 package models
 
-import data.{Client, CompleteIntranetTask, CompleteTaskComment, CompleteTaskLog, Event, IntranetTask, IntranetTaskAssignation, IntranetTaskComment, IntranetTaskLog, IntranetTaskTag, PartialIntranetTask}
+import data.{Client, CompleteIntranetTask, CompleteTaskAssignationLog, CompleteTaskComment, CompleteTaskLog, Event, IntranetTask, IntranetTaskAssignation, IntranetTaskAssignationLog, IntranetTaskComment, IntranetTaskLog, IntranetTaskTag, PartialIntranetTask}
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.MySQLProfile
@@ -12,6 +12,7 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 class IntranetModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext)
   extends HasDatabaseConfigProvider[MySQLProfile] {
+
 
   import profile.api._
 
@@ -32,12 +33,22 @@ class IntranetModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
     * @param firstComment the first comment to add (its taskId will be overwritten)
     * @return the id of the task inserted
     */
-  def createTask(task: IntranetTask, firstComment: IntranetTaskComment): Future[Int] =
+  def createTask(task: IntranetTask, firstComment: IntranetTaskComment, tags: Seq[String]): Future[Int] =
     db.run(
       (intranetTasks.returning(intranetTasks.map(_.id)) += task)
         .flatMap(id => {
           (intranetTaskComments += firstComment.copy(taskId = id)).map(_ => id)
-        }))
+        })
+        .flatMap(id => {
+          (intranetTaskTags ++= tags.map(tag => IntranetTaskTag(id, tag))).map(_ => id)
+        })
+
+    )
+
+  def updatePriority(task: Int, taskData: Int) = {
+    db.run(intranetTasks.filter(_.id === task).map(_.priority).update(taskData))
+  }
+
 
   def postComment(comment: IntranetTaskComment): Future[Int] =
     db.run(intranetTaskComments.returning(intranetTaskComments.map(_.id)) += comment)
@@ -49,23 +60,26 @@ class IntranetModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
       )
     )
 
-  def addAssignee(task: Int, assignee: Int): Future[Int] =
-    db.run(intranetTaskAssignations += IntranetTaskAssignation(task, assignee))
+  def addOrRemoveAssignee(log: IntranetTaskAssignationLog): Future[Int] =
+    db.run(
+      (if (log.deleted) intranetTaskAssignations.filter(a => a.userId === log.assignee && a.taskId === log.taskId).delete
+      else intranetTaskAssignations += IntranetTaskAssignation(log.taskId, log.assignee))
+      .andThen(
+        intranetTaskAssignationLogs += log
+      ))
 
-  def removeAssignee(task: Int, assignee: Int): Future[Int] =
-    db.run(intranetTaskAssignations.filter(assig => assig.taskId === task && assig.userId === assignee).delete)
+  def addTags(task: Int, tags: Seq[String]): Future[Option[Int]] =
+    db.run(intranetTaskTags ++= tags.map(tag => IntranetTaskTag(task, tag)))
 
-  def addTag(task: Int, tag: String): Future[Int] =
-    db.run(intranetTaskTags += IntranetTaskTag(task, tag))
-
-  def removeTag(task: Int, tag: String): Future[Int] =
-    db.run(intranetTaskTags.filter(t => t.taskId === task && t.taskTag === tag).delete)
+  def removeTags(task: Int, tags: Seq[String]): Future[Int] =
+    db.run(intranetTaskTags.filter(t => t.taskId === task && t.taskTag.inSet(tags)).delete)
 
   def getTask(task: Int): Future[Option[CompleteIntranetTask]] = {
     db.run(
       baseJoin.filter(_._1.id === task).result.headOption.flatMap(base =>
         intranetTaskComments.filter(_.taskId === task).join(clients).on(_.createdBy === _.id).result.flatMap(comments =>
           intranetTaskLogs.filter(_.taskId === task).join(clients).on(_.createdBy === _.id).result.flatMap(logs =>
+          intranetTaskAssignationLogs.filter(_.taskId === task).join(clients).on(_.createdBy === _.id).join(clients).on(_._1.assignee === _.id).result.flatMap(assigLog =>
             intranetTaskTags.filter(_.taskId === task).result.flatMap(tags =>
               intranetTaskAssignations.filter(_.taskId === task).join(clients).on(_.userId === _.id).result.map(assignees => {
                 base.map {
@@ -73,6 +87,7 @@ class IntranetModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
                     CompleteIntranetTask(task, client, event,
                       comments.map(pair => CompleteTaskComment(pair._1, pair._2)),
                       logs.map(pair => CompleteTaskLog(pair._1, pair._2)),
+                      assigLog.map(pair => data.CompleteTaskAssignationLog(pair._1._1, pair._1._2, pair._2)),
                       assignees.map(_._2),
                       tags.map(_.tag)
                     )
@@ -80,6 +95,7 @@ class IntranetModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
               }
               )
             )
+          )
           )
         )
       )
