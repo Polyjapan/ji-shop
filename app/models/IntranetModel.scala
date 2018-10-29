@@ -19,8 +19,6 @@ class IntranetModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
   private val baseJoin =
     intranetTasks
       .join(clients).on(_.createdBy === _.id)
-      .join(events).on(_._1.event === _.id)
-      .map(pair => (pair._1._1, pair._1._2, pair._2))
 
   private val tagsJoinLeft = baseJoin.joinLeft(intranetTaskTags).on(_._1.id === _.taskId)
   private val tagsJoin = baseJoin.join(intranetTaskTags).on(_._1.id === _.taskId)
@@ -83,8 +81,8 @@ class IntranetModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
             intranetTaskTags.filter(_.taskId === task).result.flatMap(tags =>
               intranetTaskAssignations.filter(_.taskId === task).join(clients).on(_.userId === _.id).result.map(assignees => {
                 base.map {
-                  case (task: IntranetTask, client: Client, event: Event) =>
-                    CompleteIntranetTask(task, client, event,
+                  case (task: IntranetTask, client: Client) =>
+                    CompleteIntranetTask(task, client,
                       comments.map(pair => CompleteTaskComment(pair._1, pair._2)),
                       logs.map(pair => CompleteTaskLog(pair._1, pair._2)),
                       assigLog.map(pair => data.CompleteTaskAssignationLog(pair._1._1, pair._1._2, pair._2)),
@@ -103,9 +101,9 @@ class IntranetModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
   }
 
 
-  private def parseToTasks(v: Seq[((IntranetTask, Client, Event), Option[IntranetTaskTag])]): Seq[PartialIntranetTask] = v.groupBy(_._1)
+  private def parseToTasks(v: Seq[((IntranetTask, Client), Option[IntranetTaskTag])]): Seq[PartialIntranetTask] = v.groupBy(_._1)
     .mapValues(seq => seq.map(_._2.map(_.tag)).filter(_.isDefined).map(_.get))
-    .map(pair => PartialIntranetTask(pair._1._1, pair._1._2, pair._1._3, pair._2)).toSeq
+    .map(pair => PartialIntranetTask(pair._1._1, pair._1._2, pair._2)).toSeq
 
   def getTasksByEvent(event: Int): Future[Seq[PartialIntranetTask]] = {
     db.run(tagsJoinLeft.filter(_._1._1.event === event).result)

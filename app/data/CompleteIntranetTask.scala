@@ -13,11 +13,12 @@ case class PartialIntranetTask(name: String,
                                priority: Int,
                                state: TaskState,
                                createdBy: JsonClient,
-                               createdAt: Timestamp, event: Event, tags: Seq[String])
+                               createdAt: Timestamp,
+                               tags: Seq[String])
 
 object PartialIntranetTask {
-  def apply(task: IntranetTask, client: Client, event: Event, tags: Seq[String]): PartialIntranetTask =
-    new PartialIntranetTask(task.name, task.priority, task.state, JsonClient(client), task.createdAt.get, event, tags)
+  def apply(task: IntranetTask, client: Client, tags: Seq[String]): PartialIntranetTask =
+    new PartialIntranetTask(task.name, task.priority, task.state, JsonClient(client), task.createdAt.get, tags)
 
   implicit val format = Json.format[PartialIntranetTask]
 }
@@ -52,7 +53,6 @@ case class CompleteIntranetTask(name: String,
                                 state: TaskState,
                                 createdBy: JsonClient,
                                 createdAt: Timestamp,
-                                event: Event,
                                 comments: Seq[CompleteTaskComment],
                                 logs: Seq[CompleteTaskLog],
                                 assignationLogs: Seq[CompleteTaskAssignationLog],
@@ -60,12 +60,12 @@ case class CompleteIntranetTask(name: String,
                                 tags: Seq[String])
 
 object CompleteIntranetTask {
-  def apply(task: IntranetTask, client: Client, event: Event, comments: Seq[CompleteTaskComment],
+  def apply(task: IntranetTask, client: Client, comments: Seq[CompleteTaskComment],
             logs: Seq[CompleteTaskLog],
             assignationLogs: Seq[CompleteTaskAssignationLog],
             assignees: Seq[Client],
             tags: Seq[String]): CompleteIntranetTask =
-    CompleteIntranetTask(task.name, task.priority, task.state, JsonClient(client), task.createdAt.get, event, comments, logs, assignationLogs, assignees.map(c => JsonClient(c)), tags)
+    CompleteIntranetTask(task.name, task.priority, task.state, JsonClient(client), task.createdAt.get, comments, logs, assignationLogs, assignees.map(c => JsonClient(c)), tags)
 
   implicit val format = Json.format[CompleteIntranetTask]
 
