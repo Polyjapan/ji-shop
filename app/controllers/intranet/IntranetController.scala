@@ -30,6 +30,7 @@ class IntranetController @Inject()(cc: ControllerComponents, model: IntranetMode
     tags.split(";").map(_.trim)
       .map(_.replaceAll("[^a-zA-Z0-9_-]", "")) // tags = alphanumeric characters
       .map(tag => if (tag.length > 140) tag.substring(0, 140) else tag)
+      .filter(_.length > 0)
 
 
   /**
