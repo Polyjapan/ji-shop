@@ -80,4 +80,9 @@ object ErrorCodes {
     */
   val NOT_ON_SITE = "error.not_on_site"
 
+  /**
+    * The provided task state is invalid
+    */
+  val INVALID_STATE = "invalid_state"
+
 }

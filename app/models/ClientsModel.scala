@@ -43,9 +43,16 @@ class ClientsModel @Inject() (protected val dbConfigProvider: DatabaseConfigProv
 
   /**
     * Query all the clients registered in database
-    * @return a future holding a [[Seq]] of all registered [[Client]] and their permissions as a [[Seq]] of [[String]]
+    * @return a future holding a [[Seq]] of all registered [[Client]]
     */
   def allClients: Future[Seq[Client]] = db.run(clients.result)
+
+  /**
+    * Query all the clients registered in database having a given permission
+    * @param permission the permission to look for
+    * @return a future holding a [[Seq]] of all registered [[Client]] having the given permission
+    */
+  def allClientsWithPermission(permission: String): Future[Seq[Client]] = db.run(clientsJoin.filter(_._2.map(_.permission) === permission).map(_._1).distinct.result)
 
   /**
     * Query a client by its email

@@ -233,4 +233,101 @@ package object models {
 
 
   private[models] val posPaymentLogs = TableQuery[PosPaymentLogs]
+
+  implicit val taskMethodMap = MappedColumnType.base[TaskState, String](TaskState.unapply, TaskState.apply)
+
+  private[models] class IntranetTasks(tag: Tag) extends Table[IntranetTask](tag, "intranet_tasks") {
+    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+    def name = column[String]("name", O.SqlType("VARCHAR(150)"))
+    def priority = column[Int]("priority")
+    def state = column[TaskState]("state", O.SqlType("SET('SENT', 'REFUSED', 'WAITING', 'INPROGRESS', 'DONE', 'DROPPED')"))
+    def event = column[Int]("event")
+    def createdBy = column[Int]("created_by")
+    def createdAt = column[Timestamp]("created_at", O.SqlType("TIMESTAMP DEFAULT now()"))
+
+    def eventsFk = foreignKey("intranet_tasks_events_fk", event, events)(_.id)
+    def clientsFk = foreignKey("intranet_tasks_clients_fk", createdBy, clients)(_.id)
+
+    def * =
+      (id.?, name, priority, state, createdBy, createdAt.?, event).shaped <> (IntranetTask.tupled, IntranetTask.unapply)
+  }
+
+  private[models] val intranetTasks = TableQuery[IntranetTasks]
+
+  private[models] class IntranetTaskComments(tag: Tag) extends Table[IntranetTaskComment](tag, "intranet_tasks_comments") {
+    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+    def taskId = column[Int]("task_id")
+    def content = column[String]("content")
+    def createdBy = column[Int]("created_by")
+    def createdAt = column[Timestamp]("created_at", O.SqlType("TIMESTAMP DEFAULT now()"))
+
+    def tasksFk = foreignKey("intranet_tasks_comments_tasks_fk", taskId, intranetTasks)(_.id)
+    def clientsFk = foreignKey("intranet_tasks_comments_clients_fk", createdBy, clients)(_.id)
+
+    def * =
+      (id.?, taskId, content, createdBy, createdAt.?).shaped <> (IntranetTaskComment.tupled, IntranetTaskComment.unapply)
+  }
+
+  private[models] val intranetTaskComments = TableQuery[IntranetTaskComments]
+
+  private[models] class IntranetTaskLogs(tag: Tag) extends Table[IntranetTaskLog](tag, "intranet_tasks_logs") {
+    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+    def taskId = column[Int]("task_id")
+    def targetState = column[TaskState]("target_state", O.SqlType("SET('SENT', 'REFUSED', 'WAITING', 'INPROGRESS', 'DONE', 'DROPPED')"))
+    def createdBy = column[Int]("created_by")
+    def createdAt = column[Timestamp]("created_at", O.SqlType("TIMESTAMP DEFAULT now()"))
+
+    def tasksFk = foreignKey("intranet_tasks_logs_tasks_fk", taskId, intranetTasks)(_.id)
+    def clientsFk = foreignKey("intranet_tasks_logs_clients_fk", createdBy, clients)(_.id)
+
+    def * =
+      (id.?, taskId, targetState, createdBy, createdAt.?).shaped <> (IntranetTaskLog.tupled, IntranetTaskLog.unapply)
+  }
+
+  private[models] val intranetTaskLogs = TableQuery[IntranetTaskLogs]
+
+  private[models] class IntranetTaskAssignationLogs(tag: Tag) extends Table[IntranetTaskAssignationLog](tag, "intranet_tasks_assignations_logs") {
+    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+    def taskId = column[Int]("task_id")
+    def assignee = column[Int]("assignee")
+    def deleted = column[Boolean]("deleted")
+    def createdBy = column[Int]("created_by")
+    def createdAt = column[Timestamp]("created_at", O.SqlType("TIMESTAMP DEFAULT now()"))
+
+    def tasksFk = foreignKey("intranet_tasks_assignations_logs_tasks_fk", taskId, intranetTasks)(_.id)
+    def clientsFk = foreignKey("intranet_tasks_assignations_logs_clients_fk", createdBy, clients)(_.id)
+    def assigneesFk = foreignKey("intranet_tasks_assignations_logs_assignees_fk", assignee, clients)(_.id)
+
+    def * =
+      (id.?, taskId, assignee, deleted, createdBy, createdAt.?).shaped <> (IntranetTaskAssignationLog.tupled, IntranetTaskAssignationLog.unapply)
+  }
+
+  private[models] val intranetTaskAssignationLogs = TableQuery[IntranetTaskAssignationLogs]
+
+
+  private[models] class IntranetTaskTags(tag: Tag) extends Table[IntranetTaskTag](tag, "intranet_tasks_tags") {
+    def taskId = column[Int]("task_id", O.PrimaryKey)
+    def taskTag = column[String]("tag", O.PrimaryKey, O.SqlType("VARCHAR(100)"))
+
+    def tasksFk = foreignKey("intranet_tasks_tags_tasks_fk", taskId, intranetTasks)(_.id)
+
+    def * =
+      (taskId, taskTag).shaped <> (IntranetTaskTag.tupled, IntranetTaskTag.unapply)
+  }
+
+  private[models] val intranetTaskTags = TableQuery[IntranetTaskTags]
+
+  private[models] class IntranetTaskAssignations(tag: Tag) extends Table[IntranetTaskAssignation](tag, "intranet_tasks_assignations") {
+    def taskId = column[Int]("task_id")
+    def userId = column[Int]("assignee")
+
+    def tasksFk = foreignKey("intranet_tasks_assignations_tasks_fk", taskId, intranetTasks)(_.id)
+    def clientsFk = foreignKey("intranet_tasks_assignations_clients_fk", userId, clients)(_.id)
+
+    def * =
+      (taskId, userId).shaped <> (IntranetTaskAssignation.tupled, IntranetTaskAssignation.unapply)
+  }
+
+  private[models] val intranetTaskAssignations = TableQuery[IntranetTaskAssignations]
+
 }

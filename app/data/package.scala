@@ -1,6 +1,8 @@
 import java.sql.Timestamp
 
-import models.OrderData
+import constants.ErrorCodes
+import play.api.data.FormError
+import play.api.data.format.Formatter
 import play.api.libs.json._
 
 /**
@@ -233,4 +235,138 @@ package object data {
 
   implicit val orderFormat = Json.format[Order]
   implicit val logFormat = Json.format[PosPaymentLog]
+
+  // Intranet stuff
+  sealed trait TaskState
+
+  /**
+    * The task was created by a non admin user and is awaiting approval
+    */
+  case object Sent extends TaskState
+
+  /**
+    * The task was created by a non admin user and was refused by an admin
+    */
+  case object Refused extends TaskState
+
+  /**
+    * The task has been approved and is waiting for an user to pick it up
+    */
+  case object Waiting extends TaskState
+
+  /**
+    * The task has been picked up by a user and is awaiting completion
+    */
+  case object InProgress extends TaskState
+
+  /**
+    * The task has been completed
+    */
+  case object Done extends TaskState
+
+  /**
+    * The task has been abandoned
+    */
+  case object Dropped extends TaskState
+
+
+  object TaskState {
+    def unapply(arg: TaskState): String = arg.toString.toUpperCase
+
+    def apply(string: String): TaskState = string.toUpperCase match {
+      case "INPROGRESS" => InProgress
+      case "SENT" => Sent
+      case "REFUSED" => Refused
+      case "WAITING" => Waiting
+      case "DONE" => Done
+      case "DROPPED" => Dropped
+    }
+
+    val formatter: Formatter[TaskState] = new Formatter[TaskState] {
+      override def bind(key: String, data: Map[String, String]): Either[Seq[FormError], TaskState] =
+        try {
+          Right(apply(data(key)))
+        } catch {
+          case e: NoClassDefFoundError => Left(Seq(FormError(key, ErrorCodes.INVALID_STATE)))
+        }
+
+      override def unbind(key: String, value: TaskState): Map[String, String] =
+        Map(key -> unapply(value))
+    }
+
+    implicit val taskStateFormat: Format[TaskState] = new Format[TaskState] {
+      override def reads(json: JsValue): JsResult[TaskState] = json match {
+        case JsString(v) => try {
+          JsSuccess(apply(v))
+        } catch {
+          case e: NoClassDefFoundError => JsError("Invalid task state")
+        }
+        case _ => JsError("Invalid type")
+      }
+
+      override def writes(o: TaskState): JsValue = JsString(unapply(o))
+    }
+  }
+
+  /**
+    * A task in the intranet
+    *
+    * @param name      the name of the task
+    * @param priority  the priority of the task (1 = highest, 5 = lowest)
+    * @param state     the state of the task
+    * @param createdBy the client who opened the request
+    * @param event     the event this task belongs to
+    */
+  case class IntranetTask(id: Option[Int], name: String, priority: Int, state: TaskState, createdBy: Int, createdAt: Option[Timestamp], event: Int)
+
+  /**
+    * A comment on a task
+    *
+    * @param id        the id of the comment
+    * @param taskId    the id of the task
+    * @param content   the comment itself
+    * @param createdBy the user who commented
+    * @param createdAt the date this comment was created
+    */
+  case class IntranetTaskComment(id: Option[Int], taskId: Int, content: String, createdBy: Int, createdAt: Option[Timestamp])
+
+  /**
+    * A task state change
+    *
+    * @param id          the id of this change
+    * @param taskId      the task this change happened to
+    * @param targetState the new state of the task
+    * @param createdBy   the user who made the change
+    * @param createdAt   the time this change was made
+    */
+  case class IntranetTaskLog(id: Option[Int], taskId: Int, targetState: TaskState, createdBy: Int, createdAt: Option[Timestamp])
+
+  /**
+    * An assignation change
+    *
+    * @param id          the id of this change
+    * @param taskId      the task this change happened to
+    * @param assignee    the user assigned to the task
+    * @param deleted     if true, the assignee was removed from the task
+    * @param createdBy   the user who made the change
+    * @param createdAt   the time this change was made
+    */
+  case class IntranetTaskAssignationLog(id: Option[Int], taskId: Int, assignee: Int, deleted: Boolean, createdBy: Int, createdAt: Option[Timestamp])
+
+  /**
+    * A tag (i.e. #security) associated with a task
+    *
+    * @param taskId the task
+    * @param tag    the tag
+    */
+  case class IntranetTaskTag(taskId: Int, tag: String)
+
+  /**
+    * An assignation of an user to a task
+    *
+    * @param taskId   the id of the task
+    * @param assignee the assigned user
+    */
+  case class IntranetTaskAssignation(taskId: Int, assignee: Int)
+
 }
