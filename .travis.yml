@@ -1,0 +1,15 @@
+language: scala
+scala:
+- 2.12.2
+script:
+- sbt dist
+- sbt debian:packageBin
+deploy:
+  provider: releases
+  api_key: $GITHUB_OAUTH_TOKEN
+  skip_cleanup: true
+  file:
+  - target/*.deb
+  - target/universal/*.zip
+  on:
+    tags: true
