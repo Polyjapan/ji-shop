@@ -104,13 +104,6 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
     */
   private def generateResult(source: Source)(result: (Iterable[CheckedOutItem], Int, Double)): Future[Result] = result match {
     case (list: Iterable[CheckedOutItem], orderId: Int, totalPrice: Double) =>
-
-      // Create a list of [[OrderedProduct]] to insert
-      val items = list.flatMap(coItem =>
-        for (i <- 1 to coItem.itemAmount) // Generate as much ordered products as the quantity requested
-          yield OrderedProduct(Option.empty, coItem.itemId, orderId, coItem.itemPrice.get)
-      )
-
       orders.insertProducts(list, orderId).flatMap(success => {
         if (success) {
           // TODO: the client should check that the returned ordered list contains the same items that the one requested
