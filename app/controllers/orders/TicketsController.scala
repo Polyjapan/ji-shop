@@ -7,11 +7,11 @@ import constants.results.Errors._
 import data._
 import javax.inject.Inject
 import models.OrdersModel
-import pdi.jwt.JwtSession._
 import play.api.libs.mailer.{AttachmentData, MailerClient}
 import play.api.mvc._
 import services.PolybankingClient.CorrectIpn
 import services.{PolybankingClient, TicketGenerator}
+import utils.AuthenticationPostfix._
 import utils.Implicits._
 
 import scala.concurrent.ExecutionContext
@@ -50,27 +50,19 @@ class TicketsController @Inject()(cc: ControllerComponents, pdfGen: TicketGenera
     * @param barCode the barcode searched
     * @return the pdf ticket
     */
-  def getTicket(barCode: String) = Action.async { implicit request => {
-    val session = request.jwtSession
-    val user = session.getAs[AuthenticatedUser]("user")
-
-    if (user.isEmpty)
-      notAuthenticated.asFuture
-    else {
-      orders.findBarcode(barCode) map {
-        case None =>
+  def getTicket(barCode: String) = Action.async { implicit request =>
+    orders.findBarcode(barCode) map {
+      case None =>
+        Errors.notFound()
+      case Some((code, client: Client, _)) =>
+        if (client.id.get != request.user.id && !request.user.hasPerm(Permissions.VIEW_OTHER_TICKET))
+        // Return the same error as if the ticket didn't exist
+        // It avoids leaking information about whether or not a ticket exists
           Errors.notFound()
-        case Some((code, client: Client, _)) =>
-          if (client.id.get != user.get.id && !user.get.hasPerm(Permissions.VIEW_OTHER_TICKET))
-          // Return the same error as if the ticket didn't exist
-          // It avoids leaking information about whether or not a ticket exists
-            Errors.notFound()
-          else {
-            // Generate the PDF
-            Ok(pdfGen.genPdf(code)._2).as("application/pdf")
-          }
-      }
+        else {
+          // Generate the PDF
+          Ok(pdfGen.genPdf(code)._2).as("application/pdf")
+        }
     }
-  }
-  }
+  }.requiresAuthentication
 }

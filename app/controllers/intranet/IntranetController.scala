@@ -1,16 +1,16 @@
 package controllers.intranet
 
-import constants.Permissions
+import constants.Permissions._
 import constants.results.Errors._
 import data._
 import javax.inject.Inject
 import models.IntranetModel
-import pdi.jwt.JwtSession._
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.mailer.MailerClient
 import play.api.mvc._
+import utils.AuthenticationPostfix._
 import utils.Implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,25 +37,22 @@ class IntranetController @Inject()(cc: ControllerComponents, model: IntranetMode
     * Creates a task and returns its id
     */
   def createTask(event: Int): Action[JsValue] = Action.async(parse.json) { implicit request => {
-    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
-    if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm(Permissions.INTRANET_TASK_POST)) noPermissions.asFuture
-    else {
-      this.taskForm.bindFromRequest.fold( // We bind the request to the form
-        withErrors => formError(withErrors).asFuture,
-        taskData => {
-          val state: TaskState =
-            if (user.get.hasPerm(Permissions.INTRANET_TASK_ACCEPT)) Waiting
-            else Sent
-          val task = IntranetTask(None, taskData._1, taskData._4, state, user.get.id, null, event)
-          val firstComm = IntranetTaskComment(None, 0, taskData._2, user.get.id, None)
-          val tags = parseTags(taskData._3)
+    val user = request.user
 
-          model.createTask(task, firstComm, tags).map(res => Ok(Json.toJson(res)))
-        })
-    }
+    this.taskForm.bindFromRequest.fold( // We bind the request to the form
+      withErrors => formError(withErrors).asFuture,
+      taskData => {
+        val state: TaskState =
+          if (user.hasPerm(INTRANET_TASK_ACCEPT)) Waiting
+          else Sent
+        val task = IntranetTask(None, taskData._1, taskData._4, state, user.id, null, event)
+        val firstComm = IntranetTaskComment(None, 0, taskData._2, user.id, None)
+        val tags = parseTags(taskData._3)
+
+        model.createTask(task, firstComm, tags).map(res => Ok(Json.toJson(res)))
+      })
   }
-  }
+  } requiresPermission INTRANET_TASK_POST
 
 
   val priorityForm = Form(mapping(
@@ -64,19 +61,13 @@ class IntranetController @Inject()(cc: ControllerComponents, model: IntranetMode
   /**
     * Updates a task priority
     */
-  def updatePriority(task: Int): Action[JsValue] = Action.async(parse.json) { implicit request => {
-    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
-    if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm(Permissions.INTRANET_TASK_EDIT)) noPermissions.asFuture
-    else {
-      this.priorityForm.bindFromRequest.fold( // We bind the request to the form
-        withErrors => formError(withErrors).asFuture,
-        taskData => {
-          model.updatePriority(task, taskData).map(res => if (res > 0) Ok.asSuccess else dbError)
-        })
-    }
-  }
-  }
+  def updatePriority(task: Int): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    this.priorityForm.bindFromRequest.fold( // We bind the request to the form
+      withErrors => formError(withErrors).asFuture,
+      taskData => {
+        model.updatePriority(task, taskData).map(res => if (res > 0) Ok.asSuccess else dbError)
+      })
+  } requiresPermission INTRANET_TASK_EDIT
 
   val stateForm = Form(mapping(
     "state" -> of[TaskState](TaskState.formatter))(e => e)(Some(_)))
@@ -84,89 +75,59 @@ class IntranetController @Inject()(cc: ControllerComponents, model: IntranetMode
   /**
     * Updates a task state
     */
-  def updateState(task: Int): Action[JsValue] = Action.async(parse.json) { implicit request => {
-    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
-    if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm(Permissions.INTRANET_TASK_CHANGE_STATE)) noPermissions.asFuture
-    else {
-      this.stateForm.bindFromRequest.fold( // We bind the request to the form
-        withErrors => formError(withErrors).asFuture,
-        taskData => {
-          val state = IntranetTaskLog(None, task, taskData, user.get.id, None)
-          model.changeState(state).map(res => if (res > 0) Ok.asSuccess else dbError)
-        })
-    }
-  }
-  }
+  def updateState(task: Int): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    this.stateForm.bindFromRequest.fold( // We bind the request to the form
+      withErrors => formError(withErrors).asFuture,
+      taskData => {
+        val state = IntranetTaskLog(None, task, taskData, request.user.id, None)
+        model.changeState(state).map(res => if (res > 0) Ok.asSuccess else dbError)
+      })
+  } requiresPermission INTRANET_TASK_CHANGE_STATE
 
   /**
     * Get all the tasks for an event
     */
-  def getTasks(event: Int): Action[AnyContent] = Action.async { implicit request => {
-    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
-    if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm(Permissions.INTRANET_VIEW)) noPermissions.asFuture
-    else {
-      model.getTasksByEvent(event).map(e => Ok(Json.toJson(e)))
-    }
-  }
-  }
+  def getTasks(event: Int): Action[AnyContent] = Action.async {
+    model.getTasksByEvent(event).map(e => Ok(Json.toJson(e)))
+  } requiresPermission INTRANET_VIEW
 
   /**
     * Get all the tasks for an event and tags
     */
-  def getTasksWithTags(event: Int, tags: Seq[String]): Action[AnyContent] = Action.async { implicit request => {
-    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
-    if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm(Permissions.INTRANET_VIEW)) noPermissions.asFuture
-    else {
-      model.getTasksByEventWithTags(event, tags).map(e => Ok(Json.toJson(e)))
-    }
-  }
-  }
+  def getTasksWithTags(event: Int, tags: Seq[String]): Action[AnyContent] = Action.async {
+    model.getTasksByEventWithTags(event, tags).map(e => Ok(Json.toJson(e)))
+  } requiresPermission INTRANET_VIEW
 
   /**
     * Get a single task by its id
     */
-  def getTask(task: Int): Action[AnyContent] = Action.async { implicit request => {
-    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
-    if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm(Permissions.INTRANET_VIEW)) noPermissions.asFuture
-    else {
-      model.getTask(task).map(e => if (e.isDefined) Ok(Json.toJson(e.get)) else notFound("task"))
-    }
-  }
-  }
+  def getTask(task: Int): Action[AnyContent] = Action.async {
+    model.getTask(task).map(e => if (e.isDefined) Ok(Json.toJson(e.get)) else notFound("task"))
+  } requiresPermission INTRANET_VIEW
 
   /**
     * Creates a comment
     */
   def addComment(task: Int): Action[String] = Action.async(parse.text) { implicit request => {
-    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
-    if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm(Permissions.INTRANET_VIEW)) noPermissions.asFuture
-    else if (!request.hasBody) BadRequest.asError().asFuture
+    if (!request.hasBody) BadRequest.asError().asFuture
     else {
       val text = request.body
-      val comment = IntranetTaskComment(None, task, text, user.get.id, None)
+      val comment = IntranetTaskComment(None, task, text, request.user.id, None)
 
       model.postComment(comment).map(res => if (res > 0) Ok.asSuccess else dbError)
     }
   }
-  }
+  } requiresPermission INTRANET_VIEW
 
   def addOrRemoveTags(dbAction: Seq[String] => Future[Result]): Action[String] = Action.async(parse.text) { implicit request => {
-    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
-    if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm(Permissions.INTRANET_TASK_EDIT)) noPermissions.asFuture
-    else if (!request.hasBody) BadRequest.asError().asFuture
+    if (!request.hasBody) BadRequest.asError().asFuture
     else {
       val tags = parseTags(request.body)
 
       dbAction(tags)
     }
   }
-  }
+  } requiresPermission INTRANET_TASK_EDIT
 
   /**
     * Add one or multiple tags
@@ -185,29 +146,28 @@ class IntranetController @Inject()(cc: ControllerComponents, model: IntranetMode
     "assignee" -> number)(e => e)(Some(_)))
 
   private def addOrRemoveAssignee(task: Int, remove: Boolean): Action[JsValue] = Action.async(parse.json) { implicit request => {
-    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
-    if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm(Permissions.INTRANET_TASK_TAKE) && !user.get.hasPerm(Permissions.INTRANET_TASK_GIVE) && !user.get.hasPerm(Permissions.INTRANET_TASK_LEAVE)) noPermissions.asFuture
-    else {
-      this.assignForm.bindFromRequest.fold( // We bind the request to the form
-        withErrors => formError(withErrors).asFuture,
-        taskData => {
-          val perm = if (taskData == user.get.id) {
-            if (remove) Permissions.INTRANET_TASK_LEAVE
-            else Permissions.INTRANET_TASK_TAKE
-          } else Permissions.INTRANET_TASK_GIVE
+    this.assignForm.bindFromRequest.fold( // We bind the request to the form
+      withErrors => formError(withErrors).asFuture,
+      taskData => {
+        val perm =
+          if (taskData == request.user.id) {
+            if (remove)
+              INTRANET_TASK_LEAVE
+            else
+              INTRANET_TASK_TAKE
+          } else
+            INTRANET_TASK_GIVE
 
-          if (!user.get.hasPerm(perm))
-            noPermissions.asFuture
-          else {
-            val log = IntranetTaskAssignationLog(None, task, taskData, remove, user.get.id, None)
+        if (!request.user.hasPerm(perm))
+          noPermissions.asFuture
+        else {
+          val log = IntranetTaskAssignationLog(None, task, taskData, remove, request.user.id, None)
 
-            model.addOrRemoveAssignee(log).map(res => if (res > 0) Ok.asSuccess else dbError)
-          }
-        })
-    }
+          model.addOrRemoveAssignee(log).map(res => if (res > 0) Ok.asSuccess else dbError)
+        }
+      })
   }
-  }
+  } requiresAuthorizationCheck AuthorizationHandler.ensuringAuthentication.andAlso(user => AuthorizationResult(user.get.hasPerm(INTRANET_TASK_GIVE) || user.get.hasPerm(INTRANET_TASK_TAKE) || user.get.hasPerm(INTRANET_TASK_LEAVE), Some(noPermissions)))
 
   def addAssignee(task: Int) = addOrRemoveAssignee(task, remove = false)
 

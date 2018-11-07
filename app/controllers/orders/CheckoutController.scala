@@ -1,18 +1,17 @@
 package controllers.orders
 
-import java.sql.Timestamp
 
-import constants.{ErrorCodes, Permissions}
 import constants.results.Errors._
+import constants.{ErrorCodes, Permissions}
 import data._
 import exceptions.OutOfStockException
 import javax.inject.Inject
 import models.{OrdersModel, ProductsModel}
-import pdi.jwt.JwtSession._
 import play.api.data.FormError
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 import services.PolybankingClient
+import utils.AuthenticationPostfix._
 import utils.Implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -27,12 +26,11 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
     * @return
     */
   def checkout: Action[JsValue] = Action.async(parse.json) { implicit request =>
-    (request.jwtSession.getAs[AuthenticatedUser]("user"), request.body.asOpt[CheckedOutOrder]) match {
-      case (None, _) => notAuthenticated.asFuture
-      case (_, None) | (_, Some(CheckedOutOrder(Seq(), _))) => BadRequest.asError(ErrorCodes.NO_REQUESTED_ITEM).asFuture
-      case (Some(user), Some(order)) => parseOrder(order, user)
+    request.body.asOpt[CheckedOutOrder] match {
+      case None | Some(CheckedOutOrder(Seq(), _)) => BadRequest.asError(ErrorCodes.NO_REQUESTED_ITEM).asFuture
+      case Some(order) => parseOrder(order, request.user)
     }
-  }
+  }.requiresAuthentication
 
   private def checkPermissions(source: Option[Source], user: AuthenticatedUser): Boolean = source match {
     case None | Some(Web) => true
@@ -58,14 +56,14 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
       .toSeq
       .flatMap { case (product, checkedOutItems) => checkedOutItems.map(item => (product, item)) } // we create pairs
       .map { // Check the item prices
-        case (product, coItem) if source == Gift => (product, coItem.copy(itemPrice = Some(0D))) // in case of gift, it's free
-        case pair@_ if source == Reseller => pair // if imported, we leave the provided price
-        case (product, coItem) if product.freePrice => // if the product has a freeprice, we check that user input is > than the freeprice
-          if (coItem.itemPrice.isEmpty || coItem.itemPrice.get < product.price) (product, coItem.copy(itemPrice = Some(product.price)))
-          else (product, coItem)
-        case (product, coItem) => (product, coItem.copy(itemPrice = Some(product.price)))
-       // if price is not free, we replace with db price, just in case
-      }
+      case (product, coItem) if source == Gift => (product, coItem.copy(itemPrice = Some(0D))) // in case of gift, it's free
+      case pair@_ if source == Reseller => pair // if imported, we leave the provided price
+      case (product, coItem) if product.freePrice => // if the product has a freeprice, we check that user input is > than the freeprice
+        if (coItem.itemPrice.isEmpty || coItem.itemPrice.get < product.price) (product, coItem.copy(itemPrice = Some(product.price)))
+        else (product, coItem)
+      case (product, coItem) => (product, coItem.copy(itemPrice = Some(product.price)))
+      // if price is not free, we replace with db price, just in case
+    }
       .map {
         // round the prices to 2 decimals
         case (product, coItem) => (product, coItem.copy(itemPrice = coItem.itemPrice.map(d => math.round(d * 100) / 100D)))

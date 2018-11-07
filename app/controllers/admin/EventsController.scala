@@ -1,18 +1,17 @@
 package controllers.admin
 
-import constants.Permissions
+import constants.Permissions._
 import constants.results.Errors._
-import data.{AuthenticatedUser, Event, Source}
+import data.Event
 import javax.inject.Inject
-import models.{EventsModel, OrdersModel, ProductsModel, SalesData, StatsModel}
-import pdi.jwt.JwtSession._
+import models.{EventsModel, ProductsModel}
 import play.api.data.Form
-import play.api.data.Forms.mapping
-import play.api.libs.json.{JsValue, Json, OFormat}
+import play.api.data.Forms.{mapping, _}
+import play.api.libs.json.{JsValue, Json}
 import play.api.libs.mailer.MailerClient
 import play.api.mvc._
+import utils.AuthenticationPostfix._
 import utils.Implicits._
-import play.api.data.Forms._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -21,44 +20,26 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext) extends AbstractController(cc) {
 
-  def getEvents: Action[AnyContent] = Action.async { implicit request => {
-    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
-    if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm(Permissions.ADMIN_ACCESS)) noPermissions.asFuture
-    else {
-      events.getEvents.map(e => Ok(Json.toJson(e)))
-    }
-  }
-  }
+  def getEvents: Action[AnyContent] = Action.async {
+    events.getEvents.map(e => Ok(Json.toJson(e)))
+  } requiresPermission ADMIN_ACCESS
 
-  def getEvent(id: Int): Action[AnyContent] = Action.async { implicit request => {
-    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
-    if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm(Permissions.ADMIN_ACCESS)) noPermissions.asFuture
-    else {
-      events.getEvent(id).map(e => Ok(Json.toJson(e)))
-    }
-  }
-  }
+  def getEvent(id: Int): Action[AnyContent] = Action.async {
+    events.getEvent(id).map(e => Ok(Json.toJson(e)))
+  } requiresPermission ADMIN_ACCESS
 
   val form = Form(mapping("id" -> optional(number), "name" -> nonEmptyText, "location" -> nonEmptyText, "visible" -> boolean)(Event.apply)(Event.unapply))
 
   private def createOrUpdateEvent(handler: Event => Future[Result]): Action[JsValue] = Action.async(parse.json) { implicit request => {
-
-    val user = request.jwtSession.getAs[AuthenticatedUser]("user")
-    if (user.isEmpty) notAuthenticated.asFuture
-    else if (!user.get.hasPerm(Permissions.ADMIN_ACCESS)) noPermissions.asFuture
-    else {
-      form.bindFromRequest.fold( // We bind the request to the form
-        withErrors => {
-          // If we have errors, we show the form again with the errors
-          formError(withErrors).asFuture
-        }, data => {
-          handler(data)
-        })
-    }
+    form.bindFromRequest.fold( // We bind the request to the form
+      withErrors => {
+        // If we have errors, we show the form again with the errors
+        formError(withErrors).asFuture
+      }, data => {
+        handler(data)
+      })
   }
-  }
+  } requiresPermission ADMIN_ACCESS
 
   def createEvent: Action[JsValue] = createOrUpdateEvent(
     ev => events.createEvent(ev.copy(Option.empty)).map(id => Ok(Json.toJson(id))))
