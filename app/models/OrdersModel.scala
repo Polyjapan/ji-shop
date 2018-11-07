@@ -379,13 +379,15 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     createOrder(order).map((map.values.flatten, _, totalPrice))
   }
 
+  private def confirmOrderQuery(order: Int) = orders
+    .filter(_.id === order)
+    .map(_.paymentConfirmed)
+    .filter(_.isEmpty)
+    .update(Some(new Timestamp(System.currentTimeMillis())))
+    .flatMap(r => if (r >= 1) DBIO.successful(Unit) else DBIO.failed(new IllegalStateException()))
+
   def setOrderAccepted(order: Int) = {
-    db.run(orders
-      .filter(_.id === order)
-      .map(_.paymentConfirmed)
-      .filter(_.isEmpty)
-      .update(Some(new Timestamp(System.currentTimeMillis())))
-      .flatMap(r => if (r >= 1) DBIO.successful(Unit) else DBIO.failed(new IllegalStateException())));
+    db.run(confirmOrderQuery(order))
   }
 
   /**
@@ -396,13 +398,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     */
   def acceptOrder(order: Int): Future[(Seq[GeneratedBarCode], data.Client)] = {
     // This query updates the confirm time of the order
-    val updateConfirmTimeQuery = orders
-      .filter(_.id === order)
-      .map(_.paymentConfirmed)
-      .filter(_.isEmpty)
-      .update(Some(new Timestamp(System.currentTimeMillis())))
-      .flatMap(r => if (r >= 1) DBIO.successful(Unit) else DBIO.failed(new IllegalStateException()))
-
+    val updateConfirmTimeQuery = confirmOrderQuery(order)
     // This query selects the tickets in the command
     val orderedTicketsQuery = productJoin
       .filter { case (orderedProduct, product, _) => orderedProduct.orderId === order && product.isTicket }
