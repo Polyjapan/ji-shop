@@ -2,11 +2,11 @@ package models
 
 import java.sql.Timestamp
 
+import data.{Card, Cash}
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.{Json, OFormat}
 import slick.jdbc.MySQLProfile
-import slick.lifted.QueryBase
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -25,8 +25,9 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
 
   private def statsRequest(filter: OrdersFilter) =
     filter(confirmedOrders)
-    .join(orderedProducts).on((order, orderedProduct) => orderedProduct.orderId === order.id).map { case (order, orderedProduct) => (order.source, orderedProduct) }
-    .join(products).on((pair, product) => pair._2.productId === product.id).map { case ((source, orderedProduct), product) => (product, (source, orderedProduct.paidPrice)) }
+      .joinLeft(posPaymentLogs).on((order, log) => order.id === log.orderId && log.accepted === true)
+      .join(orderedProducts).on((order, orderedProduct) => orderedProduct.orderId === order._1.id).map { case ((order, log), orderedProduct) => (order.source, orderedProduct, log.map(_.paymentMethod)) }
+      .join(products).on((pair, product) => pair._2.productId === product.id).map { case ((source, orderedProduct, log), product) => (product, (source, orderedProduct.paidPrice, log)) }
 
   private def eventFilteredStatsRequest(event: Int, ordersFilter: OrdersFilter) =
     statsRequest(ordersFilter).filter { case (product, _) => product.eventId === event }
@@ -36,7 +37,7 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
     def addStartFilter(prev: OrdersFilter): OrdersFilter =
       if (start == 0) prev
       else
-        // even though we know the payment timestamp is not null, we still need to provide a default value
+      // even though we know the payment timestamp is not null, we still need to provide a default value
         q => prev(q).filter(order => order.paymentConfirmed.getOrElse(new Timestamp(0)) > new Timestamp(start))
 
     def addEndFilter(prev: OrdersFilter): OrdersFilter =
@@ -50,8 +51,15 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
         .groupBy { case (product, _) => product }
         .map {
           case (product, seq) =>
-            (product, seq.map(_._2).groupBy { case (source, _) => source }.mapValues(seq => seq.map(_._2)).map {
-              case (source, prices) => (source, SalesData(prices.size, prices.sum))
+            (product, seq.map(_._2).groupBy { case (source, _, _) => source }.mapValues(seq => seq.map{ case (_, amt, log) => (amt, log) }).map {
+              case (source, pricesAndLog) =>
+                val globalSum = pricesAndLog.map(_._1).sum
+                val sumBy = pricesAndLog.groupBy(_._2)
+                  .filterKeys(_.isDefined)
+                  .map { case (key, sq) => (key.get, Some(sq.map(_._1).sum)) }
+                  .withDefaultValue(None)
+
+                (source, SalesData(pricesAndLog.size, pricesAndLog.map(_._1).sum, sumBy(Cash), sumBy(Card)))
             })
         }.toSeq
 
@@ -62,7 +70,7 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
 
 }
 
-case class SalesData(amountSold: Int, moneyGenerated: Double)
+case class SalesData(amountSold: Int, moneyGenerated: Double, moneyGeneratedCash: Option[Double], moneyGeneratedCard: Option[Double])
 
 object SalesData {
   implicit val format: OFormat[SalesData] = Json.format[SalesData]
