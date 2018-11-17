@@ -1,8 +1,12 @@
 package controllers.admin
 
+import com.mysql.jdbc.exceptions.MySQLIntegrityConstraintViolationException
+import constants.ErrorCodes
 import constants.Permissions._
+import constants.results.Errors
 import constants.results.Errors._
 import data.Event
+import exceptions.HasItemsException
 import javax.inject.Inject
 import models.{EventsModel, ProductsModel}
 import play.api.data.Form
@@ -14,6 +18,7 @@ import utils.AuthenticationPostfix._
 import utils.Implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 /**
   * @author zyuiop
@@ -28,7 +33,7 @@ class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, 
     events.getEvent(id).map(e => Ok(Json.toJson(e)))
   } requiresPermission ADMIN_ACCESS
 
-  val form = Form(mapping("id" -> optional(number), "name" -> nonEmptyText, "location" -> nonEmptyText, "visible" -> boolean)(Event.apply)(Event.unapply))
+  val form = Form(mapping("id" -> optional(number), "name" -> nonEmptyText, "location" -> nonEmptyText, "visible" -> boolean, "archived" -> boolean)(Event.apply)(Event.unapply))
 
   private def createOrUpdateEvent(handler: Event => Future[Result]): Action[JsValue] = Action.async(parse.json) { implicit request => {
     form.bindFromRequest.fold( // We bind the request to the form
@@ -39,7 +44,7 @@ class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, 
         handler(data)
       })
   }
-  } requiresPermission ADMIN_ACCESS
+  } requiresPermission ADMIN_EVENT_MANAGE
 
   def createEvent: Action[JsValue] = createOrUpdateEvent(
     ev => events.createEvent(ev.copy(Option.empty)).map(id => Ok(Json.toJson(id))))
@@ -54,4 +59,17 @@ class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, 
 
   def updateEvent(id: Int): Action[JsValue] = createOrUpdateEvent(
     ev => events.updateEvent(id, ev.copy(Some(id))).map(_ => Ok(Json.toJson(id))))
+
+  /**
+    * Delete an event. One can delete an event only if it has no product.
+    * @param id the id of the event to delete
+    */
+  def deleteEvent(id: Int): Action[AnyContent] = Action.async {
+    events.deleteEvent(id).map(r =>
+      if (r == 1) Ok.asSuccess
+      else notFound("event")
+    ).recover {
+      case HasItemsException() => BadRequest.asError(ErrorCodes.NOT_EMPTY_EVENT)
+    }
+  } requiresPermission ADMIN_EVENT_MANAGE
 }

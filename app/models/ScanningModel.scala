@@ -31,6 +31,13 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
 
   def addProduct(id: Int, productId: Int): Future[Int] = db.run(scanningItems += ScanningItem(id, productId))
 
+  /**
+    * Deletes a configuration recursively (all the bound items are removed from the configuration before)
+    * @param id the config to delete
+    */
+  def deleteConfig(id: Int): Future[Int] =
+    db.run(scanningItems.filter(_.scanningConfigurationId === id).delete.andThen(scanningConfigurations.filter(_.id === id).delete))
+
   def removeProduct(id: Int, productId: Int): Future[Int] = db.run(scanningItems
     .filter(_.scanningConfigurationId === id)
     .filter(_.acceptedItemId === productId).delete)

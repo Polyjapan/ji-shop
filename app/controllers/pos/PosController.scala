@@ -36,6 +36,13 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
       }
   } requiresPermission SELL_ON_SITE
 
+  /**
+    * Delete a POS configuration
+    * @param id the id of the POS configuration to delete
+    */
+  def deleteConfig(id: Int): Action[AnyContent] = Action.async {
+    model.deleteConfig(id).map(r => if (r >= 1) success else notFound("config"))
+  } requiresPermission ADMIN_POS_MANAGE
 
   def addProductToConfig(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request =>
     val addProductForm = Form(
@@ -55,7 +62,7 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
       })
 
     })
-  } requiresPermission CHANGE_POS_CONFIGURATIONS
+  } requiresPermission ADMIN_POS_MANAGE
 
   def removeProductFromConfig(id: Int): Action[String] = Action.async(parse.text) { implicit request =>
     try {
@@ -68,7 +75,7 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
         } else notFound("config").asFuture
       })
     }
-  } requiresPermission CHANGE_POS_CONFIGURATIONS
+  } requiresPermission ADMIN_POS_MANAGE
 
   def createConfig: Action[JsValue] = Action.async(parse.json) { implicit request => {
     handleConfig(config => {
@@ -77,7 +84,7 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
         .recover { case _ => dbError }
     })
   }
-  } requiresPermission CHANGE_POS_CONFIGURATIONS
+  } requiresPermission ADMIN_POS_MANAGE
 
   def updateConfig(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request => {
     handleConfig(config => {
@@ -86,7 +93,7 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
         .recover { case _ => dbError }
     })
   }
-  } requiresPermission CHANGE_POS_CONFIGURATIONS
+  } requiresPermission ADMIN_POS_MANAGE
 
   private def handleConfig(saver: PosConfiguration => Future[Result])(implicit request: Request[JsValue]): Future[Result] = {
     configForm.bindFromRequest().fold(withErrors => {
@@ -191,6 +198,5 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
   }
 
   case class OnSiteOrderResponse(orderId: Int, price: Double)
-
 
 }

@@ -35,8 +35,9 @@ package object data {
     * @param name     the name of the event (e.g. "Japan Impact 10")
     * @param location the location where the event takes place (e.g. "EPFL, Lausanne")
     * @param visible  whether or not the event is visible (in general, you only want a single visible event)
+    * @param archived whether or not the event is archived
     */
-  case class Event(id: Option[Int], name: String, location: String, visible: Boolean)
+  case class Event(id: Option[Int], name: String, location: String, visible: Boolean, archived: Boolean)
 
   sealed trait Source
 

@@ -56,11 +56,20 @@ class ProductsController @Inject()(cc: ControllerComponents, products: ProductsM
         )
       })
   }
-  } requiresPermission ADMIN_ACCESS
+  } requiresPermission ADMIN_PRODUCTS_MANAGE
 
   def createProduct(eventId: Int): Action[JsValue] = createOrUpdateProduct(
     p => products.createProduct(eventId, p.copy(Option.empty, eventId = eventId)))
 
   def updateProduct(eventId: Int, id: Int): Action[JsValue] = createOrUpdateProduct(
     p => products.updateProduct(eventId, id, p.copy(Some(id), eventId = eventId)))
+
+  /**
+    * Removes from the database all the products from an event that were not sold and that don't appear in a POS/Scan configuration
+    * @param id the id of the event to purge
+    */
+  def purgeUnsoldProducts(id: Int): Action[AnyContent] = Action.async {
+    products.purgeUnsoldProducts(id).map(r => Ok(Json.obj("purged" -> r, "success" -> true)))
+  } requiresPermission ADMIN_PRODUCTS_MANAGE
+
 }

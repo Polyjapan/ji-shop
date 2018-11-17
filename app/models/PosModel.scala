@@ -25,6 +25,13 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
 
   def updateConfig(id: Int, config: PosConfiguration): Future[Int] = db.run(posConfigurations.filter(_.id === id).update(config))
 
+  /**
+    * Deletes a configuration recursively (all the bound items are removed from the configuration before)
+    * @param id the config to delete
+    */
+  def deleteConfig(id: Int): Future[Int] =
+    db.run(posConfigItems.filter(_.configId === id).delete.andThen(posConfigurations.filter(_.id === id).delete))
+
   def insertLog(dbItem: PosPaymentLog): Future[Int] = db.run(posPaymentLogs += dbItem)
 
   def addProduct(item: PosConfigItem): Future[Int] = db.run(posConfigItems += item)

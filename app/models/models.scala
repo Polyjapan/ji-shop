@@ -32,9 +32,10 @@ package object models {
     def name = column[String]("event_name", O.SqlType("VARCHAR(250)"))
     def location = column[String]("event_location", O.SqlType("VARCHAR(250)"))
     def visible = column[Boolean]("event_visible")
+    def archived = column[Boolean]("event_archived", O.Default(false))
 
     def * =
-      (id.?, name, location, visible).shaped <> (Event.tupled, Event.unapply)
+      (id.?, name, location, visible, archived).shaped <> (Event.tupled, Event.unapply)
   }
 
   private[models] val events = TableQuery[Events]

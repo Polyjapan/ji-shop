@@ -52,12 +52,8 @@ object Permissions {
   /**
     * Permission to modify scanning configurations
     */
-  val CHANGE_SCANNING_CONFIGURATIONS = "admin.change_scanning_configurations"
+  val ADMIN_SCAN_MANAGE = "admin.change_scanning_configurations"
 
-  /**
-    * Permission to modify POS configurations
-    */
-  val CHANGE_POS_CONFIGURATIONS = "admin.change_pos_configurations"
 
   /**
     * Permission to see items that are marked as not visible
@@ -68,6 +64,21 @@ object Permissions {
     * Permission to access the admin area
     */
   val ADMIN_ACCESS = "admin.access_dashboard"
+
+  /**
+    * Permission to manage the events
+    */
+  val ADMIN_EVENT_MANAGE = "admin.event_manage"
+
+  /**
+    * Permission to manage the products
+    */
+  val ADMIN_PRODUCTS_MANAGE = "admin.products_manage"
+
+  /**
+    * Permission to modify POS configurations
+    */
+  val ADMIN_POS_MANAGE = "admin.change_pos_configurations"
 
   /**
     * Permission to view sales statistics of an event

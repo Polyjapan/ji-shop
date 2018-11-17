@@ -78,13 +78,22 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
     })
   } requiresPermission SCAN_TICKET
 
+
+  /**
+    * Delete a scanning configuration
+    * @param id the id of the scanning configuration to delete
+    */
+  def deleteConfig(id: Int): Action[AnyContent] = Action.async {
+    scanModel.deleteConfig(id).map(r => if (r >= 1) success else notFound("config"))
+  } requiresPermission ADMIN_SCAN_MANAGE
+
   def createConfig: Action[JsValue] = Action.async(parse.json) { implicit request =>
     handleConfig(config => {
       scanModel.createConfig(config)
         .map(inserted => Ok(Json.toJson(inserted)))
         .recover { case _ => dbError }
     })
-  } requiresPermission CHANGE_SCANNING_CONFIGURATIONS
+  } requiresPermission ADMIN_SCAN_MANAGE
 
   def updateConfig(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request =>
     handleConfig(config => {
@@ -92,15 +101,15 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
         .map(inserted => if (inserted == 1) Ok(Json.toJson(id)) else notFound("id"))
         .recover { case _ => dbError }
     })
-  } requiresPermission CHANGE_SCANNING_CONFIGURATIONS
+  } requiresPermission ADMIN_SCAN_MANAGE
 
   def addProductToConfig(id: Int): Action[String] = Action.async(parse.text) { implicit r =>
     addOrRemoveProduct(id, remove = false)
-  } requiresPermission CHANGE_SCANNING_CONFIGURATIONS
+  } requiresPermission ADMIN_SCAN_MANAGE
 
   def removeProductFromConfig(id: Int): Action[String] = Action.async(parse.text) { implicit r =>
     addOrRemoveProduct(id, remove = true)
-  } requiresPermission CHANGE_SCANNING_CONFIGURATIONS
+  } requiresPermission ADMIN_SCAN_MANAGE
 
   private def addOrRemoveProduct(id: Int, remove: Boolean)(implicit request: Request[String]): Future[Result] = {
     try {

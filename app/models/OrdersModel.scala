@@ -432,7 +432,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     val orderBarcodeQuery = (otherProducts flatMap (r => {
       if (r.nonEmpty) {
 
-        val event = r.headOption.map { case (_, _, pairEvent) => pairEvent }.getOrElse(data.Event(None, "unknown_event", "unknown_location", visible = false))
+        val event = r.headOption.map { case (_, _, pairEvent) => pairEvent }.getOrElse(data.Event(None, "unknown_event", "unknown_location", visible = false, archived = true))
         val products = r.map { case (_, product, _) => product }.groupBy(p => p).mapValues(_.size)
         // If we have items:
         // Create a ticket

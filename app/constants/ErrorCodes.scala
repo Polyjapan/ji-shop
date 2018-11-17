@@ -81,6 +81,11 @@ object ErrorCodes {
   val NOT_ON_SITE = "error.not_on_site"
 
   /**
+    * The event you try to remove still has products
+    */
+  val NOT_EMPTY_EVENT = "error.event_not_empty"
+
+  /**
     * The provided task state is invalid
     */
   val INVALID_STATE = "invalid_state"

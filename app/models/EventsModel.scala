@@ -1,8 +1,11 @@
 package models
 
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import data.Event
+import exceptions.HasItemsException
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import play.api.mvc.{Action, AnyContent}
 import slick.jdbc.MySQLProfile
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,4 +33,13 @@ class EventsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   def updateEvent(id: Int, event: Event): Future[Int] =
     db.run(events.filter(e => e.id === id).update(event))
 
+
+  /**
+    * Delete an event. One can delete an event only if it has no product.
+    */
+  def deleteEvent(id: Int): Future[Int] =
+    // Won't succeed if there are still products existing in the event because of SQL constraints
+    db.run(events.filter(e => e.id === id).delete).recoverWith {
+      case _: MySQLIntegrityConstraintViolationException => throw HasItemsException()
+    }
 }
