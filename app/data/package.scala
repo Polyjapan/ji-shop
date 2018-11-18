@@ -171,7 +171,7 @@ package object data {
     * @param id   the id of the configuration
     * @param name the name of the configuration
     */
-  case class PosConfiguration(id: Option[Int], name: String)
+  case class PosConfiguration(id: Option[Int], name: String, acceptCards: Boolean)
 
   /**
     * Describes an item in a PointOfSale configuration

@@ -175,9 +175,10 @@ package object models {
   private[models] class PosConfigurations(tag: Tag) extends Table[PosConfiguration](tag, "pos_configurations") {
     def id = column[Int]("pos_configuration_id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("pos_configuration_name", O.SqlType("VARCHAR(250)"))
+    def acceptCards = column[Boolean]("pos_configuration_accept_cards")
 
     def * =
-      (id.?, name).shaped <> (PosConfiguration.tupled, PosConfiguration.unapply)
+      (id.?, name, acceptCards).shaped <> (PosConfiguration.tupled, PosConfiguration.unapply)
   }
 
   private[models] val posConfigurations = TableQuery[PosConfigurations]
