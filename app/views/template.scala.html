@@ -1,4 +1,4 @@
-@(event: data.Event, title: String, poster: String, topCode: String, bottomCode: String, code: String)(content: Html)
+@(event: data.Event, title: String, poster: String, topCode: String, smallCode: String, bottomCode: String, code: String)(content: Html)
 
 <html>
     <head>
@@ -39,12 +39,12 @@
             left: 0;
             word-wrap: break-spaces;
             display: block;">
-            <img src='data:image/png;base64,@bottomCode' style="float: left; margin-right: 10px; width: 75px;"/>
+            <img src='data:image/png;base64,@smallCode' style="float: left; margin-right: 10px; width: 75px;"/>
 
-            <strong>Watch out!</strong> Each ticket will be scanned by our staff and can be used only once. Don't buy this ticket to an unknown person.
-            <br>
             <strong>Attention !</strong>
             Chaque billet est scanné par notre staff et ne peut être utilisé qu'une seule fois. N'achetez pas ce billet à un inconnu.
+            <br>
+            <strong>Watch out!</strong> Each ticket will be scanned by our staff and can be used only once. Don't buy this ticket to an unknown person.
             <br>
             <br>
             <small>Ticket no. <code>@code</code> generated on @{new java.text.SimpleDateFormat("dd/MM/yyyy 'at' HH:mm:ss z").format(new java.util.Date())}</small>
@@ -53,8 +53,8 @@
         <div style="page-break-before:always; text-align: center;">
 
             <br>
-            <h2>Present this page on your phone</h2>
             <h2>Présentez cette page sur votre mobile</h2>
+            <h2>Present this page on your phone</h2>
             <br>
 
             <img src='data:image/png;base64,@bottomCode' width="500px"/>

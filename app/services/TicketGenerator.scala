@@ -33,7 +33,7 @@ class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(imp
   lazy val image: String = Base64.getEncoder.encodeToString(FileUtils.readFileToByteArray(imageFile))
 
 
-  private def genCodes(code: String): (String, String) = {
+  private def genCodes(code: String): (String, String, String) = {
     def getCode(bean: AbstractBarcodeBean, rotation: Int = 0, dpi: Int = 100): String = {
       val out = new ByteArrayOutputStream()
       val canvas = new BitmapCanvasProvider(out, "image/png", dpi, BufferedImage.TYPE_BYTE_BINARY, false, rotation)
@@ -51,7 +51,7 @@ class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(imp
 
     val classic = new DataMatrixBean
 
-    (getCode(top, 90, 200), getCode(classic, 0, 1000))
+    (getCode(top, 90, 200), getCode(classic, 0, 1000), getCode(top, 0, 1000))
   }
 
   private def doGenPdf(ticket: TicketBarCode): Array[Byte] = {

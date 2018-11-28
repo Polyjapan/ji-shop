@@ -1,22 +1,22 @@
-@(poster: String, event: data.Event, products: Map[data.Product, Int], orderId: Int, codes: (String, String), code: String)
+@(poster: String, event: data.Event, products: Map[data.Product, Int], orderId: Int, codes: (String, String, String), code: String)
 
-@template(event, "Goodies #" + orderId, poster, codes._1, codes._2, code) {
+@template(event, "Goodies #" + orderId, poster, codes._1, codes._2, codes._3, code) {
 
-    <h3>Goodies Ticket</h3>
+    <h3>Billet Goodies // Goodies Ticket</h3>
 
     <p>
-        Show this ticket at PolyJapan's booth to retrieve your goodies!  <strong>Watch out!</strong> This ticket doesn't give you an access to the convention.
-        <br>Montrez ce billet au stand PolyJapan pour récupérer vos goodies ! <strong>Attention !</strong> Ce ticket ne vous donne pas accès au festival.
+        Montrez ce billet au stand PolyJapan pour récupérer vos goodies ! <strong>Attention !</strong> Ce ticket ne vous donne pas accès au festival.
+        <br>Show this ticket at PolyJapan's booth to retrieve your goodies!  <strong>Watch out!</strong> This ticket doesn't give you an access to the convention.
     </p>
 
     <h3>Items:</h3>
 
     <table class="bordered">
         <tr>
-            <th style="width: 10%;">Quantity</th>
-            <th style="width: 70%;">Product</th>
-            <th style="width: 10%;">Unit Price</th>
-            <th style="width: 10%;">Total Price</th>
+            <th style="width: 10%;">Qté</th>
+            <th style="width: 70%;">Produit</th>
+            <th style="width: 10%;">Px Unit</th>
+            <th style="width: 10%;">Px Total</th>
         </tr>
 
         @for(item <- products) {

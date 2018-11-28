@@ -1,22 +1,12 @@
-@(poster: String, event: data.Event, product: data.Product, codes: (String, String), code : String)
+@(poster: String, event: data.Event, product: data.Product, codes: (String, String, String), code: String)
 
-    @template(event, product.name, poster, codes._1, codes._2, code) {
+@template(event, product.name, poster, codes._1, codes._2, codes._3, code) {
 
-        <h3>@product.name</h3>
+    <h3>@product.name</h3>
 
-        <p>@Html(product.longDescription.replaceAll("\n", "<br>"))</p>
+    <p>@Html(product.longDescription.replaceAll("\n", "<br>"))</p>
 
-        <h2>How to get there?</h2>
-        <p>
-            From the Lausanne train station, take metro m2 and change at Lausanne Flon for line m1. Get off at the EPFL stop, then follow the signs, and there you are!
-            <br>From the Renens VD train station, take metro m1 and get off at EPFL.
-            <br>For more information, see cff.ch and t-l.ch.
-        </p>
+    <!-- Todo : remettre une section pour aider les visiteurs à venir -->
 
-        <h2>Comment venir ?</h2>
-        <p>
-            Depuis la gare de Lausanne, prenez le m2 et changez à Lausanne Flon pour le m1. Descendez à l'arrêt EPFL. Suivez la signalisation, et vous y êtes !
-            <br>Depuis la gare de Renens VD, prenez le m1 et sortez à l'arrêt EPFL.
-            <br>Pour plus d'informations, consultez cff.ch et t-l.ch.
-        </p>
-    }
+
+}
