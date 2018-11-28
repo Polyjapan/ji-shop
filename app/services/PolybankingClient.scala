@@ -44,7 +44,7 @@ class PolybankingClient @Inject()(config: Configuration, ws: WSClient)(implicit 
       "extra_data" -> reference,
       "config_id" -> configId.toString)
 
-    val sig = computeSignature(params, requestKey)
+    val sig = prependWithZeroes(computeSignature(params, requestKey))
 
     println(sig)
 
@@ -70,6 +70,11 @@ class PolybankingClient @Inject()(config: Configuration, ws: WSClient)(implicit 
   private def removeLeadingZeroes(hex: String): String = {
     if (hex.head == '0') removeLeadingZeroes(hex.tail)
     else hex
+  }
+
+  private def prependWithZeroes(str: String): String = {
+    if (str.length != 128) prependWithZeroes("0" + str)
+    else str
   }
 
   def checkIpn(map: Map[String, Seq[String]]): IpnStatus = {
