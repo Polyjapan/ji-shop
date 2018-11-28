@@ -37,7 +37,12 @@ class TicketsController @Inject()(cc: ControllerComponents, pdfGen: TicketGenera
             Ok
           case _ => BadRequest.asError("error.already_accepted")
         }
-      case a@_ => BadRequest.asError(a.toString).asFuture
+      case a@_ =>
+        println("Wrong IPN request found.")
+        println(a.toString)
+        println("Request details:")
+        println(request.body)
+        BadRequest.asError(a.toString).asFuture
     }
 
   }

@@ -67,6 +67,11 @@ class PolybankingClient @Inject()(config: Configuration, ws: WSClient)(implicit 
 
   import PolybankingClient._
 
+  private def removeLeadingZeroes(hex: String): String = {
+    if (hex.head == '0') removeLeadingZeroes(hex.tail)
+    else hex
+  }
+
   def checkIpn(map: Map[String, Seq[String]]): IpnStatus = {
     val required = Seq("config", "reference", "postfinance_status", "postfinance_status_good", "last_update", "sign")
     val missing = required.filterNot(map.keySet)
@@ -74,9 +79,10 @@ class PolybankingClient @Inject()(config: Configuration, ws: WSClient)(implicit 
     if (missing.nonEmpty) return MissingFields(missing)
 
     val single = map.mapValues(_.head)
-    val sig = computeSignature(single - "sign", ipnKey)
+    val sig = removeLeadingZeroes(computeSignature(single - "sign", ipnKey))
+    val packageSig = removeLeadingZeroes(single("sign"))
 
-    if (sig != single("sign")) return BadSignature
+    if (sig != packageSig) return BadSignature(sig, packageSig)
 
     if (single("config") != configId.toString) return BadConfig
 
@@ -99,7 +105,7 @@ object PolybankingClient {
   sealed trait IpnStatus
 
   case class MissingFields(missingFields: Seq[String]) extends IpnStatus
-  case object BadSignature extends IpnStatus
+  case class BadSignature(expected: String, got: String) extends IpnStatus
   case object BadConfig extends IpnStatus
   case class CorrectIpn(status: Boolean, orderId: Int) extends IpnStatus
 }
