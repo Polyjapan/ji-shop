@@ -114,9 +114,10 @@ package object data {
     *                        separately.
     * @param freePrice       if true, the `price` becomes a minimal price and the client can choose to pay more
     * @param isVisible       if false, this product is not visible to the public and cannot be bought via the site
+    * @param image           an URL to an image to display with the product
     */
   case class Product(id: Option[Int], name: String, price: Double, description: String, longDescription: String,
-                     maxItems: Int, eventId: Int, isTicket: Boolean, freePrice: Boolean, isVisible: Boolean)
+                     maxItems: Int, eventId: Int, isTicket: Boolean, freePrice: Boolean, isVisible: Boolean, image: Option[String])
 
 
   /**
@@ -345,12 +346,12 @@ package object data {
   /**
     * An assignation change
     *
-    * @param id          the id of this change
-    * @param taskId      the task this change happened to
-    * @param assignee    the user assigned to the task
-    * @param deleted     if true, the assignee was removed from the task
-    * @param createdBy   the user who made the change
-    * @param createdAt   the time this change was made
+    * @param id        the id of this change
+    * @param taskId    the task this change happened to
+    * @param assignee  the user assigned to the task
+    * @param deleted   if true, the assignee was removed from the task
+    * @param createdBy the user who made the change
+    * @param createdAt the time this change was made
     */
   case class IntranetTaskAssignationLog(id: Option[Int], taskId: Int, assignee: Int, deleted: Boolean, createdBy: Int, createdAt: Option[Timestamp])
 

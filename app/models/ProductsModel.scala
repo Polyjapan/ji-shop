@@ -19,7 +19,7 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
 
   private val productsJoin = events join products on (_.id === _.eventId)
 
-  private val joinToMap: (Seq[(Event, data.Product)]) => Map[Event, Seq[data.Product]] =
+  private val joinToMap: Seq[(Event, data.Product)] => Map[Event, Seq[data.Product]] =
     _.groupBy(_._1).mapValues(_.map(_._2))
 
 
@@ -105,7 +105,7 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
       case (map, missing) =>
         // We generate products for the missing items
         val toInsert = missing.map(name => data.Product(None, name, 0D, "Automatic insert from external dump",
-          "Automatic insert from external dump", -1, event, isTicket = true, freePrice = false, isVisible = false))
+          "Automatic insert from external dump", -1, event, isTicket = true, freePrice = false, isVisible = false, image = None))
 
         if (toInsert.nonEmpty)
         // We insert them one by one
