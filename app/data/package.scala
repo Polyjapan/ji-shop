@@ -202,6 +202,19 @@ package object data {
     }
   }
 
+  /**
+    * Describes a line of log in a PointOfSale payment processing
+    *
+    * @param id                     the id of the log
+    * @param orderId                the id of the related order
+    * @param paymentMethod          the method used to pay
+    * @param logDate                the date this log was generated
+    * @param accepted               true if the order was accepted by this log
+    * @param cardTransactionMessage transaction message received from SumUP, if CARD payment
+    * @param cardTransactionCode    transaction code received from SumUP, if CARD payment
+    * @param cardReceiptSend        true if a receipt was sent by SumUP, if CARD payment
+    * @param cardFailureCause       an error message, if the payment was a CARD payment
+    */
   case class PosPaymentLog(id: Option[Int],
                            orderId: Int,
                            paymentMethod: PaymentMethod,
@@ -211,6 +224,19 @@ package object data {
                            cardTransactionCode: Option[String],
                            cardReceiptSend: Option[Boolean],
                            cardFailureCause: Option[String])
+
+  /**
+    * Describes a line of log in an order
+    *
+    * @param id       the id of the line
+    * @param orderId  the order this log is related to
+    * @param logDate  the timestamp when this log was generated
+    * @param name     a short description of the log
+    * @param details  the details of the log, if any
+    * @param accepted true if this log caused the order to be accepted
+    */
+  case class OrderLog(id: Option[Int], orderId: Int, logDate: Timestamp, name: String, details: Option[String],
+                      accepted: Boolean)
 
   implicit val eventFormat = Json.format[Event]
   implicit val productFormat = Json.format[Product]
@@ -238,7 +264,10 @@ package object data {
   implicit val orderFormat = Json.format[Order]
   implicit val logFormat = Json.format[PosPaymentLog]
 
-  // Intranet stuff
+  /* ********************************
+     * Intranet stuff               *
+     ******************************** */
+
   sealed trait TaskState
 
   /**

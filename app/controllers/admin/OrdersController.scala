@@ -33,8 +33,10 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
     validationRequest.bindFromRequest.fold(err =>
       formError(err).asFuture, {
       case (orderId, None) =>
+        orders.insertLog(orderId, "admin_force_self", "Trying to force-accept order (with no specific target mail)")
         processOrder(orderId, OrderEmail.sendOrderEmail)
       case (orderId, Some(v)) =>
+        orders.insertLog(orderId, "admin_force_invite", "Trying to generate an invite for " + v)
         processOrder(orderId, sendInviteEmail(v))
     })
   }
@@ -138,12 +140,14 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
 
   private def processOrder(orderId: Int, mailSender: MailSender) = {
     orders.acceptOrder(orderId).map {
-      case (Seq(), _) => NotFound.asError(ErrorCodes.ALREADY_ACCEPTED)
+      case (Seq(), _) =>
+        orders.insertLog(orderId, "admin_force_duplicate", "Duplicate order validation")
+        NotFound.asError(ErrorCodes.ALREADY_ACCEPTED)
       case (oldSeq, client) if oldSeq.nonEmpty =>
         val attachments: Seq[AttachmentData] =
           oldSeq.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))
 
-
+        orders.insertLog(orderId, "admin_force_ok", "Order forcefully accepted", accepted = true)
         Future(mailSender(attachments, client))
 
         Ok(Json.obj("success" -> true, "errors" -> JsArray()))

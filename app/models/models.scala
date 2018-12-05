@@ -237,6 +237,27 @@ package object models {
 
   private[models] val posPaymentLogs = TableQuery[PosPaymentLogs]
 
+  private[models] class OrderLogs(tag: Tag) extends Table[OrderLog](tag, "order_logs") {
+    def id = column[Int]("order_log_id", O.PrimaryKey, O.AutoInc)
+    def orderId = column[Int]("order_id")
+    def logDate = column[Timestamp]("order_log_date", O.SqlType("TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+    def accepted = column[Boolean]("order_log_accepted")
+
+    def name = column[String]("order_log_name", O.SqlType("VARCHAR(255) NOT NULL"))
+    def details = column[Option[String]]("order_log_details", O.SqlType("TEXT NULL"))
+
+    /*
+      CONSTRAINT pos_payment_logs_fk FOREIGN KEY (order_id) REFERENCES orders (order_id)
+     */
+    def ordersFk = foreignKey("order_logs_orders_order_id_fk", orderId, orders)(_.id)
+
+    def * =
+      (id.?, orderId, logDate, name, details, accepted)
+        .shaped <> (OrderLog.tupled, OrderLog.unapply)
+  }
+
+  private[models] val orderLogs = TableQuery[OrderLogs]
+
   implicit val taskMethodMap = MappedColumnType.base[TaskState, String](TaskState.unapply, TaskState.apply)
 
   private[models] class IntranetTasks(tag: Tag) extends Table[IntranetTask](tag, "intranet_tasks") {

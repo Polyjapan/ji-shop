@@ -109,8 +109,13 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
           // TODO: the client should check that the returned ordered list contains the same items that the one requested
           // If the user comes from the site, we generate a payment link and make him pay
           if (source == Web) pb.startPayment(totalPrice, orderId, list).map {
-            case (true, url) => Ok(Json.obj("ordered" -> list, "success" -> true, "redirect" -> url))
-            case (false, err) => InternalServerError.asError(ErrorCodes.POLYBANKING(err))
+            case (true, url) =>
+              // Insert log
+              orders.insertLog(orderId, "payment_start", "polybankingUrl=" + url)
+              Ok(Json.obj("ordered" -> list, "success" -> true, "redirect" -> url))
+            case (false, err) =>
+              orders.insertLog(orderId, "payment_start_fail", "error=" + err)
+              InternalServerError.asError(ErrorCodes.POLYBANKING(err))
           }
           else Future(Ok(Json.obj("ordered" -> list, "success" -> true, "orderId" -> orderId)))
 

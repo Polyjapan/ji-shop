@@ -107,10 +107,14 @@ class PolybankingClient @Inject()(config: Configuration, ws: WSClient)(implicit 
 }
 
 object PolybankingClient {
-  sealed trait IpnStatus
+  sealed trait IpnStatus {
+    def toError: String = this.toString
+  }
 
   case class MissingFields(missingFields: Seq[String]) extends IpnStatus
-  case class BadSignature(expected: String, got: String) extends IpnStatus
+  case class BadSignature(expected: String, got: String) extends IpnStatus {
+    override def toError: String = "BadSignature"
+  }
   case object BadConfig extends IpnStatus
   case class CorrectIpn(status: Boolean, orderId: Int) extends IpnStatus
 }

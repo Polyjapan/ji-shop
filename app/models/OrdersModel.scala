@@ -3,7 +3,7 @@ package models
 import java.security.SecureRandom
 import java.sql.{SQLIntegrityConstraintViolationException, Timestamp}
 
-import data.{AuthenticatedUser, CheckedOutItem, Client, Gift, Order, OrderedProduct, Product, Source, Ticket}
+import data.{AuthenticatedUser, CheckedOutItem, Client, Gift, Order, OrderLog, OrderedProduct, Product, Source, Ticket}
 import javax.inject.Inject
 import models.OrdersModel.{GeneratedBarCode, OrderBarCode, TicketBarCode}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -68,6 +68,9 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
 
     barcodeType.getId + usedFormat(BigInt(bytes))
   }
+
+  def insertLog(orderId: Int, name: String, details: String = null, accepted: Boolean = false): Future[Int] =
+    db.run(orderLogs += OrderLog(None, orderId, null, name, Option.apply(details), accepted))
 
   /**
     * Read all orders made by a given user. If the user is not admin, only the orders with source == `Web` will be

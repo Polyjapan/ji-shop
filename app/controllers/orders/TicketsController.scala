@@ -25,24 +25,29 @@ class TicketsController @Inject()(cc: ControllerComponents, pdfGen: TicketGenera
     pb.checkIpn(request.body) match {
       case CorrectIpn(valid: Boolean, order: Int) =>
         println(s"Processing IPN request for order $order. PostFinance status is $valid")
-        if (!valid) BadRequest.asError("error.postfinance_refused").asFuture
-        else orders.acceptOrder(order).map {
+        if (!valid) {
+          orders.insertLog(order, "ipn_refused", "Postfinance refused the order")
+          BadRequest.asError("error.postfinance_refused").asFuture
+        } else orders.acceptOrder(order).map {
           case (Seq(), _) => NotFound.asError("error.order_not_found")
           case (oldSeq, client) =>
             val attachments =
               oldSeq.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))
 
             OrderEmail.sendOrderEmail(attachments, client)
+            orders.insertLog(order, "ipn_accepted", "IPN was accepted and tickets were generated", accepted =true)
 
             Ok
-          case _ => BadRequest.asError("error.already_accepted")
+          case _ =>
+            orders.insertLog(order, "ipn_duplicate", "Duplicate IPN request for order? (or other db error)")
+            BadRequest.asError("error.already_accepted")
         }
       case a@_ =>
         println("Wrong IPN request found.")
         println(a.toString)
         println("Request details:")
         println(request.body)
-        BadRequest.asError(a.toString).asFuture
+        BadRequest.asError(a.toError).asFuture
     }
 
   }
