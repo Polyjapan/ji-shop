@@ -125,4 +125,10 @@ object Permissions {
     * Edit a tasks created by someone else
     */
   val INTRANET_TASK_EDIT = "intranet.admin.task_edit"
+
+  /**
+    * Permission to sell tickets in advance on a polyjapan controlled sales point
+    */
+  val SELL_IN_ADVANCE = "admin.sell_in_advance"
+
 }

@@ -4,7 +4,7 @@ import constants.ErrorCodes
 import constants.Permissions._
 import constants.emails.OrderEmail
 import constants.results.Errors._
-import data.{Order, OrderedProduct, Reseller}
+import data.{Order, OrderedProduct, Physical, Reseller}
 import javax.inject.Inject
 import models.{OrdersModel, ProductsModel}
 import play.api.data.Form
@@ -34,10 +34,16 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
       formError(err).asFuture, {
       case (orderId, None) =>
         orders.insertLog(orderId, "admin_force_self", "Trying to force-accept order (with no specific target mail)")
-        processOrder(orderId, OrderEmail.sendOrderEmail)
+        processOrder(orderId, _ => sendOrderEmail(None))
       case (orderId, Some(v)) =>
-        orders.insertLog(orderId, "admin_force_invite", "Trying to generate an invite for " + v)
-        processOrder(orderId, sendInviteEmail(v))
+        processOrder(orderId, {
+          case Physical =>
+            orders.insertLog(orderId, "admin_force_send", "Sending an order email to " + v)
+            sendOrderEmail(Some(v))
+          case _ =>
+            orders.insertLog(orderId, "admin_force_invite", "Trying to generate an invite for " + v)
+            sendInviteEmail(v)
+        })
     })
   }
   } requiresPermission FORCE_VALIDATION
@@ -136,19 +142,22 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
       attachments = attachments
     ))
 
-  private type MailSender = (Seq[AttachmentData], data.Client) => Any
+  def sendOrderEmail(email: Option[String])(attachments: Seq[AttachmentData], client: data.Client)(implicit mailerClient: MailerClient): String =
+    OrderEmail.sendOrderEmail(attachments, client, email)
+
+  private type MailSender = data.Source => (Seq[AttachmentData], data.Client) => Any
 
   private def processOrder(orderId: Int, mailSender: MailSender) = {
     orders.acceptOrder(orderId).map {
-      case (Seq(), _) =>
+      case (Seq(), _, _) =>
         orders.insertLog(orderId, "admin_force_duplicate", "Duplicate order validation")
         NotFound.asError(ErrorCodes.ALREADY_ACCEPTED)
-      case (oldSeq, client) if oldSeq.nonEmpty =>
+      case (oldSeq, client, order) if oldSeq.nonEmpty =>
         val attachments: Seq[AttachmentData] =
           oldSeq.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))
 
         orders.insertLog(orderId, "admin_force_ok", "Order forcefully accepted", accepted = true)
-        Future(mailSender(attachments, client))
+        Future(mailSender(order.source)(attachments, client))
 
         Ok(Json.obj("success" -> true, "errors" -> JsArray()))
       case _ => dbError

@@ -399,7 +399,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     * @param order the order to accept
     * @return a future holding the barcodes as well as the client to which they should be sent
     */
-  def acceptOrder(order: Int): Future[(Seq[GeneratedBarCode], data.Client)] = {
+  def acceptOrder(order: Int): Future[(Seq[GeneratedBarCode], data.Client, data.Order)] = {
     // This query updates the confirm time of the order
     val updateConfirmTimeQuery = confirmOrderQuery(order)
     // This query selects the tickets in the command
@@ -466,14 +466,14 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
         if (code != null) DBIO.successful(seq :+ code)
         else DBIO.successful(seq)
       })) flatMap // get the order code
-      (seq => orderQuery.flatMap(cli => DBIO.successful((seq, cli.head._2)))) flatMap // get the client
+      (seq => orderQuery.flatMap(cli => DBIO.successful((seq, cli.head._2, cli.head._1)))) flatMap // get the client
       (res => updateRemainingStockQuery.flatMap(_ => DBIO.successful(res))) // execute the 4th request, ignoring its result
 
 
     db.run((updateConfirmTimeQuery andThen computeResult).transactionally).recover {
       case _: SQLIntegrityConstraintViolationException | _: IllegalStateException =>
         println("Duplicate IPN request for " + order + ", returning empty result")
-        (Seq(), null)
+        (Seq(), null, null)
     }
   }
 }

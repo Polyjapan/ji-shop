@@ -49,7 +49,7 @@ package object models {
     def totalPrice = column[Double]("order_total_price")
     def paymentConfirmed = column[Option[Timestamp]]("order_payment_confirmed")
     def enterDate = column[Timestamp]("order_enter_date", O.SqlType("timestamp DEFAULT now()"))
-    def source = column[Source]("order_source", O.SqlType("SET('WEB', 'ONSITE', 'RESELLER', 'GIFT') DEFAULT 'WEB'"))
+    def source = column[Source]("order_source", O.SqlType("SET('WEB', 'ONSITE', 'RESELLER', 'GIFT', 'PHYSICAL') DEFAULT 'WEB'"))
 
     def client = foreignKey("order_client_fk", clientId, clients)(_.id)
 

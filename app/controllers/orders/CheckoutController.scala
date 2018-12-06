@@ -37,6 +37,7 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
     case Some(OnSite) => false // use dedicated endpoint!
     case Some(Reseller) => false // use dedicated endpoint!
     case Some(Gift) if user.hasPerm(Permissions.GIVE_FOR_FREE) => true
+    case Some(Physical) if user.hasPerm(Permissions.SELL_IN_ADVANCE) => true
     case _ => false
   }
 

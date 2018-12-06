@@ -29,8 +29,8 @@ class TicketsController @Inject()(cc: ControllerComponents, pdfGen: TicketGenera
           orders.insertLog(order, "ipn_refused", "Postfinance refused the order")
           BadRequest.asError("error.postfinance_refused").asFuture
         } else orders.acceptOrder(order).map {
-          case (Seq(), _) => NotFound.asError("error.order_not_found")
-          case (oldSeq, client) =>
+          case (Seq(), _, _) => NotFound.asError("error.order_not_found")
+          case (oldSeq, client, _) =>
             val attachments =
               oldSeq.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))
 

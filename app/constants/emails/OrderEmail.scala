@@ -6,11 +6,11 @@ import play.api.libs.mailer.{AttachmentData, Email, MailerClient}
   * @author zyuiop
   */
 object OrderEmail {
-  def sendOrderEmail(attachments: Seq[AttachmentData], client: data.Client)(implicit mailerClient: MailerClient): String =
+  def sendOrderEmail(attachments: Seq[AttachmentData], client: data.Client, email: Option[String] = None)(implicit mailerClient: MailerClient): String =
     mailerClient.send(Email(
       "Vos billets JapanImpact",
       "Billetterie JapanImpact <ticket@japan-impact.ch>",
-      Seq(client.email),
+      Seq(email.getOrElse(client.email)),
       bodyText = Some("Bonjour, " +
         "\nVous avez réalisé des achats sur la boutique JapanImpact et nous vous en remercions." +
         "\nVous trouverez en pièce jointe vos billets. Vous pouvez les imprimer ou les présenter sur smartphone." +

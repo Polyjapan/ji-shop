@@ -52,6 +52,12 @@ package object data {
   case object OnSite extends Source
 
   /**
+    * An order made and paid on a PolyJapan owned salepoint (i.e. Agepoly shop, advent calendar...). The clientId is the$
+    * id of the staff that registered the order
+    */
+  case object Physical extends Source
+
+  /**
     * An order made on an external site (e.g. fnac.ch) that was imported in the database. The clientId is the id of the
     * admin who imported the database
     */
@@ -70,6 +76,7 @@ package object data {
       case "RESELLER" => Reseller
       case "WEB" => Web
       case "GIFT" => Gift
+      case "PHYSICAL" => Physical
     }
 
     implicit val sourceFormat: Format[Source] = new Format[Source] {
