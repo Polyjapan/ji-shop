@@ -197,14 +197,15 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     * Read an order by its id and return it. The caller should check that the user requesting the order has indeed the
     * right to read it.
     *
-    * @param orderId the orderId to look for
+    * @param orderId        the orderId to look for
+    * @param includeRemoved if true, the removed tickets will be included in the reply
     * @return a future, containing an optional OrderData
     */
-  def loadOrder(orderId: Int): Future[Option[OrderData]] = {
+  def loadOrder(orderId: Int, includeRemoved: Boolean = false): Future[Option[OrderData]] = {
     // orderedProductsTickets JOIN tickets
-    val oPTicketsJoin = orderedProductTickets join tickets on ((left, right) => left.ticketId === right.id && !right.removed)
+    val oPTicketsJoin = orderedProductTickets join tickets on ((left, right) => left.ticketId === right.id && (!right.removed || includeRemoved))
     // orderTickets JOIN tickets
-    val oTicketsJoin = orderTickets join tickets on ((left, right) => left.ticketId === right.id && !right.removed)
+    val oTicketsJoin = orderTickets join tickets on ((left, right) => left.ticketId === right.id && (!right.removed || includeRemoved))
 
     val req = orders.filter(_.id === orderId) // find the order
       .join(orderedProducts).on(_.id === _.orderId) // join it to its orderedProducts
@@ -261,19 +262,19 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       .map(_.id) // Only get the id
       .result.map(seq => seq.head) // Only get the first one
       .flatMap(barcodeId => {
-        Barcodes.parseCode(barcode) match {
-          case ProductCode => findProduct(barcode, barcodeId)
-          case OrderCode => findOrder(barcode, barcodeId)
-          case _ =>
-            // We try to find a product then an order
-            // Some barcodes (like the one imported from resellers) might not follow the format and therefore not be
-            // recognized
-            findProduct(barcode, barcodeId).flatMap(result => {
-              if (result.isDefined) DBIO.successful(result)
-              else findOrder(barcode, barcodeId)
-            })
-        }
-      })
+      Barcodes.parseCode(barcode) match {
+        case ProductCode => findProduct(barcode, barcodeId)
+        case OrderCode => findOrder(barcode, barcodeId)
+        case _ =>
+          // We try to find a product then an order
+          // Some barcodes (like the one imported from resellers) might not follow the format and therefore not be
+          // recognized
+          findProduct(barcode, barcodeId).flatMap(result => {
+            if (result.isDefined) DBIO.successful(result)
+            else findOrder(barcode, barcodeId)
+          })
+      }
+    })
 
     db.run(req).recover {
       case e: UnknownError => None
