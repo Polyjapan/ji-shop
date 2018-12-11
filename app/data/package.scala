@@ -101,9 +101,11 @@ package object data {
     *                         the IPN script was called for this order confirming the payment was received
     * @param enterDate        the timestamp at which this order was generated
     * @param source           the source of the order (web, on site, reseller)
+    * @param removed          if true, the order has been flagged as removed and should not count in stats
     */
   case class Order(id: Option[Int], clientId: Int, ticketsPrice: Double, totalPrice: Double,
-                   paymentConfirmed: Option[Timestamp] = Option.empty, enterDate: Option[Timestamp] = Option.empty, source: Source = Web)
+                   paymentConfirmed: Option[Timestamp] = Option.empty, enterDate: Option[Timestamp] = Option.empty, source: Source = Web,
+                   removed: Boolean = false)
 
 
   /**
@@ -144,8 +146,9 @@ package object data {
     * @param barCode   a string that will be represented on a barcode on the printed ticket and that can be used to find
     *                  this ticket. It has to be unique
     * @param createdAt the time at which this ticket was created
+    * @param removed   if true, the ticked has been flagged as "removed" and should not be validable
     */
-  case class Ticket(id: Option[Int], barCode: String, createdAt: Option[Timestamp] = Option.empty)
+  case class Ticket(id: Option[Int], barCode: String, createdAt: Option[Timestamp] = Option.empty, removed: Boolean = false)
 
   /**
     * Describes the event that a ticket was claimed. A claimed ticket was scanned and cannot be scanned anymore

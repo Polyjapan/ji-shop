@@ -50,11 +50,12 @@ package object models {
     def paymentConfirmed = column[Option[Timestamp]]("order_payment_confirmed")
     def enterDate = column[Timestamp]("order_enter_date", O.SqlType("timestamp DEFAULT now()"))
     def source = column[Source]("order_source", O.SqlType("SET('WEB', 'ONSITE', 'RESELLER', 'GIFT', 'PHYSICAL') DEFAULT 'WEB'"))
+    def removed = column[Boolean]("order_removed")
 
     def client = foreignKey("order_client_fk", clientId, clients)(_.id)
 
     def * =
-      (id.?, clientId, ticketsPrice, totalPrice, paymentConfirmed, enterDate.?, source).shaped <> (Order.tupled, Order.unapply)
+      (id.?, clientId, ticketsPrice, totalPrice, paymentConfirmed, enterDate.?, source, removed).shaped <> (Order.tupled, Order.unapply)
   }
   private[models] val orders = TableQuery[Orders]
 
@@ -63,10 +64,11 @@ package object models {
     def id = column[Int]("ticket_id", O.PrimaryKey, O.AutoInc)
     def createdAt = column[Timestamp]("ticket_created_at", O.SqlType("timestamp DEFAULT now()"))
     def barCode = column[String]("ticket_bar_code", O.SqlType("VARCHAR(50)"), O.Unique)
+    def removed = column[Boolean]("ticket_removed")
 
 
     def * =
-      (id.?, barCode, createdAt.?).shaped <> (Ticket.tupled, Ticket.unapply)
+      (id.?, barCode, createdAt.?, removed).shaped <> (Ticket.tupled, Ticket.unapply)
   }
   private[models] val tickets = TableQuery[Tickets]
 
