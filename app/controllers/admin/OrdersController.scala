@@ -166,7 +166,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
 
 
   def getOrders(event: Int): Action[AnyContent] = Action.async {
-    orders.ordersByEvent(event).map(seq => Ok(Json.toJson(seq)))
+    orders.ordersByEvent(event, returnRemovedOrders = true).map(seq => Ok(Json.toJson(seq)))
   } requiresPermission ADMIN_ACCESS
 
   def getOrdersByUser(userId: Int): Action[AnyContent] = Action.async {

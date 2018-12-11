@@ -49,7 +49,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     * List of orders and the client who made them
     * orders JOIN clients
     */
-  private val orderJoin = orders join clients on (_.clientId === _.id)
+  private val orderJoin = (orders filterNot (_.removed)) join clients on (_.clientId === _.id)
 
   /**
     * Defines a style of barcode
@@ -81,8 +81,10 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     * @return a future, containing a sequence of orders
     */
   def loadOrders(userId: Int, isAdmin: Boolean): Future[Seq[data.Order]] = {
+    val ordersTable = if (isAdmin) orders else orders.filterNot(_.removed)
+
     db.run(clients.filter(_.id === userId)
-      .join(orders)
+      .join(ordersTable)
       .on(_.id === _.clientId)
       .map { case (_, order) => order }
       .result
@@ -96,14 +98,16 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     db.run(posPaymentLogs.filter(_.orderId === order).result)
 
   /**
-    * Get all the orders in a given event
+    * Get all the orders in a given event.
     *
     * @param eventId the id of the event to look for
     * @return the orders in this event
     */
-  def ordersByEvent(eventId: Int): Future[Seq[data.Order]] = {
+  def ordersByEvent(eventId: Int, returnRemovedOrders: Boolean = false): Future[Seq[data.Order]] = {
+    val ordersTable = (if (returnRemovedOrders) orders else orders.filterNot(_.removed))
+
     db.run(
-      orders
+      ordersTable
         .join(productJoin).on(_.id === _._1.orderId) // join with products and events
         .filter(_._2._3.id === eventId) // get only this event id
         .map(_._1) // get only the order
@@ -136,7 +140,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   }
 
   def getOrder(orderId: Int): Future[Option[Order]] = {
-    db.run(orders.filter(_.id === orderId).result.headOption)
+    db.run(orders.filter(_.id === orderId).filterNot(_.removed).result.headOption)
   }
 
   def insertProducts(list: Iterable[CheckedOutItem], orderId: Int): Future[Boolean] = {
@@ -207,7 +211,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     // orderTickets JOIN tickets
     val oTicketsJoin = orderTickets join tickets on ((left, right) => left.ticketId === right.id && (!right.removed || includeRemoved))
 
-    val req = orders.filter(_.id === orderId) // find the order
+    val req = orders.filter(_.id === orderId).filterNot(_.removed) // find the order
       .join(orderedProducts).on(_.id === _.orderId) // join it to its orderedProducts
       .join(products).on(_._2.productId === _.id) // join them to their corresponding product
       .map { case ((ord, op), p) => (ord, op, p) }
@@ -285,7 +289,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   private def findOrder(barcode: String, barcodeId: Int): DBIOAction[Option[(GeneratedBarCode, data.Client, Int)], NoStream, Effect.Read] = {
     val join =
       orderTickets filter (_.ticketId === barcodeId) join // find the orderTicket by ticketId
-        orders on (_.orderId === _.id) map (_._2) join // find the order by its ticket
+        orders on ((left, right) => left.orderId === right.id && !right.removed) map (_._2) join // find the order by its ticket
         clients on (_.clientId === _.id) join // find the client who made the order
         productJoin on (_._1.id === _._1.orderId) map { // find products in the order
         case ((order, client), (_, product, event)) => (order.id, product, event, client)
@@ -304,7 +308,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     val join =
       orderedProductTickets.filter(_.ticketId === barcodeId) // find the orderedProductTicket by ticketId
         .join(productJoin).on(_.orderedProductId === _._1.id) // find the product by its ticket
-        .join(orders).on(_._2._1.orderId === _.id) // find the order corresponding to the products
+        .join(orders.filterNot(_.removed)).on(_._2._1.orderId === _.id) // find the order corresponding to the products
         .join(clients).on(_._2.clientId === _.id) map { // find the client who made the order
         case (((_, (_, p, e)), _), client) => (p, e, client)
       } // keep only product, event and client
@@ -353,6 +357,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   }
 
   private def confirmOrderQuery(order: Int) = orders
+    .filterNot(_.removed)
     .filter(_.id === order)
     .map(_.paymentConfirmed)
     .filter(_.isEmpty)

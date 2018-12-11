@@ -21,7 +21,7 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
   type OrdersFilter = Query[Orders, data.Order, Seq] => Query[Orders, data.Order, Seq]
 
   private val confirmedOrders: Query[Orders, data.Order, Seq] = orders
-    .filter(order => order.paymentConfirmed.isDefined)
+    .filter(order => order.paymentConfirmed.isDefined && !order.removed)
 
   private def statsRequest(filter: OrdersFilter) =
     filter(confirmedOrders)
