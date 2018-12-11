@@ -119,7 +119,7 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
         // Check order source
         orders.getOrder(orderId)
           .flatMap {
-            case Some(Order(_, _, _, _, None, _, OnSite)) =>
+            case Some(Order(_, _, _, _, None, _, OnSite, _)) =>
               // This is an on-site order
               // We can insert the log
 
@@ -135,7 +135,7 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
                 .map(succ =>
                   if (succ) Ok.asSuccess
                   else dbError)
-            case Some(Order(_, _, _, _, None, _, _)) => BadRequest.asError(ErrorCodes.NOT_ON_SITE).asFuture
+            case Some(Order(_, _, _, _, None, _, _, _)) => BadRequest.asError(ErrorCodes.NOT_ON_SITE).asFuture
             case Some(_) => BadRequest.asError(ErrorCodes.ALREADY_ACCEPTED).asFuture
             case None => notFound("orderId").asFuture
           }

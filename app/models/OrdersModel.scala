@@ -492,7 +492,7 @@ case class OrderData(order: data.Order, products: Map[(OrderedProduct, data.Prod
   * @param createdAt        the time (ms) at which this order was created
   * @param source           where this order comes from ([[data.Source.toString]])
   */
-case class JsonOrder(id: Int, price: Double, paymentConfirmed: Boolean, createdAt: Long, source: String)
+case class JsonOrder(id: Int, price: Double, paymentConfirmed: Boolean, createdAt: Long, source: String, removed: Boolean)
 
 case object JsonOrder {
   /**
@@ -502,8 +502,8 @@ case object JsonOrder {
     * @return a [[JsonOrder]]
     */
   def apply(order: data.Order): JsonOrder = order match {
-    case Order(Some(id), _, _, price, paymentConfirmed, Some(enterDate), source) =>
-      JsonOrder(id, price, paymentConfirmed.isDefined, enterDate.getTime, source.toString)
+    case Order(Some(id), _, _, price, paymentConfirmed, Some(enterDate), source, removed) =>
+      JsonOrder(id, price, paymentConfirmed.isDefined, enterDate.getTime, source.toString, removed)
   }
 
   implicit val format = Json.format[JsonOrder]
