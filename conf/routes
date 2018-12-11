@@ -82,6 +82,8 @@ GET            /admin/orders/:event                                controllers.a
 GET            /admin/orders/userInfo/:id                          controllers.admin.OrdersController.getOrderUserInfo(id: Int)
 GET            /admin/orders/logs/:id                              controllers.admin.OrdersController.getOrderLogs(id: Int)
 GET            /admin/orders/byUser/:id                            controllers.admin.OrdersController.getOrdersByUser(id: Int)
++nocsrf
+DELETE         /admin/orders/:id                                   controllers.admin.OrdersController.removeOrder(id: Int)
 
 GET            /admin/stats/:event                                 controllers.admin.StatsController.getSales(event: Int, start: Long ?= 0, end: Long ?= 0)
 

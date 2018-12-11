@@ -40,6 +40,11 @@ object Permissions {
   val VIEW_OTHER_ORDER = "admin.view_other_order"
 
   /**
+    * Permission to view deleted orders and tickets
+    */
+  val VIEW_DELETED_STUFF = "admin.view_deleted_stuff"
+
+  /**
     * Permission to download a ticket that belongs to an other user
     */
   val VIEW_OTHER_TICKET = "admin.view_other_ticket"
@@ -64,6 +69,11 @@ object Permissions {
     * Permission to access the admin area
     */
   val ADMIN_ACCESS = "admin.access_dashboard"
+
+  /**
+    * Permission to remove an order
+    */
+  val ADMIN_REMOVE_ORDER = "admin.remove_order"
 
   /**
     * Permission to manage the events

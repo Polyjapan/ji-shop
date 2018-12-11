@@ -21,7 +21,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel)(
   }.requiresAuthentication
 
   def getOrder(orderId: Int) = Action.async { implicit request =>
-    orders.loadOrder(orderId)
+    orders.loadOrder(orderId, request.user.hasPerm(Permissions.VIEW_DELETED_STUFF))
       .map(opt =>
         opt.filter(data => data.order.clientId == request.user.id || request.user.hasPerm(Permissions.VIEW_OTHER_ORDER)))
       .map {

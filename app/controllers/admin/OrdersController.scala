@@ -166,7 +166,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
 
 
   def getOrders(event: Int): Action[AnyContent] = Action.async {
-    orders.ordersByEvent(event).map(seq => Ok(Json.toJson(seq)))
+    orders.ordersByEvent(event, returnRemovedOrders = true).map(seq => Ok(Json.toJson(seq)))
   } requiresPermission ADMIN_ACCESS
 
   def getOrdersByUser(userId: Int): Action[AnyContent] = Action.async {
@@ -180,6 +180,10 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
   def getOrderLogs(order: Int): Action[AnyContent] = Action.async {
     orders.getOrderLogs(order).map(seq => Ok(Json.toJson(seq)))
   } requiresPermission ADMIN_ACCESS
+
+  def removeOrder(order: Int): Action[AnyContent] = Action.async {
+    orders.setOrderRemoved(order, removed = true).map(rep => Ok(Json.toJson(rep)))
+  } requiresPermission ADMIN_REMOVE_ORDER
 
 
 }
