@@ -5,47 +5,38 @@ JIShop (Backend)
 
 JIShop is a webapp written in scala with PlayFramework which goal is to provide a new ticketing site for Japan Impact.
 
-## Why JIShop?
+## How to build?
 
-The current Japan Impact shop is a PHP plugin for wordpress which has become unmaintainable because of successive changes year
-after year. The goal of this project is to create a new plateform that can be used correctly year after year.
+To build the app, simply run `sbt dist` from the root directory of the project. The app will be contained in a single zip file, located
+in `target/universal/jishop-version.zip`.
 
-## Components (backend)
+## How to run?
 
-- [x] Register / login
-  -  [x] Requires to verify email
-  -  [x] Can login using an old password that MUST be rehashed using a new algorithm then removed from the database
-- [x] Actual shop
-  -  [x] List products for the active edition 
-  -  [x] Go to the payment page and pay
-  -  [x] IPN script is triggered and the tickets are sent `/shop/ipn`
-    -  [x] Each bought ticket get its own ticket and barcode (yes these two concepts share the same name)
-    -  [x] If the order has a non-ticket item, an order ticket is generated too
-  -  [x] Display bought tickets on the user page `/users/orders` and `/users/tickets`
-    -  [x] Get an URL to generate again a given ticket
-  -  [x] Avoid selling [too much] more than max allowed
-- [x] (Admin) Manage the shop
-  -  [x] Create and update events `POST /admin/events` and `PUT /admin/events/:id`
-  -  [x] Deep clone events `POST /admin/events` with `cloneEvent: <id>`
-  -  [x] Create and update products within events `POST /admin/events/:id/products` and `PUT /admin/events/:id/products/:id`
-  -  [x] Create free tickets of any kind of item `/orders/create` and `/admin/orders/validate`
-  -  [x] Sell tickets with real money `(use JI10 code)` and `/orders/create`
-  -  [x] Import fnac dump `/orders/create` is **not suitable**. We need an endpoint that inserts the barcodes at the same time (one single order for each import)
-- [ ] (Admin) Read data
-  -  [x] Export all tickets for a given edition to different lists
-  -  [ ] Display scan stats
-  -  [x] Display sales stats 
-  -  [x] See all clients
-  -  [x] Update clients permissions
-  -  [x] See all orders
-  -  [x] Re-send emails from an order view
-  -  [x] Force acceptation of an order
-- [ ] (BackOffice) Scan tickets
-  -  [ ] Create scanning configurations, with a list of allowed item types
-  -  [x] Endpoint to scan a barcode with a given config, checking if it's allowed or not `/scan/process/:configId`
-  -  [x] Endpoint to scan an order barcode (with a special config), checking if it's allowed and returning a list of the items it contains `/scan/process/:configId`
-  
-## Other stuff to do:
+This file can be extracted anywhere. To start the app, just run the `bin/jishop` script.
+As an example, the command used to start the process currently is
+
+    nohup su --shell=/bin/bash --command="jishop-1.0/bin/jishop" play-jishop > application.log 2>&1 & echo $! > run.pid
+
+Some details in the application configuration must be changed. The config file
+is in `conf/application.conf`.
+
+The http port can easily be set in the config
+
+    http.port = 16060
+
+For the database evolutions to apply automatically, it can be good practice to set
+
+    play.evolutions.autoApply=true
+
+You must however be sure that your evolutions are good before deploying the app in production.
+
+Don't forget also to configure polybanking details, as well as recaptcha secrets, mailer details, ...
+
+## Develop
+
+To start a local development server, just run `sbt boot` in the root directory.
+
+## Stuff to do:
 
 - [ ] Write tests
 - [ ] Write tests
@@ -54,7 +45,7 @@ after year. The goal of this project is to create a new plateform that can be us
 - [ ] Refactor/Reorder code
 - [ ] More comments and documentation!
 
-## Ticket generation templates
+## About ticket generation templates
 
 For tickets generation, we use Twirl templates. The base template is defined in `views/template.scala.html`. It defines 
 the header (title, poster, top barcode) and the footer (warning text, generation time, bottom barcode). Then, there is a
