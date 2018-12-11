@@ -77,6 +77,11 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       .map(_.removed)
       .update(removed)
 
+    // Removing an order is, in itself, enough to disable all its tickets, as the requests that
+    // fetch the tickets always join on the orders as well.
+    // However, we still want to tag the tickets as removed, as we can more easily exclude them in scan
+    // statistics, and because it makes them disabled even in endpoints that don't join on the orders
+
     val orderTicketReq = orderTickets.filter(_.orderId === orderId)
       .map(_.ticketId)
       .result
