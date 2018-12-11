@@ -124,6 +124,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       productJoin
         .join(orderedProductTickets).on(_._1.id === _.orderedProductId)
         .join(tickets).on(_._2.ticketId === _.id)
+        .filterNot(_._2.removed) // Exclude removed tickets
         .map { case (((ordered, product, ev), _), ticket) => (ev, product, ordered, ticket) }
 
 
@@ -162,8 +163,8 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
             (order, orderedProduct, product, event, optProdTicket.map(_.ticketId), optOrderTicket.map(_.ticketId), user)
         }
         //.filter(tuple => tuple._5.isDefined || tuple._6.isDefined)
-        .joinLeft(tickets).on(_._5 === _.id)
-        .joinLeft(tickets).on(_._1._6 === _.id)
+        .joinLeft(tickets).on((left, right) => left._5 === right.id && !right.removed)
+        .joinLeft(tickets).on((left, right) => left._1._6 === right.id && !right.removed)
         .map {
           case (((order, orderedProduct, product, event, _, _, client), optProdTicket), optOrderTicket) =>
             (order, orderedProduct, product, event, optProdTicket.map(_.barCode), optOrderTicket.map(_.barCode), client)
@@ -192,43 +193,6 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     )
   }
 
-  /*
-    def getBarcodes(orderId: Int): Future[Seq[GeneratedBarCode]] = {
-      def getBarCode(ticket: Ticket): DBIOAction[Option[(GeneratedBarCode, Client, Int)], NoStream, Effect.Read] = ticket match {
-        case Ticket(Some(barcodeId), barcode, _) =>
-          Barcodes.parseCode(barcode) match {
-            case ProductCode => findProduct(barcode, barcodeId)
-            case OrderCode => findOrder(barcode, barcodeId)
-            case _ =>
-              // We try to find a product then an order
-              // Some barcodes (like the one imported from resellers) might not follow the format and therefore not be
-              // recognized
-              findProduct(barcode, barcodeId).flatMap(result => {
-                if (result.isDefined) DBIO.successful(result)
-                else findOrder(barcode, barcodeId)
-              })
-          }
-      }
-
-      db.run(orders.filter(_.id === orderId)
-        .join(orderedProducts).on(_.id === _.orderId)
-        .joinLeft(orderedProductTickets).on(_._2.id === _.orderedProductId)
-        .joinLeft(orderTickets).on(_._1._1.id === _.orderId)
-        .map {
-          case (((_, _), optProductTicket), optOrderTicket) => (optProductTicket.map(_.ticketId), optOrderTicket.map(_.ticketId))
-        }
-        .filter(pair => pair._1.isDefined || pair._2.isDefined)
-        .map(pair => pair._1.getOrElse(pair._2.get)) // merge all ids
-        .distinct
-        .join(tickets)
-        .on(_ === _.id)
-        .map(_._2)
-        .result
-          .flatMap(list => DBIO.sequence(list.map(ticket => getBarCode(ticket))))
-          .map(seq => seq.filter(opt => opt.isDefined).map(opt => opt.get._1))
-      )
-    }*/
-
   /**
     * Read an order by its id and return it. The caller should check that the user requesting the order has indeed the
     * right to read it.
@@ -238,9 +202,9 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     */
   def loadOrder(orderId: Int): Future[Option[OrderData]] = {
     // orderedProductsTickets JOIN tickets
-    val oPTicketsJoin = orderedProductTickets join tickets on (_.ticketId === _.id)
+    val oPTicketsJoin = orderedProductTickets join tickets on ((left, right) => left.ticketId === right.id && !right.removed)
     // orderTickets JOIN tickets
-    val oTicketsJoin = orderTickets join tickets on (_.ticketId === _.id)
+    val oTicketsJoin = orderTickets join tickets on ((left, right) => left.ticketId === right.id && !right.removed)
 
     val req = orders.filter(_.id === orderId) // find the order
       .join(orderedProducts).on(_.id === _.orderId) // join it to its orderedProducts
@@ -291,20 +255,25 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     * @return an optional triple of the barcode data, the client that created it and the id of the barcode in the database
     */
   def findBarcode(barcode: String): Future[Option[(GeneratedBarCode, data.Client, Int)]] = {
-    val req = tickets.filter(_.barCode === barcode).map(_.id).result.map(seq => seq.head).flatMap(barcodeId => {
-      Barcodes.parseCode(barcode) match {
-        case ProductCode => findProduct(barcode, barcodeId)
-        case OrderCode => findOrder(barcode, barcodeId)
-        case _ =>
-          // We try to find a product then an order
-          // Some barcodes (like the one imported from resellers) might not follow the format and therefore not be
-          // recognized
-          findProduct(barcode, barcodeId).flatMap(result => {
-            if (result.isDefined) DBIO.successful(result)
-            else findOrder(barcode, barcodeId)
-          })
-      }
-    })
+    val req = tickets
+      .filter(_.barCode === barcode) // Get the BarCode corresponding to the scanned barcode string
+      .filterNot(_.removed) // Remove the removed barcodes from the order
+      .map(_.id) // Only get the id
+      .result.map(seq => seq.head) // Only get the first one
+      .flatMap(barcodeId => {
+        Barcodes.parseCode(barcode) match {
+          case ProductCode => findProduct(barcode, barcodeId)
+          case OrderCode => findOrder(barcode, barcodeId)
+          case _ =>
+            // We try to find a product then an order
+            // Some barcodes (like the one imported from resellers) might not follow the format and therefore not be
+            // recognized
+            findProduct(barcode, barcodeId).flatMap(result => {
+              if (result.isDefined) DBIO.successful(result)
+              else findOrder(barcode, barcodeId)
+            })
+        }
+      })
 
     db.run(req).recover {
       case e: UnknownError => None
@@ -332,10 +301,10 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
 
   private def findProduct(barcode: String, barcodeId: Int): DBIOAction[Option[(GeneratedBarCode, data.Client, Int)], NoStream, Effect.Read] = {
     val join =
-      orderedProductTickets filter (_.ticketId === barcodeId) join // find the orderedProductTicket by ticketId
-        productJoin on (_.orderedProductId === _._1.id) join // find the product by its ticket
-        orders on (_._2._1.orderId === _.id) join // find the order corresponding to the products
-        clients on (_._2.clientId === _.id) map { // find the client who made the order
+      orderedProductTickets.filter(_.ticketId === barcodeId) // find the orderedProductTicket by ticketId
+        .join(productJoin).on(_.orderedProductId === _._1.id) // find the product by its ticket
+        .join(orders).on(_._2._1.orderId === _.id) // find the order corresponding to the products
+        .join(clients).on(_._2.clientId === _.id) map { // find the client who made the order
         case (((_, (_, p, e)), _), client) => (p, e, client)
       } // keep only product, event and client
 
