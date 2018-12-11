@@ -1,0 +1,4 @@
+checks:
+  similar-code:
+    config:
+      threshold: 80
