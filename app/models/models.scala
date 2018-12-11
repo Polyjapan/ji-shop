@@ -57,7 +57,8 @@ package object models {
     def * =
       (id.?, clientId, ticketsPrice, totalPrice, paymentConfirmed, enterDate.?, source, removed).shaped <> (Order.tupled, Order.unapply)
   }
-  private[models] val orders = TableQuery[Orders]
+  private[models] val allOrders = TableQuery[Orders]
+  private[models] val orders = allOrders.filterNot(_.removed)
 
 
   private[models] class Tickets(tag: Tag) extends Table[Ticket](tag, "tickets") {
@@ -70,7 +71,8 @@ package object models {
     def * =
       (id.?, barCode, createdAt.?, removed).shaped <> (Ticket.tupled, Ticket.unapply)
   }
-  private[models] val tickets = TableQuery[Tickets]
+  private[models] val allTickets = TableQuery[Tickets]
+  private[models] val tickets = allTickets.filterNot(_.removed)
 
 
   private[models] class OrderedProductTickets(tag: Tag) extends Table[(Int, Int)](tag, "ordered_products_tickets") {

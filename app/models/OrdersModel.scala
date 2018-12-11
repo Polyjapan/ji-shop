@@ -124,7 +124,6 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       productJoin
         .join(orderedProductTickets).on(_._1.id === _.orderedProductId)
         .join(tickets).on(_._2.ticketId === _.id)
-        .filterNot(_._2.removed) // Exclude removed tickets
         .map { case (((ordered, product, ev), _), ticket) => (ev, product, ordered, ticket) }
 
 
@@ -163,8 +162,8 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
             (order, orderedProduct, product, event, optProdTicket.map(_.ticketId), optOrderTicket.map(_.ticketId), user)
         }
         //.filter(tuple => tuple._5.isDefined || tuple._6.isDefined)
-        .joinLeft(tickets).on((left, right) => left._5 === right.id && !right.removed)
-        .joinLeft(tickets).on((left, right) => left._1._6 === right.id && !right.removed)
+        .joinLeft(tickets).on((left, right) => left._5 === right.id)
+        .joinLeft(tickets).on((left, right) => left._1._6 === right.id)
         .map {
           case (((order, orderedProduct, product, event, _, _, client), optProdTicket), optOrderTicket) =>
             (order, orderedProduct, product, event, optProdTicket.map(_.barCode), optOrderTicket.map(_.barCode), client)
@@ -203,9 +202,11 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     */
   def loadOrder(orderId: Int, includeRemoved: Boolean = false): Future[Option[OrderData]] = {
     // orderedProductsTickets JOIN tickets
-    val oPTicketsJoin = orderedProductTickets join tickets on ((left, right) => left.ticketId === right.id && (!right.removed || includeRemoved))
+    val joinWith = if (includeRemoved) allTickets else tickets
+
+    val oPTicketsJoin = orderedProductTickets join joinWith on ((left, right) => left.ticketId === right.id)
     // orderTickets JOIN tickets
-    val oTicketsJoin = orderTickets join tickets on ((left, right) => left.ticketId === right.id && (!right.removed || includeRemoved))
+    val oTicketsJoin = orderTickets join joinWith on ((left, right) => left.ticketId === right.id)
 
     val req = orders.filter(_.id === orderId) // find the order
       .join(orderedProducts).on(_.id === _.orderId) // join it to its orderedProducts
@@ -258,7 +259,6 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   def findBarcode(barcode: String): Future[Option[(GeneratedBarCode, data.Client, Int)]] = {
     val req = tickets
       .filter(_.barCode === barcode) // Get the BarCode corresponding to the scanned barcode string
-      .filterNot(_.removed) // Remove the removed barcodes from the order
       .map(_.id) // Only get the id
       .result.map(seq => seq.head) // Only get the first one
       .flatMap(barcodeId => {
