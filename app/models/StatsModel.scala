@@ -32,26 +32,58 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
   private def eventFilteredStatsRequest(event: Int, ordersFilter: OrdersFilter) =
     statsRequest(ordersFilter).filter { case (product, _) => product.eventId === event }
 
+  private def addStartFilter(start: Long, prev: OrdersFilter): OrdersFilter =
+    if (start == 0) prev
+    else
+    // even though we know the payment timestamp is not null, we still need to provide a default value
+      q => prev(q).filter(order => order.paymentConfirmed.getOrElse(new Timestamp(0)) > new Timestamp(start))
+
+  private def addEndFilter(end: Long, prev: OrdersFilter): OrdersFilter =
+    if (end == 0) prev
+    else q => prev(q).filter(order => order.paymentConfirmed.getOrElse(new Timestamp(0)) < new Timestamp(end))
+
+  private def addSourceFilter(source: Option[data.Source], prev: OrdersFilter): OrdersFilter =
+    if (source.isEmpty) prev
+    else q => prev(q).filter(order => order.source === source.get)
+
+  /**
+    * Gets some stats to export as CSV
+    *
+    * @param event the event to get the stats for
+    * @param start the start of the period you're interested in (0 = no start)
+    * @param end   the end of the period you're interested in (0 = no end)
+    * @return a list of comma separated values
+    */
+  def getOrdersStats(event: Int, start: Long, end: Long, source: Option[data.Source] = None): Future[List[String]] = {
+    val filter = addStartFilter(start, addEndFilter(end, addSourceFilter(source, q => q)))
+
+    val linesReq =
+      filter(confirmedOrders)
+        .join(orderedProducts)
+        .on(_.id === _.orderId)
+        .result
+        .map(
+          _.map {
+            case (data.Order(Some(id), _, ticketsPrice, totalPrice, Some(paymentDate), Some(enterDate), _, _),
+            data.OrderedProduct(_, productId, _, paidPrice)) =>
+              id + "," + enterDate.getTime + "," + paymentDate.getTime + "," + ticketsPrice + "," + totalPrice + "," + productId + "," + paidPrice
+          }
+        )
+
+    db.run(linesReq).map(seq =>
+      "id,enterDate,paymentDate,ticketsPrice,totalPrice,productId,paidPrice" :: seq.toList
+    )
+  }
 
   def getStats(event: Int, start: Long, end: Long): Future[Seq[(data.Product, Map[data.Source, SalesData])]] = {
-    def addStartFilter(prev: OrdersFilter): OrdersFilter =
-      if (start == 0) prev
-      else
-      // even though we know the payment timestamp is not null, we still need to provide a default value
-        q => prev(q).filter(order => order.paymentConfirmed.getOrElse(new Timestamp(0)) > new Timestamp(start))
-
-    def addEndFilter(prev: OrdersFilter): OrdersFilter =
-      if (end == 0) prev
-      else q => prev(q).filter(order => order.paymentConfirmed.getOrElse(new Timestamp(0)) < new Timestamp(end))
-
     db.run(
-      eventFilteredStatsRequest(event, addStartFilter(addEndFilter(q => q))).result
+      eventFilteredStatsRequest(event, addStartFilter(start, addEndFilter(end, q => q))).result
     ).map(data => {
       data
         .groupBy { case (product, _) => product }
         .map {
           case (product, seq) =>
-            (product, seq.map(_._2).groupBy { case (source, _, _) => source }.mapValues(seq => seq.map{ case (_, amt, log) => (amt, log) }).map {
+            (product, seq.map(_._2).groupBy { case (source, _, _) => source }.mapValues(seq => seq.map { case (_, amt, log) => (amt, log) }).map {
               case (source, pricesAndLog) =>
                 val globalSum = pricesAndLog.map(_._1).sum
                 val sumBy = pricesAndLog.groupBy(_._2)

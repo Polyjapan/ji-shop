@@ -71,12 +71,15 @@ package object data {
   object Source {
     def unapply(arg: Source): String = arg.toString.toUpperCase
 
-    def apply(string: String): Source = string.toUpperCase match {
-      case "ONSITE" => OnSite
-      case "RESELLER" => Reseller
-      case "WEB" => Web
-      case "GIFT" => Gift
-      case "PHYSICAL" => Physical
+    def apply(string: String): Source = asOpt(string).get
+
+    def asOpt(string: String): Option[Source] = string.toUpperCase match {
+      case "ONSITE" => Some(OnSite)
+      case "RESELLER" => Some(Reseller)
+      case "WEB" => Some(Web)
+      case "GIFT" => Some(Gift)
+      case "PHYSICAL" => Some(Physical)
+      case _ => None
     }
 
     implicit val sourceFormat: Format[Source] = new Format[Source] {

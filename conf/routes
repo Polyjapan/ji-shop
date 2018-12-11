@@ -52,7 +52,7 @@ POST           /scan/configurations/:id/addProduct                 controllers.s
 +nocsrf
 POST           /scan/configurations/:id/removeProduct              controllers.scanning.ScanningController.removeProductFromConfig(id: Int)
 +nocsrf
-DELETE         /scan/configurations/:id                             controllers.scanning.ScanningController.deleteConfig(id: Int)
+DELETE         /scan/configurations/:id                            controllers.scanning.ScanningController.deleteConfig(id: Int)
 
 
 +nocsrf
@@ -86,12 +86,13 @@ GET            /admin/orders/byUser/:id                            controllers.a
 DELETE         /admin/orders/:id                                   controllers.admin.OrdersController.removeOrder(id: Int)
 
 GET            /admin/stats/:event                                 controllers.admin.StatsController.getSales(event: Int, start: Long ?= 0, end: Long ?= 0)
+GET            /admin/stats/:event/salesData.csv                   controllers.admin.StatsController.getOrdersStats(event: Int, start: Long ?= 0, end: Long ?= 0, source: Option[String] ?= None)
 
 GET            /admin/events                                       controllers.admin.EventsController.getEvents
 GET            /admin/events/:event                                controllers.admin.EventsController.getEvent(event: Int)
 
 +nocsrf
-DELETE         /admin/events/:event                          controllers.admin.EventsController.deleteEvent(event: Int)
+DELETE         /admin/events/:event                                controllers.admin.EventsController.deleteEvent(event: Int)
 
 +nocsrf
 POST           /admin/events                                       controllers.admin.EventsController.createEvent
@@ -102,7 +103,7 @@ PUT            /admin/events/:id                                   controllers.a
 
 
 GET            /admin/events/:event/products                       controllers.admin.ProductsController.getProducts(event: Int)
-GET            /admin/events/:event/products/purge                       controllers.admin.ProductsController.purgeUnsoldProducts(event: Int)
+GET            /admin/events/:event/products/purge                 controllers.admin.ProductsController.purgeUnsoldProducts(event: Int)
 GET            /admin/events/:event/products/:product              controllers.admin.ProductsController.getProduct(event: Int, product: Int)
 
 +nocsrf
