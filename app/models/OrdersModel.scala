@@ -2,6 +2,7 @@ package models
 
 import java.security.SecureRandom
 import java.sql.{SQLIntegrityConstraintViolationException, Timestamp}
+import java.util.NoSuchElementException
 
 import data.{AuthenticatedUser, CheckedOutItem, Client, Gift, Order, OrderLog, OrderedProduct, Product, Source, Ticket}
 import javax.inject.Inject
@@ -50,6 +51,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     * orders JOIN clients
     */
   private val orderJoin = (orders filterNot (_.removed)) join clients on (_.clientId === _.id)
+  private val allOrderJoin = orders join clients on (_.clientId === _.id)
 
   /**
     * Defines a style of barcode
@@ -76,15 +78,29 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       .update(removed)
 
     val orderTicketReq = orderTickets.filter(_.orderId === orderId)
-      .flatMap(_.ticket)
-      .map(_.removed)
-      .update(removed)
+      .map(_.ticketId)
+      .result
+      .headOption
+      .flatMap{
+        case Some(ticketId) => tickets
+          .filter(_.id === ticketId)
+          .map(_.removed)
+          .update(removed)
+        case None => DBIO.successful(0)
+      }
 
     val ticketsReq = orderedProducts.filter(_.orderId === orderId)
       .join(orderedProductTickets).on(_.id === _.orderedProductId).map(_._2)
-      .flatMap(_.ticket)
-      .map(_.removed)
-      .update(removed)
+      .map(_.ticketId)
+      .result
+      .flatMap(ticketIds =>
+        DBIO.sequence(
+          ticketIds.map(tid =>
+            tickets
+              .filter(_.id === tid)
+              .map(_.removed)
+              .update(removed)
+          )))
 
     db.run(orderReq andThen orderTicketReq andThen ticketsReq)
   }
@@ -112,7 +128,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   }
 
   def userFromOrder(order: Int): Future[JsonClient] =
-    db.run(orderJoin.filter(_._1.id === order).map(_._2).result.head).map(client => JsonClient(client))
+    db.run(allOrderJoin.filter(_._1.id === order).map(_._2).result.head).map(client => JsonClient(client))
 
   def getOrderLogs(order: Int): Future[Seq[data.PosPaymentLog]] =
     db.run(posPaymentLogs.filter(_.orderId === order).result)
@@ -231,7 +247,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     // orderTickets JOIN tickets
     val oTicketsJoin = orderTickets join tickets on ((left, right) => left.ticketId === right.id && (!right.removed || includeRemoved))
 
-    val req = orders.filter(_.id === orderId).filterNot(_.removed) // find the order
+    val req = orders.filter(_.id === orderId).filter(order => !order.removed || includeRemoved) // find the order
       .join(orderedProducts).on(_.id === _.orderId) // join it to its orderedProducts
       .join(products).on(_._2.productId === _.id) // join them to their corresponding product
       .map { case ((ord, op), p) => (ord, op, p) }

@@ -21,7 +21,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel)(
   }.requiresAuthentication
 
   def getOrder(orderId: Int) = Action.async { implicit request =>
-    orders.loadOrder(orderId) // add second param 'request.user.hasPerm(Permissions.VIEW_DELETED_STUFF)' to return deleted tickets for admins
+    orders.loadOrder(orderId, request.user.hasPerm(Permissions.VIEW_DELETED_STUFF))
       .map(opt =>
         opt.filter(data => data.order.clientId == request.user.id || request.user.hasPerm(Permissions.VIEW_OTHER_ORDER)))
       .map {
