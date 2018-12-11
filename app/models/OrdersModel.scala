@@ -69,6 +69,26 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     barcodeType.getId + usedFormat(BigInt(bytes))
   }
 
+  def setOrderRemoved(orderId: Int, removed: Boolean) = {
+    val orderReq = orders
+      .filter(_.id === orderId)
+      .map(_.removed)
+      .update(removed)
+
+    val orderTicketReq = orderTickets.filter(_.orderId === orderId)
+      .flatMap(_.ticket)
+      .map(_.removed)
+      .update(removed)
+
+    val ticketsReq = orderedProducts.filter(_.orderId === orderId)
+      .join(orderedProductTickets).on(_.id === _.orderedProductId).map(_._2)
+      .flatMap(_.ticket)
+      .map(_.removed)
+      .update(removed)
+
+    db.run(orderReq andThen orderTicketReq andThen ticketsReq)
+  }
+
   def insertLog(orderId: Int, name: String, details: String = null, accepted: Boolean = false): Future[Int] =
     db.run(orderLogs += OrderLog(None, orderId, null, name, Option.apply(details), accepted))
 

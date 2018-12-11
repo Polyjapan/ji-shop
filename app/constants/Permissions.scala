@@ -71,6 +71,11 @@ object Permissions {
   val ADMIN_ACCESS = "admin.access_dashboard"
 
   /**
+    * Permission to remove an order
+    */
+  val ADMIN_REMOVE_ORDER = "admin.remove_order"
+
+  /**
     * Permission to manage the events
     */
   val ADMIN_EVENT_MANAGE = "admin.event_manage"
