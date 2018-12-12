@@ -1,6 +1,7 @@
 package models
 
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 
 import data.{Card, Cash}
 import javax.inject.Inject
@@ -57,24 +58,23 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
   def getOrdersStats(event: Int, start: Long, end: Long, source: Option[data.Source] = None): Future[List[String]] = {
     val filter = addStartFilter(start, addEndFilter(end, addSourceFilter(source, q => q)))
 
+    val dateFormat = new SimpleDateFormat("Y-M-d")
+
     val linesReq =
       filter(confirmedOrders)
         .join(orderedProducts).on(_.id === _.orderId)
         .join(products).on(_._2.productId === _.id)
         .filter(_._2.eventId === event)
-        .map(_._1) // remove products from the result as we only needed them to filter the event
+        .map(tuple => (tuple._1._1, tuple._1._2, tuple._2.name)) // remove products from the result as we only needed them to filter the event
         .sortBy(_._1.id) // sort by orderId
         .result
-        .map(
-          _.map {
-            case (data.Order(Some(id), _, ticketsPrice, totalPrice, Some(paymentDate), Some(enterDate), _, _),
-            data.OrderedProduct(_, productId, _, paidPrice)) =>
-              id + "," + enterDate.getTime + "," + paymentDate.getTime + "," + ticketsPrice + "," + totalPrice + "," + productId + "," + paidPrice
-          }
-        )
 
     db.run(linesReq).map(seq =>
-      "id,enterDate,paymentDate,ticketsPrice,totalPrice,productId,paidPrice" :: seq.toList
+      "id,enterDate,paymentDate,ticketsPrice,totalPrice,productId,productName,paidPrice" :: seq.toList.map {
+        case (data.Order(Some(id), _, ticketsPrice, totalPrice, Some(paymentDate), Some(enterDate), _, _),
+        data.OrderedProduct(_, productId, _, paidPrice), prodName) =>
+          id + "," + dateFormat.format(enterDate) + "," + dateFormat.format(paymentDate) + "," + ticketsPrice + "," + totalPrice + "," + productId + "," + prodName + "," + paidPrice
+      }
     )
   }
 
