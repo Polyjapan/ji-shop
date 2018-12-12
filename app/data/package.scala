@@ -114,22 +114,26 @@ package object data {
   /**
     * Describes a product that can be bought
     *
-    * @param id              the id of the product
-    * @param name            the name of the product, displayed on the site and the ticket
-    * @param price           the price of the product
-    * @param description     a short description of the product, that will be displayed alongside the name and on the ticket
-    * @param longDescription a long description of the product, that gives more details about the product
-    * @param maxItems        the items in stock, if lower than 0 it means the stock is unlimited
-    * @param eventId         the id of the event this product belongs to
-    * @param isTicket        if true, the product will be considered as ticket grouped with the other tickets on the
-    *                        buying page. Moreover, when buying, the ticket items will be counted to make a ticket price that will be stored
-    *                        separately.
-    * @param freePrice       if true, the `price` becomes a minimal price and the client can choose to pay more
-    * @param isVisible       if false, this product is not visible to the public and cannot be bought via the site
-    * @param image           an URL to an image to display with the product
+    * @param id                 the id of the product
+    * @param name               the name of the product, displayed on the site and the ticket
+    * @param price              the price of the product
+    * @param description        a short description of the product, that will be displayed alongside the name and on the ticket
+    * @param longDescription    a long description of the product, that gives more details about the product
+    * @param maxItems           the items in stock, if lower than 0 it means the stock is unlimited
+    * @param eventId            the id of the event this product belongs to
+    * @param isTicket           if true, the product will be considered as ticket grouped with the other tickets on the
+    *                           buying page. Moreover, when buying, the ticket items will be counted to make a ticket price that will be stored
+    *                           separately.
+    * @param freePrice          if true, the `price` becomes a minimal price and the client can choose to pay more
+    * @param isVisible          if false, this product is not visible to the public and cannot be bought via the site
+    * @param image              an URL to an image to display with the product
+    * @param isWebExclusive     if true, it means the ticket is a web exclusive. It only changes the way
+    *                           the product will be displayed and doesn't affect the way it's sold
+    * @param estimatedRealPrice an estimation of the price this product would really cost if it was bought separately (only for display purposes)
     */
   case class Product(id: Option[Int], name: String, price: Double, description: String, longDescription: String,
-                     maxItems: Int, eventId: Int, isTicket: Boolean, freePrice: Boolean, isVisible: Boolean, image: Option[String])
+                     maxItems: Int, eventId: Int, isTicket: Boolean, freePrice: Boolean, isVisible: Boolean,
+                     image: Option[String], isWebExclusive: Boolean = false, estimatedRealPrice: Int = -1)
 
 
   /**

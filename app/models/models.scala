@@ -124,11 +124,14 @@ package object models {
     def freePrice = column[Boolean]("product_free_price")
     def isVisible = column[Boolean]("is_visible")
     def image = column[Option[String]]("product_image", O.SqlType("VARCHAR(255)"))
+    def isExclusive = column[Boolean]("is_web_exclusive")
+    def realPrice = column[Int]("product_real_price")
 
     def category = foreignKey("product_event_fk", eventId, events)(_.id)
 
     def * =
-      (id.?, name, price, description, longDescription, maxItems, eventId, isTicket, freePrice, isVisible, image).shaped <> (Product.tupled, Product.unapply)
+      (id.?, name, price, description, longDescription, maxItems, eventId, isTicket, freePrice, isVisible, image,
+        isExclusive, realPrice).shaped <> (Product.tupled, Product.unapply)
   }
 
   private[models] val products = TableQuery[Products]

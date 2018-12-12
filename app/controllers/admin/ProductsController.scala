@@ -44,7 +44,10 @@ class ProductsController @Inject()(cc: ControllerComponents, products: ProductsM
     "isTicket" -> boolean,
     "freePrice" -> boolean,
     "isVisible" -> boolean,
-    "image" -> optional(text))(Product.apply)(Product.unapply))
+    "image" -> optional(text),
+    "isWebExclusive" -> boolean,
+    "estimatedRealPrice" -> number
+  )(Product.apply)(Product.unapply))
 
   private def createOrUpdateProduct(handler: Product => Future[Int]): Action[JsValue] = Action.async(parse.json) { implicit request => {
     form.bindFromRequest.fold( // We bind the request to the form
