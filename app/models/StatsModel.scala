@@ -63,6 +63,7 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
         .join(products).on(_._2.productId === _.id)
         .filter(_._2.eventId === event)
         .map(_._1) // remove products from the result as we only needed them to filter the event
+        .sortBy(_._1.id) // sort by orderId
         .result
         .map(
           _.map {
