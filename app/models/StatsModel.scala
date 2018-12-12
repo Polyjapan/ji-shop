@@ -59,8 +59,10 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
 
     val linesReq =
       filter(confirmedOrders)
-        .join(orderedProducts)
-        .on(_.id === _.orderId)
+        .join(orderedProducts).on(_.id === _.orderId)
+        .join(products).on(_._2.productId === _.id)
+        .filter(_._2.eventId === event)
+        .map(_._1) // remove products from the result as we only needed them to filter the event
         .result
         .map(
           _.map {
