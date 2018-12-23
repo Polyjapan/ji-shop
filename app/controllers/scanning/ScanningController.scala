@@ -165,8 +165,9 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
           new FormError("", ErrorCodes.ALREADY_SCANNED,
             Seq(Json.obj(
               "scannedAt" -> ticket.claimedAt,
-              "scannedBy" -> (claimedBy.firstname + " " + claimedBy.lastname
-                ))))
+              "scannedBy" -> (claimedBy.firstname + " " + claimedBy.lastname),
+                "ticketData" -> data
+                )))
         ).asFuture
     }
   }
