@@ -128,7 +128,9 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
       })
     } catch {
       case _: NumberFormatException => BadRequest.asError("expected a number").asFuture
-      case _ => unknownError.asFuture
+      case e: Throwable =>
+        e.printStackTrace()
+        unknownError.asFuture
     }
   }
 

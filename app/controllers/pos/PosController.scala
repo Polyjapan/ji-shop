@@ -74,6 +74,11 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
           else success.asFuture // We don't have to remove, it's not there anymore
         } else notFound("config").asFuture
       })
+    } catch {
+      case _: NumberFormatException => BadRequest.asError("expected a number").asFuture
+      case e: Throwable =>
+        e.printStackTrace()
+        unknownError.asFuture
     }
   } requiresPermission ADMIN_POS_MANAGE
 
