@@ -177,6 +177,10 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
     orders.userFromOrder(order).map(user => Ok(Json.toJson(user)))
   } requiresPermission ADMIN_ACCESS
 
+  def getPosPaymentLogs(order: Int): Action[AnyContent] = Action.async {
+    orders.getPosPaymentLogs(order).map(seq => Ok(Json.toJson(seq)))
+  } requiresPermission ADMIN_ACCESS
+
   def getOrderLogs(order: Int): Action[AnyContent] = Action.async {
     orders.getOrderLogs(order).map(seq => Ok(Json.toJson(seq)))
   } requiresPermission ADMIN_ACCESS

@@ -135,8 +135,11 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   def userFromOrder(order: Int): Future[JsonClient] =
     db.run(allOrderJoin.filter(_._1.id === order).map(_._2).result.head).map(client => JsonClient(client))
 
-  def getOrderLogs(order: Int): Future[Seq[data.PosPaymentLog]] =
+  def getPosPaymentLogs(order: Int): Future[Seq[data.PosPaymentLog]] =
     db.run(posPaymentLogs.filter(_.orderId === order).result)
+
+  def getOrderLogs(order: Int): Future[Seq[data.OrderLog]] =
+    db.run(orderLogs.filter(_.orderId === order).result)
 
   /**
     * Get all the orders in a given event.

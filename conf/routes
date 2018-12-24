@@ -80,6 +80,7 @@ POST           /admin/orders/import/:event                         controllers.a
 GET            /admin/orders/export/:event/:date                   controllers.admin.OrdersController.export(event: Int, date: String)
 GET            /admin/orders/:event                                controllers.admin.OrdersController.getOrders(event: Int)
 GET            /admin/orders/userInfo/:id                          controllers.admin.OrdersController.getOrderUserInfo(id: Int)
+GET            /admin/orders/posLogs/:id                           controllers.admin.OrdersController.getPosPaymentLogs(id: Int)
 GET            /admin/orders/logs/:id                              controllers.admin.OrdersController.getOrderLogs(id: Int)
 GET            /admin/orders/byUser/:id                            controllers.admin.OrdersController.getOrdersByUser(id: Int)
 +nocsrf

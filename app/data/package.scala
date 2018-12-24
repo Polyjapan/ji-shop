@@ -279,7 +279,8 @@ package object data {
   }
 
   implicit val orderFormat = Json.format[Order]
-  implicit val logFormat = Json.format[PosPaymentLog]
+  implicit val posLogFormat = Json.format[PosPaymentLog]
+  implicit val logFormat = Json.format[OrderLog]
 
   /* ********************************
      * Intranet stuff               *
