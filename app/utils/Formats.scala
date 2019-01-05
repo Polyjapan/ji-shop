@@ -15,7 +15,7 @@ package object Formats {
       )
 
       o.args match {
-        case values: Seq[JsValue] => data + ("args" -> Json.toJson(values.filter(_.isInstanceOf[JsValue])))
+        case values: Seq[Any] => data + ("args" -> Json.toJson(values.filter(_.isInstanceOf[JsValue]).map(_.asInstanceOf[JsValue])))
         case _ => data
       }
     }
