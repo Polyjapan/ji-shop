@@ -86,6 +86,8 @@ GET            /admin/orders/byUser/:id                            controllers.a
 +nocsrf
 DELETE         /admin/orders/:id                                   controllers.admin.OrdersController.removeOrder(id: Int)
 
+GET            /admin/tickets/:barcode                             controllers.admin.TicketsController.getTicketData(barcode: String)
+
 GET            /admin/stats/:event                                 controllers.admin.StatsController.getSales(event: Int, start: Long ?= 0, end: Long ?= 0)
 GET            /admin/stats/:event/salesData.csv                   controllers.admin.StatsController.getOrdersStats(event: Int, start: Long ?= 0, end: Long ?= 0, source: Option[String] ?= None)
 

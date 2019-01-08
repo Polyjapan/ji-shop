@@ -2,9 +2,8 @@ package models
 
 import java.security.SecureRandom
 import java.sql.{SQLIntegrityConstraintViolationException, Timestamp}
-import java.util.NoSuchElementException
 
-import data.{AuthenticatedUser, CheckedOutItem, Client, Gift, Order, OrderLog, OrderedProduct, Product, Source, Ticket}
+import data.{AuthenticatedUser, CheckedOutItem, ClaimedTicket, Client, Gift, Order, OrderLog, OrderedProduct, Product, Source, Ticket}
 import javax.inject.Inject
 import models.OrdersModel.{GeneratedBarCode, OrderBarCode, TicketBarCode}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -86,7 +85,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       .map(_.ticketId)
       .result
       .headOption
-      .flatMap{
+      .flatMap {
         case Some(ticketId) => tickets
           .filter(_.id === ticketId)
           .map(_.removed)
@@ -325,6 +324,64 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     })
 
     db.run(req).recover {
+      case e: UnknownError => None
+      case e: UnsupportedOperationException => None // no result (empty.head)
+    }
+  }
+
+  def getTicketValidationStatus(ticketId: Int): Future[Option[(ClaimedTicket, Client)]] = {
+    db.run((claimedTickets join clients on (_.claimedBy === _.id)) // we join with the clients so that we can return useful information in the exception (i.e. the name)
+      .filter(_._1.ticketId === ticketId)
+      .result
+      .headOption)
+  }
+
+  /**
+    * Find the order a given barcode belongs to
+    *
+    * @param barcode the barcode to look for
+    * @return a tuple (ticketData, orderId) if the barcode exists, None if not
+    */
+  def findOrderByBarcode(barcode: String): Future[Option[(Ticket, Int)]] = {
+    val req = tickets
+      .filter(_.barCode === barcode) // Get the BarCode corresponding to the scanned barcode string
+      .joinLeft(claimedTickets).on(_.id === _.ticketId)
+      .result
+      .head // Only get the first one
+      .flatMap {
+      case (ticketData, optClaimed) => {
+        def findByProduct(): DBIOAction[Option[Int], NoStream, Effect.Read] = {
+          orderedProductTickets.filter(_.ticketId === ticketData.id) // find the orderedProductTicket by ticketId
+            .join(productJoin).on(_.orderedProductId === _._1.id) // find the product by its ticket
+            .join(orders).on(_._2._1.orderId === _.id) // find the order corresponding to the products
+            .map(_._2.id) // only get the order id
+            .result
+            .headOption
+        }
+
+        def findByOrder(): DBIOAction[Option[Int], NoStream, Effect.Read] = {
+          orderTickets.filter(_.ticketId === ticketData.id).map(_.ticketId).result.headOption
+        }
+
+        val orderIdFinder = Barcodes.parseCode(barcode) match {
+          case ProductCode => findByProduct()
+          case OrderCode => findByOrder()
+          case _ =>
+            // We try to find a product then an order
+            // Some barcodes (like the one imported from resellers) might not follow the format and therefore not be
+            // recognized
+            findByProduct().flatMap(result => {
+              if (result.isDefined) DBIO.successful(result)
+              else findByOrder()
+            })
+        }
+
+        orderIdFinder.map(optId => optId.map(id => (ticketData, id)))
+      }
+    }
+
+    db.run(req).recover {
+      case e: NoSuchElementException => None
       case e: UnknownError => None
       case e: UnsupportedOperationException => None // no result (empty.head)
     }

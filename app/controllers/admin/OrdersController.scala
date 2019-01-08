@@ -186,6 +186,8 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
   } requiresPermission ADMIN_ACCESS
 
   def removeOrder(order: Int): Action[AnyContent] = Action.async {
+    orders.insertLog(order, "admin_remove", "Order was deleted")
+
     orders.setOrderRemoved(order, removed = true).map(rep => Ok(Json.toJson(rep)))
   } requiresPermission ADMIN_REMOVE_ORDER
 
