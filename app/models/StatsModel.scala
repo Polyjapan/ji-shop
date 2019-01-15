@@ -58,7 +58,7 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
   def getOrdersStats(event: Int, start: Long, end: Long, source: Option[data.Source] = None): Future[List[String]] = {
     val filter = addStartFilter(start, addEndFilter(end, addSourceFilter(source, q => q)))
 
-    val dateFormat = new SimpleDateFormat("Y-M-d")
+    val dateFormat = new SimpleDateFormat("y-M-d")
 
     val linesReq =
       filter(confirmedOrders)
