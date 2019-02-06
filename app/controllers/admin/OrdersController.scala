@@ -112,9 +112,12 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
       log += ""
 
       remain
+        .sortBy(_.date)
         // Group by date. 1 date = 1 order
         .groupBy(_.date)
-        .values
+        .toList
+        .sortBy(_._1)
+        .map(_._2)
         // Insert everything
         .map(items => {
           val price = items.map(_.paidPrice).sum
