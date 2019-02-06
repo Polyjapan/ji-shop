@@ -1,5 +1,9 @@
 package controllers.admin
 
+import java.sql.Timestamp
+import java.text.SimpleDateFormat
+import java.util.Date
+
 import constants.ErrorCodes
 import constants.Permissions._
 import constants.emails.OrderEmail
@@ -9,13 +13,14 @@ import javax.inject.Inject
 import models.{OrdersModel, ProductsModel}
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
-import play.api.libs.json.{JsArray, JsValue, Json}
+import play.api.libs.json.{JsArray, JsValue, Json, OFormat}
 import play.api.libs.mailer.{AttachmentData, Email, MailerClient}
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import services.TicketGenerator
 import utils.AuthenticationPostfix._
 import utils.Implicits._
 
+import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
@@ -23,6 +28,8 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, pdfGen: TicketGenerator, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext) extends AbstractController(cc) {
   private val validationRequest = Form(mapping("orderId" -> number, "targetEmail" -> optional(email))(Tuple2.apply)(Tuple2.unapply))
+
+  private lazy val dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
   /**
     * Force the validation of an order (i.e. bypass IPN). The body should be a json containing the orderId, and an
@@ -68,63 +75,86 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
     orders.dumpEvent(event, date + " 10 :00").map(list => Ok(list.mkString("\n")))
   } requiresPermission EXPORT_TICKETS
 
-  def importOrder(event: Int): Action[String] = Action.async(parse.text) { implicit request => {
-    // Logic of this endpoint:
-    // 1. Parse the file and extract the data
-    // 2. Extract the item names, check if they exist (or create them), and get their IDs
-    // 3. Create an order and get its id
-    // 4. Created OrderedProducts with the obtained item IDs
-    // 5. Insert the OrderedProducts, along with their barcodes
-    // 6. If everything worked fine, mark the order as paid
-    // Because we use "DBIO.sequence" in the logic, it's not possible to send the same file twice
-    // Any duplicated barcode in the file will cause the whole upload to fail.
-    // I don't consider this an issue for now, but we might need to evaluate this
+  case class ImportedItemData(product: Int, barcode: String, paidPrice: Int, date: String, refunded: Boolean)
 
-    val lines = request.body.split("\n")
+  object ImportedItemData {
+    implicit val format: OFormat[ImportedItemData] = Json.format[ImportedItemData]
+  }
 
-    // Extract the first line to determine the location of the barcode and price
-    // We take the head, split it on ";", make everything lower case, and remove any space that might have slipped
-    // between around ";"
-    val head = lines.head.toLowerCase.split(";").map(_.trim)
+  def importOrder(event: Int): Action[Seq[ImportedItemData]] = Action.async(parse.json[Seq[ImportedItemData]]) { implicit request => {
+    val log = new mutable.MutableList[String]
 
-    val barcodePos = head.indexOf("code barre")
-    val categoryPos = head.indexOf("tarif")
-    val pricePos = head.indexOf("prix")
+    log += "Processing " + request.body.size + " codes..."
 
-    if (barcodePos == -1 || categoryPos == -1) {
-      BadRequest.asError(ErrorCodes.MISSING_FIELDS).asFuture
-    } else {
-      case class ImportedTicket(barcode: String, category: String, price: Option[Double])
+    // 0. Filter out refunds
+    val (refunded, codes): (Seq[ImportedItemData], Seq[ImportedItemData]) = request.body.partition(_.refunded)
 
-      // Extract the data from the lines
-      val data = lines.tail.map(line => {
-        val content = line.toLowerCase().split(";").map(_.trim)
+    log ++= refunded map (_.barcode) map (code => "Removing code " + code + " (refund!)")
 
-        ImportedTicket(content(barcodePos), content(categoryPos),
-          Option(pricePos).filter(_ != -1).map(content(_).toDouble))
-        // Take the pricePos, and if it's not -1 get the corresponding content as a double
-      })
+    log += ""
+    log += "-- Removing existing codes among " + codes.size + " remaining codes"
+    log += ""
 
-      // Extract the total price
-      val price = data.map(_.price).map(_.getOrElse(0D)).sum
+    // 1. Filter out existing codes
+    orders.filterBarcodes(codes.map(_.barcode)).flatMap(existingCodes => {
+      log ++= existingCodes.map(code => s"Removing code $code (already exists)")
+      // TODO: we might want to report with a warning codes that already exist AND don't come from a reseller
+      // TODO: we might want to report with a warning codes that already exist AND don't have the same product id
+      log += ""
 
-      // Extract single categories
-      val categories = data.groupBy(_.category).keys
+      val existingSet = existingCodes.toSet
 
-      // We query the items corresponding to these categories, and insert them if they don't exist
-      products.getOrInsert(event, categories).flatMap(map => {
-        orders.createOrder(Order(None, request.user.id, price, price, source = Reseller)).map(orderId => (map, orderId))
-      }).flatMap({
-        case (idMap, orderId) =>
-          val products = data.map(ticket => {
-            (OrderedProduct(None, idMap(ticket.category), orderId, ticket.price.getOrElse(0)), ticket.barcode)
-          })
+      val remain = codes
+        // Remove existing (end)
+        .filterNot(code => existingSet(code.barcode))
 
-          orders.fillImportedOrder(products)
-            .flatMap(res => orders.markAsPaid(orderId)) // mark the order as paid in the end
-            .map(_ => Ok).recover { case _ => InternalServerError.asError(ErrorCodes.DATABASE) }
-      })
-    }
+      log += s"-- Inserting new orders for the ${remain.size} remaining codes"
+      log += ""
+
+      remain
+        // Group by date. 1 date = 1 order
+        .groupBy(_.date)
+        .values
+        // Insert everything
+        .map(items => {
+          val price = items.map(_.paidPrice).sum
+          val time = dateFormat.parse(items.head.date)
+          val order = Order(None, request.user.id, price, price, source = Reseller, enterDate = Some(new Timestamp(time.getTime)))
+
+          // Create order
+          orders.createOrder(order)
+            .flatMap(orderId => {
+              // Map imported items to ordered products
+              val products = items.map(item => {
+                (OrderedProduct(None, item.product, orderId, item.paidPrice), item.barcode)
+              })
+
+              // Insert a log and the items of the order
+              orders.insertLog(orderId, "import_details", "Order generated from an import on " + dateFormat.format(new Date())).flatMap(_ =>
+                orders.fillImportedOrder(products).map(_ => (orderId,
+                  "Inserting order " + orderId :: products.map(pair => " . Inserted barcode " + pair._2).toList
+                )))
+            })
+            // Mark the inserted order as paid
+            .flatMap(pair => orders.markAsPaid(pair._1, order.enterDate.get).map(_ => pair._2))
+            .recover {
+              case e: Exception =>
+                println("Error while inserting barcodes from import: ")
+                e.printStackTrace()
+                List("Failed insertion of barcodes " + items.map(_.barcode).mkString(", ") + ": " + e.getMessage)
+            }
+        })
+        // Collect all the generated futures inside a single one
+        .reduceOption((left, right) => left.flatMap(leftR => right.map(rightR => leftR ::: rightR)))
+        .getOrElse(Future(List.empty[String]))
+        .map(result => Ok((log.toList ::: result).mkString("\n")))
+        .recover {
+          case e: Exception =>
+            println("Global error in import: ")
+            e.printStackTrace()
+            InternalServerError.asError(ErrorCodes.DATABASE)
+        }
+    })
 
   }
   } requiresPermission IMPORT_EXTERNAL

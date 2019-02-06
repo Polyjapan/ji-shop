@@ -329,6 +329,13 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     }
   }
 
+  /**
+    * Gets a list of barcodes and return only the barcodes that actually exist in the database
+    */
+  def filterBarcodes(barcodes: Seq[String]): Future[Seq[String]] = {
+    db.run(tickets.map(_.barCode).filter(_.inSet(barcodes)).result)
+  }
+
   def getTicketValidationStatus(ticketId: Int): Future[Option[(ClaimedTicket, Client)]] = {
     db.run((claimedTickets join clients on (_.claimedBy === _.id)) // we join with the clients so that we can return useful information in the exception (i.e. the name)
       .filter(_._1.ticketId === ticketId)
@@ -423,12 +430,12 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     * @param order the order to mark as paid
     * @return a future, containing 1 or an error
     */
-  def markAsPaid(order: Int): Future[Int] = {
+  def markAsPaid(order: Int, date: Timestamp = new Timestamp(System.currentTimeMillis())): Future[Int] = {
     db.run(
       orders
         .filter(_.id === order)
         .map(_.paymentConfirmed)
-        .update(Some(new Timestamp(System.currentTimeMillis())))
+        .update(Some(date))
         .filter(r => r == 1) // ensure we updated only one item
     )
   }
