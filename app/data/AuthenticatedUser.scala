@@ -7,7 +7,8 @@ import play.api.libs.json.Json
   */
 case class AuthenticatedUser(id: Int, lastname: String, firstname: String, email: String, permissions: Seq[String]) {
   def hasPerm(perm: String) = {
-    if (permissions.contains(perm)) true
+    if (hasPermExclusion(perm)) false
+    else if (permissions.contains(perm)) true
     else {
       // Check other permissions (i.e. admin.* for admin.sth)
       val list = perm.split("\\.").toList
@@ -15,6 +16,10 @@ case class AuthenticatedUser(id: Int, lastname: String, firstname: String, email
       if (list.size < 2) false
       else list.map(_ + ".").scanLeft("")(_ + _) take list.size map (_ + "*") exists permissions.contains
     }
+  }
+
+  def hasPermExclusion(perm: String) = {
+    permissions.contains(s"-$perm")
   }
 }
 
