@@ -70,10 +70,10 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
         .result
 
     db.run(linesReq).map(seq =>
-      "id,enterDate,paymentDate,ticketsPrice,totalPrice,productId,productName,paidPrice" :: seq.toList.map {
-        case (data.Order(Some(id), _, ticketsPrice, totalPrice, Some(paymentDate), Some(enterDate), _, _),
+      "id,enterDate,paymentDate,ticketsPrice,totalPrice,productId,productName,paidPrice,orderType" :: seq.toList.map {
+        case (data.Order(Some(id), _, ticketsPrice, totalPrice, Some(paymentDate), Some(enterDate), orderSource, _),
         data.OrderedProduct(_, productId, _, paidPrice), prodName) =>
-          id + "," + dateFormat.format(enterDate) + "," + dateFormat.format(paymentDate) + "," + ticketsPrice + "," + totalPrice + "," + productId + "," + prodName + "," + paidPrice
+          id + "," + dateFormat.format(enterDate) + "," + dateFormat.format(paymentDate) + "," + ticketsPrice + "," + totalPrice + "," + productId + "," + prodName + "," + paidPrice + "," + orderSource
       }
     )
   }
