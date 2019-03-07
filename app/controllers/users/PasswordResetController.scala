@@ -1,13 +1,13 @@
 package controllers.users
 
 import java.net.URLEncoder
-import java.security.SecureRandom
 import java.sql.Timestamp
-import java.util.Date
 
 import constants.ErrorCodes
+import constants.results.Errors._
+import data.AuthenticatedUser
 import javax.inject.Inject
-import models.{ClientsModel, JsonOrderData}
+import models.ClientsModel
 import play.api.Configuration
 import play.api.data.Forms._
 import play.api.data._
@@ -15,20 +15,17 @@ import play.api.i18n.I18nSupport
 import play.api.libs.json._
 import play.api.libs.mailer._
 import play.api.mvc._
-import utils.Formats._
-import utils.{HashHelper, RandomUtils}
-import pdi.jwt.JwtSession._
-
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Random
-import constants.results.Errors._
-import data.AuthenticatedUser
 import services.ReCaptchaClient
 import utils.Implicits._
+import utils.{HashHelper, RandomUtils}
+import pdi.jwt._
+import pdi.jwt.JwtSession._
+
+import scala.concurrent.ExecutionContext
 /**
   * @author zyuiop
   */
-class PasswordResetController @Inject()(cc: MessagesControllerComponents, clients: ClientsModel, hash: HashHelper, mailerClient: MailerClient, config: Configuration, captchaClient: ReCaptchaClient)(implicit ec: ExecutionContext) extends MessagesAbstractController(cc) with I18nSupport {
+class PasswordResetController @Inject()(cc: MessagesControllerComponents, clients: ClientsModel, hash: HashHelper, mailerClient: MailerClient, captchaClient: ReCaptchaClient)(implicit ec: ExecutionContext, config: Configuration) extends MessagesAbstractController(cc) with I18nSupport {
   private val recoverForm = Form(mapping("email" -> email, "captcha" -> nonEmptyText)(Tuple2.apply)(Tuple2.unapply))
   private val resetForm = Form(mapping("email" -> email, "code" -> nonEmptyText, "password" -> nonEmptyText(8))(Tuple3.apply)(Tuple3.unapply))
   private val changeForm = Form(mapping("password" -> nonEmptyText(8))(e => e)(Some(_)))

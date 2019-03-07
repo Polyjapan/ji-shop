@@ -2,8 +2,10 @@ package utils
 
 import constants.results.Errors.{noPermissions, notAuthenticated}
 import data.AuthenticatedUser
-import pdi.jwt.JwtSession._
 import play.api.mvc._
+import pdi.jwt.JwtSession._
+import pdi.jwt._
+import play.api.Configuration
 import utils.Implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,7 +45,7 @@ object AuthenticationPostfix {
   }
 
 
-  case class AuthenticationAction[T](action: Action[T], handler: AuthorizationHandler) extends Action[T] {
+  case class AuthenticationAction[T](action: Action[T], handler: AuthorizationHandler)(implicit conf: Configuration) extends Action[T] {
     override def apply(request: Request[T]): Future[Result] = {
       val user = request.optUser
       val result = handler(user)
@@ -57,7 +59,7 @@ object AuthenticationPostfix {
     override def executionContext: ExecutionContext = action.executionContext
   }
 
-  implicit class AuthenticationPostfix[T](action: Action[T]) {
+  implicit class AuthenticationPostfix[T](action: Action[T])(implicit conf: Configuration) {
     def requiresAuthentication: Action[T] = AuthenticationAction(action, AuthorizationHandler.ensuringAuthentication)
 
     def requiresPermission(perm: String): Action[T] = AuthenticationAction(action, AuthorizationHandler.ensuringPermission(perm))
@@ -65,7 +67,7 @@ object AuthenticationPostfix {
     def requiresAuthorizationCheck(authorization: AuthorizationHandler): Action[T] = AuthenticationAction(action, authorization)
   }
 
-  implicit class UserRequestHeader(request: RequestHeader) {
+  implicit class UserRequestHeader(request: RequestHeader)(implicit conf: Configuration) {
     def optUser: Option[AuthenticatedUser] = request.jwtSession.getAs[AuthenticatedUser]("user")
 
     def user: AuthenticatedUser = optUser.get

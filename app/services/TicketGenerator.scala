@@ -4,7 +4,7 @@ import java.awt.image.BufferedImage
 import java.io.{ByteArrayOutputStream, File, FileInputStream}
 import java.util.Base64
 
-import com.hhandoko.play.pdf.PdfGenerator
+import it.innove.play.pdf.PdfGenerator
 import javax.inject.Inject
 import models.OrdersModel.{GeneratedBarCode, OrderBarCode, TicketBarCode}
 import org.apache.commons.io.{FileUtils, IOUtils}
@@ -58,14 +58,14 @@ class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(imp
     val codes = genCodes(ticket.barcode)
 
 
-    pdfGen.toBytes(views.html.ticket(image, ticket.event, ticket.product, codes, ticket.barcode), "goodies_" + ticket.barcode + ".pdf", Seq())
+    pdfGen.toBytes(views.html.ticket(image, ticket.event, ticket.product, codes, ticket.barcode), "goodies_" + ticket.barcode + ".pdf")
   }
 
   private def doGenPdf(ticket: OrderBarCode): Array[Byte] = {
     val codes = genCodes(ticket.barcode)
 
 
-    pdfGen.toBytes(views.html.orderTicket(image, ticket.event, ticket.products, ticket.order, codes, ticket.barcode), "ticket_" + ticket.barcode + ".pdf", Seq())
+    pdfGen.toBytes(views.html.orderTicket(image, ticket.event, ticket.products, ticket.order, codes, ticket.barcode), "ticket_" + ticket.barcode + ".pdf")
   }
 
   def genPdf(ticket: GeneratedBarCode): (String, Array[Byte]) = ticket match {

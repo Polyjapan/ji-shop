@@ -4,6 +4,7 @@ import constants.Permissions._
 import constants.results.Errors._
 import javax.inject.Inject
 import models.{JsonClient, OrdersModel, ProductsModel}
+import play.api.Configuration
 import play.api.libs.json.Json
 import play.api.libs.mailer.MailerClient
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
@@ -16,7 +17,7 @@ import scala.concurrent.ExecutionContext
 /**
   * @author zyuiop
   */
-class TicketsController @Inject()(cc: ControllerComponents, orders: OrdersModel)(implicit mailerClient: MailerClient, ec: ExecutionContext) extends AbstractController(cc) {
+class TicketsController @Inject()(cc: ControllerComponents, orders: OrdersModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, config: Configuration) extends AbstractController(cc) {
 
 
   def getTicketData(ticket: String): Action[AnyContent] = Action.async {

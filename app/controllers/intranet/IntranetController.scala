@@ -5,6 +5,7 @@ import constants.results.Errors._
 import data._
 import javax.inject.Inject
 import models.IntranetModel
+import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
 import play.api.libs.json.{JsValue, Json}
@@ -18,7 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class IntranetController @Inject()(cc: ControllerComponents, model: IntranetModel)(implicit mailerClient: MailerClient, ec: ExecutionContext) extends AbstractController(cc) {
+class IntranetController @Inject()(cc: ControllerComponents, model: IntranetModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, config: Configuration) extends AbstractController(cc) {
 
   val taskForm = Form(mapping(
     "name" -> nonEmptyText(minLength = 1, maxLength = 140),

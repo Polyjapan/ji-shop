@@ -4,6 +4,7 @@ import constants.Permissions._
 import data.Source
 import javax.inject.Inject
 import models.{OrdersModel, ProductsModel, SalesData, StatsModel}
+import play.api.Configuration
 import play.api.libs.json.{Json, OFormat}
 import play.api.libs.mailer.MailerClient
 import play.api.mvc._
@@ -14,7 +15,7 @@ import scala.concurrent.ExecutionContext
 /**
   * @author zyuiop
   */
-class StatsController @Inject()(cc: ControllerComponents, orders: OrdersModel, stats: StatsModel, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext) extends AbstractController(cc) {
+class StatsController @Inject()(cc: ControllerComponents, orders: OrdersModel, stats: StatsModel, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, config: Configuration) extends AbstractController(cc) {
 
   def getSales(event: Int, start: Long = 0, end: Long = 0): Action[AnyContent] = Action.async {
     stats.getStats(event, start, end).map(e => mapStats(e))

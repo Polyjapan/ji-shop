@@ -7,6 +7,7 @@ import constants.results.Errors._
 import data._
 import javax.inject.Inject
 import models.{AlreadyValidatedTicketException, OrdersModel, ProductsModel, ScanningModel}
+import play.api.Configuration
 import play.api.data.Forms.{mapping, _}
 import play.api.data.{Form, FormError}
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -20,7 +21,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel, scanModel: ScanningModel, products: ProductsModel)(implicit ec: ExecutionContext, mailerClient: MailerClient) extends AbstractController(cc) {
+class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel, scanModel: ScanningModel, products: ProductsModel)(implicit ec: ExecutionContext, mailerClient: MailerClient, conf: Configuration) extends AbstractController(cc) {
   private val scanForm = Form(mapping("barcode" -> nonEmptyText)(e => e)(Some(_)))
   private val configForm = Form(mapping("name" -> nonEmptyText, "acceptOrderTickets" -> boolean)(Tuple2.apply)(Tuple2.unapply))
 

@@ -7,6 +7,7 @@ import constants.results.Errors._
 import data._
 import javax.inject.Inject
 import models.{OrdersModel, PosModel, ProductsModel}
+import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
 import play.api.libs.json.{JsValue, Json, OFormat}
@@ -20,7 +21,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, model: PosModel, products: ProductsModel)(implicit ec: ExecutionContext, mailerClient: MailerClient) extends AbstractController(cc) {
+class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, model: PosModel, products: ProductsModel)(implicit ec: ExecutionContext, mailerClient: MailerClient, config: Configuration) extends AbstractController(cc) {
   private val configForm = Form(mapping("name" -> nonEmptyText, "acceptCards" -> boolean)(Tuple2.apply)(Tuple2.unapply))
 
   def getConfigs: Action[AnyContent] = Action.async {

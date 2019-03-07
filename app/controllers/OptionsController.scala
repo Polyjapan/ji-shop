@@ -2,6 +2,7 @@ package controllers
 
 import akka.actor.ActorSystem
 import javax.inject._
+import play.api.Configuration
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
@@ -10,7 +11,7 @@ import scala.concurrent.ExecutionContext
   * This controller replies to all OPTIONS requests
   */
 @Singleton
-class OptionsController @Inject()(cc: ControllerComponents, actorSystem: ActorSystem)(implicit exec: ExecutionContext) extends AbstractController(cc) {
+class OptionsController @Inject()(cc: ControllerComponents, actorSystem: ActorSystem)(implicit exec: ExecutionContext, config: Configuration) extends AbstractController(cc) {
   def headers = List(
     "Access-Control-Allow-Origin" -> "*", // TODO: replace
     "Access-Control-Allow-Methods" -> "GET, POST, OPTIONS, DELETE, PUT",

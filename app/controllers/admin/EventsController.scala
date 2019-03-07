@@ -9,6 +9,7 @@ import data.Event
 import exceptions.HasItemsException
 import javax.inject.Inject
 import models.{EventsModel, ProductsModel}
+import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
 import play.api.libs.json.{JsValue, Json}
@@ -23,7 +24,7 @@ import scala.util.control.NonFatal
 /**
   * @author zyuiop
   */
-class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext) extends AbstractController(cc) {
+class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, config: Configuration) extends AbstractController(cc) {
 
   def getEvents: Action[AnyContent] = Action.async {
     events.getEvents.map(e => Ok(Json.toJson(e)))

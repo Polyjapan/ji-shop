@@ -7,6 +7,7 @@ import data._
 import exceptions.OutOfStockException
 import javax.inject.Inject
 import models.{OrdersModel, ProductsModel}
+import play.api.Configuration
 import play.api.data.FormError
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
@@ -19,7 +20,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel, products: ProductsModel, pb: PolybankingClient)(implicit ec: ExecutionContext) extends AbstractController(cc) {
+class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel, products: ProductsModel, pb: PolybankingClient)(implicit ec: ExecutionContext, config: Configuration) extends AbstractController(cc) {
   /**
     * Execute an order
     *
