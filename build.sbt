@@ -34,4 +34,4 @@ libraryDependencies += "com.typesafe.play" %% "play-mailer" % "6.0.1"
 libraryDependencies += "com.typesafe.play" %% "play-mailer-guice" % "6.0.1"
 libraryDependencies += "net.sf.barcode4j" % "barcode4j" % "2.1"
 
-      
+scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")

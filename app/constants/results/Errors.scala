@@ -15,22 +15,23 @@ object Errors {
   implicit class PostFixAsError(result: Result) {
     //noinspection TypeCheckCanBeMatch
     //somehow, patternmatching doesn't work for this case
-    implicit def asFormErrorSeq(err: Seq[FormError]): Result = {
+    def asFormErrorSeq(err: Seq[FormError]): Result = {
       if (result.isInstanceOf[Status]) {
         val r = result.asInstanceOf[Status]
         r(Json.obj("success" -> false, "errors" -> err))
       } else result
     }
 
-    implicit def asFormError(err: FormError*): Result = asFormErrorSeq(err.toSeq)
+    def asFormError(err: FormError*): Result = asFormErrorSeq(err.toSeq)
 
-    implicit def asError(err: String*): Result = asFormErrorSeq(err.toSeq.map(FormError("", _)))
+    def asError(err: String*): Result = asFormErrorSeq(err.toSeq.map(FormError("", _)))
 
-    implicit def asSuccess: Result = {
-      if (result.isInstanceOf[Status]) {
-        val r = result.asInstanceOf[Status]
-        r(Json.obj("success" -> true))
-      } else result
+    def asSuccess: Result = {
+      result match {
+        case r: Status =>
+          r(Json.obj("success" -> true))
+        case _ => result
+      }
     }
   }
 

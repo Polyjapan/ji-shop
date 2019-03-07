@@ -11,6 +11,8 @@ import play.api.libs.json.Json
 import slick.jdbc.MySQLProfile
 import utils.Barcodes
 import utils.Barcodes.{BarcodeType, OrderCode, ProductCode}
+import scala.language.postfixOps
+import scala.language.existentials
 
 import scala.concurrent.{ExecutionContext, Future}
 
