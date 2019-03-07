@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext
 /**
   * @author zyuiop
   */
-class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel)(implicit ec: ExecutionContext, config: Configuration) extends AbstractController(cc) {
+class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel)(implicit ec: ExecutionContext, config: Configuration<) extends AbstractController(cc) {
 
   def getOrders = Action.async { implicit request =>
     orders.loadOrders(request.user.id, request.user.hasPerm(Permissions.SEE_ALL_ORDER_TYPES)).map(ords => Ok(

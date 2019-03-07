@@ -4,7 +4,7 @@ package controllers.orders
 import constants.results.Errors._
 import constants.{ErrorCodes, Permissions}
 import data._
-import exceptions.OutOfStockException
+import exceptions.{MultipleEventsException, OutOfStockException}
 import javax.inject.Inject
 import models.{OrdersModel, ProductsModel}
 import play.api.Configuration
@@ -137,6 +137,12 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
 
     products.getMergedProducts(source != Web) // get all the products in database, including the hidden ones if the source is not _Web_
       .map(sanitizeInput(items, _, source)) // sanitize the user input using the database
+      .map(map => {
+        val eventIds = map.keys.map(_.eventId).toSet
+        if (eventIds.size > 1)
+          throw MultipleEventsException(eventIds)
+        map
+      })
       .map(checkItemAvailability(items, _, source)) // check that items are available
       .flatMap(orders.postOrder(user, _, source))
       .flatMap(generateResult(source))
@@ -147,6 +153,8 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
               FormError("", ErrorCodes.OUT_OF_STOCK,
                 items.map(it => Json.obj("itemId" -> it.id, "itemName" -> it.name)).toSeq) // return a list of items missing in the error
             ))
+        case MultipleEventsException(_) =>
+          BadRequest.asError(ErrorCodes.MULTIPLE_EVENTS)
         case _: NoSuchElementException =>
           NotFound.asError(ErrorCodes.MISSING_ITEM)
         case _: Throwable =>

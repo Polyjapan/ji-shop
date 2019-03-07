@@ -34,6 +34,11 @@ object ErrorCodes {
   val OUT_OF_STOCK = "error.item_out_of_stock"
 
   /**
+    * Items in the order come from different events
+    */
+  val MULTIPLE_EVENTS = "error.multiple_events"
+
+  /**
     * An item in the order doesn't exist in the database
     */
   val MISSING_ITEM = "error.missing_item"
