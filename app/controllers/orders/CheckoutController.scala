@@ -58,14 +58,18 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
       .toSeq
       .flatMap { case (product, checkedOutItems) => checkedOutItems.map(item => (product, item)) } // we create pairs
       .map { // Check the item prices
-      case (product, coItem) if source == Gift => (product, coItem.copy(itemPrice = Some(0D))) // in case of gift, it's free
-      case pair@_ if source == Reseller => pair // if imported, we leave the provided price
-      case (product, coItem) if product.freePrice => // if the product has a freeprice, we check that user input is > than the freeprice
-        if (coItem.itemPrice.isEmpty || coItem.itemPrice.get < product.price) (product, coItem.copy(itemPrice = Some(product.price)))
-        else (product, coItem)
-      case (product, coItem) => (product, coItem.copy(itemPrice = Some(product.price)))
-      // if price is not free, we replace with db price, just in case
-    }
+        case (product, coItem) if source == Gift =>
+          (product, coItem.copy(itemPrice = Some(0D))) // in case of gift, it's free
+        case (product, coItem) if product.freePrice =>
+          // if the product has a freeprice, we check that user input is > than the freeprice
+          if (coItem.itemPrice.isEmpty || coItem.itemPrice.get < product.price)
+            (product, coItem.copy(itemPrice = Some(product.price)))
+          else
+            (product, coItem)
+        case (product, coItem) =>
+          // if price is not free, we replace with db price, just in case
+          (product, coItem.copy(itemPrice = Some(product.price)))
+      }
       .map {
         // round the prices to 2 decimals
         case (product, coItem) => (product, coItem.copy(itemPrice = coItem.itemPrice.map(d => math.round(d * 100) / 100D)))
