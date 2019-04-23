@@ -126,24 +126,3 @@ GET            /admin/users/:user/acceptEmail                      controllers.a
 POST           /admin/users/:user/permissions/add                  controllers.admin.UsersController.addPermission(user: Int)
 +nocsrf
 POST           /admin/users/:user/permissions/remove               controllers.admin.UsersController.removePermission(user: Int)
-
-# Intranet stuff
-+nocsrf
-POST           /intranet/tasks/byEvent/:event                      controllers.intranet.IntranetController.createTask(event: Int)
-GET            /intranet/tasks/byEvent/:event                      controllers.intranet.IntranetController.getTasks(event: Int)
-
-+nocsrf
-PUT            /intranet/tasks/byId/:task/priority                 controllers.intranet.IntranetController.updatePriority(task: Int)
-+nocsrf
-PUT            /intranet/tasks/byId/:task/state                    controllers.intranet.IntranetController.updateState(task: Int)
-GET            /intranet/tasks/byId/:task                          controllers.intranet.IntranetController.getTask(task: Int)
-+nocsrf
-POST           /intranet/tasks/byId/:task/comments                 controllers.intranet.IntranetController.addComment(task: Int)
-+nocsrf
-POST           /intranet/tasks/byId/:task/tags/add                 controllers.intranet.IntranetController.addTags(task: Int)
-+nocsrf
-POST           /intranet/tasks/byId/:task/tags/remove              controllers.intranet.IntranetController.removeTags(task: Int)
-+nocsrf
-POST           /intranet/tasks/byId/:task/assignees/add            controllers.intranet.IntranetController.addAssignee(task: Int)
-+nocsrf
-POST           /intranet/tasks/byId/:task/assignees/remove         controllers.intranet.IntranetController.removeAssignee(task: Int)

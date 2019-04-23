@@ -96,47 +96,6 @@ object Permissions {
   val ADMIN_VIEW_STATS = "admin.view_stats"
 
   /**
-    * Access the intranet data
-    */
-  val INTRANET_VIEW = "intranet.staff.view"
-
-  /**
-    * Post a new task to the intranet
-    */
-  val INTRANET_TASK_POST = "intranet.staff.post_task"
-
-  /**
-    * Accept tasks in the intranet
-    */
-  val INTRANET_TASK_ACCEPT = "intranet.admin.accept_task"
-
-  /**
-    * Assign tasks to self
-    */
-  val INTRANET_TASK_TAKE = "intranet.staff.self_assign"
-
-
-  /**
-    * Unassign tasks to self
-    */
-  val INTRANET_TASK_LEAVE = "intranet.staff.self_unassign"
-
-  /**
-    * Assign or unassign tasks to other
-    */
-  val INTRANET_TASK_GIVE = "intranet.admin.assign_other"
-
-  /**
-    * Change the state of a task
-    */
-  val INTRANET_TASK_CHANGE_STATE = "intranet.admin.change_task_state"
-
-  /**
-    * Edit a tasks created by someone else
-    */
-  val INTRANET_TASK_EDIT = "intranet.admin.task_edit"
-
-  /**
     * Permission to sell tickets in advance on a polyjapan controlled sales point
     */
   val SELL_IN_ADVANCE = "admin.sell_in_advance"
