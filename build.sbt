@@ -21,8 +21,8 @@ scalaVersion := "2.12.2"
 
 libraryDependencies ++= Seq( ehcache , ws , specs2 % Test , guice )
 libraryDependencies ++= Seq(
-  "com.typesafe.play" %% "play-slick" % "3.0.0",
-  "com.typesafe.play" %% "play-slick-evolutions" % "3.0.0",
+  "com.typesafe.play" %% "play-slick" % "4.0.0",
+  "com.typesafe.play" %% "play-slick-evolutions" % "4.0.0",
   "mysql" % "mysql-connector-java" % "5.1.34",
   "org.mindrot" % "jbcrypt" % "0.3m",
   "com.pauldijou" %% "jwt-play" % "0.16.0",
@@ -34,6 +34,7 @@ libraryDependencies ++= Seq(
 libraryDependencies += "com.typesafe.play" %% "play-mailer" % "6.0.1"
 libraryDependencies += "com.typesafe.play" %% "play-mailer-guice" % "6.0.1"
 libraryDependencies += "net.sf.barcode4j" % "barcode4j" % "2.1"
+libraryDependencies += "ch.japanimpact" %% "jiauthframework" % "0.1-SNAPSHOT"
 
 
 unmanagedResourceDirectories in Test <+=  baseDirectory ( _ /"target/web/public/test" )

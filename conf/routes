@@ -12,15 +12,6 @@ GET            /shop/items/invisible                               controllers.s
 POST           /users/login                                        controllers.users.LoginController.postLogin
 +nocsrf
 POST           /users/signup                                       controllers.users.RegisterController.postSignup
-+nocsrf
-POST           /users/emailConfirm                                 controllers.users.EmailConfirmController.emailConfirmProcess
-+nocsrf
-POST           /users/recoverPassword                              controllers.users.PasswordResetController.recoverPasswordSend
-+nocsrf
-POST           /users/resetPassword                                controllers.users.PasswordResetController.passwordResetSend
-+nocsrf
-POST           /users/passwordChange                               controllers.users.PasswordResetController.passwordChange
-
 
 
 +nocsrf
@@ -120,7 +111,6 @@ GET            /admin/events/:event/products/:id/acceptedBy        controllers.a
 GET            /admin/users                                        controllers.admin.UsersController.getUsers
 GET            /admin/users/withPerm/:perm                         controllers.admin.UsersController.getUsersWithPermission(perm: String)
 GET            /admin/users/:user                                  controllers.admin.UsersController.getUser(user: Int)
-GET            /admin/users/:user/acceptEmail                      controllers.admin.UsersController.acceptEmail(user: Int)
 
 +nocsrf
 POST           /admin/users/:user/permissions/add                  controllers.admin.UsersController.addPermission(user: Int)

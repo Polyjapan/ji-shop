@@ -3,11 +3,10 @@ package controllers.admin
 import constants.Permissions._
 import constants.results.Errors._
 import javax.inject.Inject
-import models.{JsonClient, OrdersModel, ProductsModel}
+import models.OrdersModel
 import play.api.libs.json.Json
 import play.api.libs.mailer.MailerClient
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
-import services.TicketGenerator
 import utils.AuthenticationPostfix._
 import utils.Implicits._
 
@@ -26,7 +25,7 @@ class TicketsController @Inject()(cc: ControllerComponents, orders: OrdersModel)
         orders.getTicketValidationStatus(ticketData.id.get).map {
           case Some((claimedTicket, claimer)) =>
             Json.obj("scannedAt" -> claimedTicket.claimedAt,
-              "scannedBy" -> JsonClient(claimer), "scanned" -> true)
+              "scannedBy" -> claimer, "scanned" -> true)
           case _ => Json.obj("scanned" -> false)
 
         }.map(validation => {

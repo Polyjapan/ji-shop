@@ -1,8 +1,8 @@
 package models
 
+import com.google.common.base.Preconditions
 import javax.inject.Inject
 import data.Client
-import org.apache.commons.lang3.Validate
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.MySQLProfile
 
@@ -59,6 +59,11 @@ class ClientsModel @Inject() (protected val dbConfigProvider: DatabaseConfigProv
     */
   def findClient(email: String): Future[Option[ClientAndPermissions]] =
     db.run(clientsJoin.filter(_._1.email === email).result).map(singleClientPermsJoinMapper)
+  /**
+    * Query a client by its cas ID
+    */
+  def findClientByCasId(casId: Int): Future[Option[ClientAndPermissions]] =
+    db.run(clientsJoin.filter(row => row._1.casId === casId).result).map(singleClientPermsJoinMapper)
 
   def getClient(id: Int): Future[Option[ClientAndPermissions]] =
     db.run(clientsJoin.filter(_._1.id === id).result).map(singleClientPermsJoinMapper)
@@ -68,9 +73,6 @@ class ClientsModel @Inject() (protected val dbConfigProvider: DatabaseConfigProv
 
   def removePermission(id: Int, permission: String): Future[Int] =
     db.run(permissions.filter(pair => pair.permission === permission && pair.userId === id).delete)
-
-  def forceEmailConfirm(id: Int): Future[Int] =
-    db.run(clients.filter(_.id === id).map(_.emailConfirmKey).update(Option.empty))
 
   /**
     * Create a client
@@ -85,7 +87,7 @@ class ClientsModel @Inject() (protected val dbConfigProvider: DatabaseConfigProv
     * @return the number of updated rows in a future
     */
   def updateClient(client: Client): Future[Int] = {
-    Validate.isTrue(client.id.isDefined)
+    Preconditions.checkArgument(client.id.isDefined)
     db.run(clients.filter(_.id === client.id.get).update(client))
   }
 }

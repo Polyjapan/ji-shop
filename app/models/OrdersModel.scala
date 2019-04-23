@@ -131,8 +131,8 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       .map(_.filter(_.source == data.Web || isAdmin)))
   }
 
-  def userFromOrder(order: Int): Future[JsonClient] =
-    db.run(allOrderJoin.filter(_._1.id === order).map(_._2).result.head).map(client => JsonClient(client))
+  def userFromOrder(order: Int): Future[Client] =
+    db.run(allOrderJoin.filter(_._1.id === order).map(_._2).result.head)
 
   def getPosPaymentLogs(order: Int): Future[Seq[data.PosPaymentLog]] =
     db.run(posPaymentLogs.filter(_.orderId === order).result)
@@ -657,17 +657,4 @@ case object JsonOrderData {
   }
 
   implicit val format = Json.format[JsonOrderData]
-}
-
-case class JsonClient(id: Option[Int], lastname: String, firstname: String, email: String, emailConfirmed: Boolean,
-                      passwordAlgo: String, passwordResetEnd: Option[Timestamp] = Option.empty,
-                      acceptNewsletter: Boolean)
-
-case object JsonClient {
-  def apply(data: Client): JsonClient =
-    JsonClient(data.id, data.lastname, data.firstname, data.email, data.emailConfirmKey.isEmpty, data.passwordAlgo, data.passwordResetEnd, data.acceptNewsletter)
-
-  implicit val tsFormat = data.tsFormat
-
-  implicit val format = Json.format[JsonClient]
 }

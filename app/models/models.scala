@@ -11,18 +11,14 @@ import slick.jdbc.MySQLProfile.api._
 package object models {
   private[models] class Clients(tag: Tag) extends Table[Client](tag, "clients") {
     def id = column[Int]("client_id", O.PrimaryKey, O.AutoInc)
+    def casId = column[Int]("client_cas_user_id", O.Unique)
     def firstname = column[String]("client_firstname", O.SqlType("VARCHAR(100)"))
     def lastname = column[String]("client_lastname", O.SqlType("VARCHAR(100)"))
     def email = column[String]("client_email", O.SqlType("VARCHAR(180)"), O.Unique)
-    def emailConfirmKey = column[Option[String]]("client_email_confirm_key", O.SqlType("VARCHAR(100)"))
-    def password = column[String]("client_password", O.SqlType("VARCHAR(250)"))
-    def passwordAlgo = column[String]("client_password_algo", O.SqlType("VARCHAR(15)"))
-    def passwordReset = column[Option[String]]("client_password_reset", O.SqlType("VARCHAR(250)"))
-    def passwordResetEnd = column[Option[Timestamp]]("client_password_reset_end")
     def acceptNews = column[Boolean]("client_accept_newsletter", O.Default(false))
 
     def * =
-      (id.?, firstname, lastname, email, emailConfirmKey, password, passwordAlgo, passwordReset, passwordResetEnd, acceptNews).shaped <> (Client.tupled, Client.unapply)
+      (id.?, casId, firstname, lastname, email, acceptNews).shaped <> (Client.tupled, Client.unapply)
   }
 
   private[models] val clients = TableQuery[Clients]

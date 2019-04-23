@@ -1,8 +1,5 @@
 import java.sql.Timestamp
 
-import constants.ErrorCodes
-import play.api.data.FormError
-import play.api.data.format.Formatter
 import play.api.libs.json._
 
 /**
@@ -13,20 +10,17 @@ package object data {
   /**
     * Defines a Client
     *
-    * @param id               the id of the client in database
-    * @param lastname         the last name of the client
-    * @param firstname        the first name of the client
-    * @param email            the email of the client
-    * @param emailConfirmKey  an optional confirmation key for the email. If it's null then the email has been validated
-    * @param password         the hashed password of the user
-    * @param passwordAlgo     the algorithm used to hash the password
-    * @param passwordReset    an optional reset key for the password. If it's null then no password change was requested
-    * @param passwordResetEnd an optional timestamp marking the date at which the password reset key will no longer be valid
-    *                         If absent, the password reset key is considered invalid
+    * @param id        the id of the client in database
+    * @param casId     the id of the client in the CAS database
+    * @param lastname  the last name of the client
+    * @param firstname the first name of the client
+    * @param email     the email of the client
     */
-  case class Client(id: Option[Int], lastname: String, firstname: String, email: String, emailConfirmKey: Option[String], password: String,
-                    passwordAlgo: String, passwordReset: Option[String] = Option.empty, passwordResetEnd: Option[Timestamp] = Option.empty,
-                    acceptNewsletter: Boolean)
+  case class Client(id: Option[Int], casId: Int, lastname: String, firstname: String, email: String, acceptNewsletter: Boolean)
+
+
+  implicit val clientFormat: Format[Client] = Json.format[Client]
+
 
   /**
     * Defines an Event, in general it will be a Japan Impact edition, but who knows what could come next?
