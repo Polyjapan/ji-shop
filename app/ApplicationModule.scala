@@ -8,7 +8,7 @@ import play.api.libs.ws.WSClient
 class ApplicationModule extends AbstractModule with ScalaModule {
 
   /** Module configuration + binding */
-  def configure(): Unit = {}
+  override def configure(): Unit = {}
 
   /**
    * Provides PDF generator implementation.

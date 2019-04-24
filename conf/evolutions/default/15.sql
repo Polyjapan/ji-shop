@@ -3,6 +3,8 @@
 alter table clients
     add client_cas_user_id int not null after client_id;
 
+update clients set clients.client_cas_user_id = client_id where 1;
+
 alter table clients
     drop column client_email_confirm_key;
 
