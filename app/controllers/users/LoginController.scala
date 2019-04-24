@@ -55,7 +55,7 @@ class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel,
           InternalServerError.asFuture
         case Right(error) if error == GeneralErrorCodes.MissingData =>
           notFound().asFuture
-        case Right(error) if error == 201 =>
+        case Right(_) =>
           notFound().asFuture
       }
     }

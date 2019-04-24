@@ -4,6 +4,7 @@ import constants.Permissions._
 import constants.results.Errors._
 import javax.inject.Inject
 import models.ClientsModel
+import play.api.Configuration
 import play.api.libs.json.Json
 import play.api.libs.mailer.MailerClient
 import play.api.mvc._
@@ -14,7 +15,7 @@ import scala.concurrent.ExecutionContext
 /**
   * @author zyuiop
   */
-class UsersController @Inject()(cc: ControllerComponents, users: ClientsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext) extends AbstractController(cc) {
+class UsersController @Inject()(cc: ControllerComponents, users: ClientsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, conf: Configuration) extends AbstractController(cc) {
 
   def getUsers: Action[AnyContent] = Action.async {
     users.allClients.map(e => Ok(Json.toJson(e)))

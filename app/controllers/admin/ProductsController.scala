@@ -5,6 +5,7 @@ import constants.results.Errors._
 import data.Product
 import javax.inject.Inject
 import models.{ProductsModel, ScanningModel}
+import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
 import play.api.data.format.Formats
@@ -19,7 +20,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class ProductsController @Inject()(cc: ControllerComponents, products: ProductsModel, configs: ScanningModel)(implicit mailerClient: MailerClient, ec: ExecutionContext) extends AbstractController(cc) {
+class ProductsController @Inject()(cc: ControllerComponents, products: ProductsModel, configs: ScanningModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, conf: Configuration) extends AbstractController(cc) {
 
   def getProducts(event: Int): Action[AnyContent] = Action.async {
     products.getProducts(event).map(e => Ok(Json.toJson(e)))

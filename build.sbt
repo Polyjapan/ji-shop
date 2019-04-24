@@ -25,8 +25,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-slick-evolutions" % "4.0.0",
   "mysql" % "mysql-connector-java" % "5.1.34",
   "org.mindrot" % "jbcrypt" % "0.3m",
-  "com.pauldijou" %% "jwt-play" % "0.16.0",
-  "com.hhandoko" %% "play2-scala-pdf" % "3.0.0.P26",
+  "com.pauldijou" %% "jwt-play" % "2.1.0",
+  "com.hhandoko" %% "play27-scala-pdf" % "4.1.0",
   "net.codingwell" %% "scala-guice" % "4.1.0"
 
 )
