@@ -18,7 +18,7 @@ package object models {
     def acceptNews = column[Boolean]("client_accept_newsletter", O.Default(false))
 
     def * =
-      (id.?, casId, firstname, lastname, email, acceptNews).shaped <> (Client.tupled, Client.unapply)
+      (id.?, casId, lastname, firstname, email, acceptNews).shaped <> (Client.tupled, Client.unapply)
   }
 
   private[models] val clients = TableQuery[Clients]

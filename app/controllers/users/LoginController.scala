@@ -10,8 +10,6 @@ import models.ClientsModel
 import pdi.jwt.JwtSession._
 import pdi.jwt._
 import play.api.Configuration
-import play.api.data.Forms._
-import play.api.data._
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 import play.api.libs.mailer.MailerClient
@@ -23,7 +21,7 @@ import scala.concurrent.ExecutionContext
 /**
   * @author zyuiop
   */
-class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel, api: AuthApi)(implicit ec: ExecutionContext, mailer: MailerClient, config: Configuration) extends AbstractController(cc) {
+class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel, api: AuthApi)(implicit ec: ExecutionContext, config: Configuration) extends AbstractController(cc) {
 
   def postLogin: Action[String] = Action.async(parse.text(250)) { implicit request => {
     // Is it valid?
@@ -40,11 +38,11 @@ class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel,
             clients.findClientByCasId(userId).map {
               case Some((client, perms)) =>
                 val session = JwtSession() + ("user", AuthenticatedUser(client, perms))
-                Ok(Json.obj("success" -> true, "errors" -> JsArray(), "token" -> session.serialize)).withJwtSession(session)
+                Ok(Json.obj("success" -> true, "requireInfo" -> false, "errors" -> JsArray(), "token" -> session.serialize)).withJwtSession(session)
 
               case None =>
                 val session = JwtSession(Seq[(String, JsValueWrapper)]("casId" -> userId, "casEmail" -> userEmail): _*)
-                Ok(Json.obj("success" -> false, "errors" -> JsArray(), "token" -> session.serialize)).withJwtSession(session)
+                Ok(Json.obj("success" -> true, "requireInfo" -> true, "errors" -> JsArray(), "token" -> session.serialize)).withJwtSession(session)
 
             }
           } else {
@@ -61,41 +59,6 @@ class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel,
           notFound().asFuture
       }
     }
-  }
-  }
-
-  private val registerForm = Form(mapping("ticket" -> nonEmptyText, "lastname" -> nonEmptyText, "firstname" -> nonEmptyText, "acceptNews" -> default(boolean, false))(RegisterForm.apply)(RegisterForm.unapply))
-
-  case class RegisterForm(ticket: String, lastName: String, firstName: String, acceptNews: Boolean)
-
-  def postFirstLogin = Action.async(parse.json) { implicit request => {
-    val form = registerForm.bindFromRequest
-
-    form.fold( // We bind the request to the form
-      formError(_).asFuture, formData => {
-        val decoded = JwtSession.deserialize(formData.ticket)
-
-        (decoded.getAs[Int]("casId"), decoded.getAs[String]("casEmail")) match {
-          case (Some(id), Some(email)) =>
-            clients.findClientByCasId(id).flatMap {
-              case None =>
-                val client = data.Client(Option.empty, id, formData.lastName, formData.firstName, email, acceptNewsletter = formData.acceptNews)
-                clients
-                  .createClient(client)
-                  .map(r => {
-                    val session = JwtSession() + ("user", AuthenticatedUser(client.copy(id = Some(r)), Seq()))
-                    Ok(Json.obj("success" -> true, "errors" -> JsArray(), "token" -> session.serialize)).withJwtSession(session)
-                  })
-              case Some((client, perms)) =>
-                val session = JwtSession() + ("user", AuthenticatedUser(client, perms))
-                Ok(Json.obj("success" -> true, "errors" -> JsArray(), "token" -> session.serialize)).withJwtSession(session).asFuture
-            }
-
-          case _ =>
-            notFound("ticket").asFuture
-        }
-      }
-    )
   }
   }
 }

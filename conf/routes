@@ -11,7 +11,7 @@ GET            /shop/items/invisible                               controllers.s
 +nocsrf
 POST           /users/login                                        controllers.users.LoginController.postLogin
 +nocsrf
-POST           /users/firstLogin                                   controllers.users.LoginController.postFirstLogin
+POST           /users/firstLogin                                   controllers.users.FirstLoginController.postFirstLogin
 +nocsrf
 POST           /users/signup                                       controllers.users.RegisterController.postSignup
 
