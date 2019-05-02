@@ -37,13 +37,13 @@ class RegisterController @Inject()(cc: MessagesControllerComponents, clients: Cl
           notFound("ticket").asFuture
         } else {
           api.getAppTicket(formData.ticket).flatMap {
-            case Left(AppTicketResponse(userId, userEmail, TicketType.RegisterTicket)) =>
+            case Left(AppTicketResponse(userId, userEmail, TicketType.RegisterTicket, _)) =>
               clients
                 .createClient(data.Client(Option.empty, userId, formData.lastName, formData.firstName, userEmail, acceptNewsletter = formData.acceptNews))
                 .map(r => Ok(Json.obj("success" -> true, "errors" -> JsArray())))
-            case Left(AppTicketResponse(_, _, TicketType.DoubleRegisterTicket)) =>
+            case Left(AppTicketResponse(_, _, TicketType.DoubleRegisterTicket, _)) =>
               Ok(Json.obj("success" -> true, "errors" -> JsArray())).asFuture
-            case Left(AppTicketResponse(_, _, _)) =>
+            case Left(AppTicketResponse(_, _, _, _)) =>
               // We might want to handle Login tickets
               notFound("ticket").asFuture
             case Right(error) if error == GeneralErrorCodes.InvalidAppSecret =>
