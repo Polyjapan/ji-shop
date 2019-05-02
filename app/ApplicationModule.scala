@@ -5,6 +5,8 @@ import play.api.{Configuration, Environment}
 import net.codingwell.scalaguice.ScalaModule
 import play.api.libs.ws.WSClient
 
+import scala.concurrent.ExecutionContext
+
 class ApplicationModule extends AbstractModule with ScalaModule {
 
   /** Module configuration + binding */
@@ -24,12 +26,6 @@ class ApplicationModule extends AbstractModule with ScalaModule {
   }
 
   @Provides
-  def provideAuthClient(config: Configuration, ws: WSClient): AuthApi = {
-    val clientId: String = config.get[String]("jiauth.clientId")
-    val clientSecret: String = config.get[String]("jiauth.clientSecret")
-    val apiRoot: String = config.get[String]("jiauth.baseUrl")
-
-    new AuthApi(ws, apiRoot, clientId, clientSecret)
-  }
+  def provideAuthClient(ws: WSClient)(implicit ec: ExecutionContext, config: Configuration): AuthApi = AuthApi(ws)
 
 }

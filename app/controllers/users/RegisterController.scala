@@ -1,13 +1,10 @@
 package controllers.users
 
-import ch.japanimpact.auth.api.AuthApi.AppTicketResponse
 import ch.japanimpact.auth.api.constants.GeneralErrorCodes
-import ch.japanimpact.auth.api.{AuthApi, TicketType}
+import ch.japanimpact.auth.api.{AppTicketResponse, AuthApi, TicketType}
 import constants.results.Errors._
-import data.AuthenticatedUser
 import javax.inject.Inject
 import models.ClientsModel
-import pdi.jwt.{Jwt, JwtSession}
 import play.api.Configuration
 import play.api.data.Forms._
 import play.api.data._

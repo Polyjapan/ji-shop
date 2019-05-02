@@ -1,8 +1,7 @@
 package controllers.users
 
-import ch.japanimpact.auth.api.AuthApi.AppTicketResponse
 import ch.japanimpact.auth.api.constants.GeneralErrorCodes
-import ch.japanimpact.auth.api.{AuthApi, TicketType}
+import ch.japanimpact.auth.api.{AppTicketResponse, AuthApi, TicketType}
 import constants.results.Errors._
 import data.AuthenticatedUser
 import javax.inject.Inject
@@ -12,7 +11,6 @@ import pdi.jwt._
 import play.api.Configuration
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
-import play.api.libs.mailer.MailerClient
 import play.api.mvc._
 import utils.Implicits._
 
