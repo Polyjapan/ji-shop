@@ -33,6 +33,7 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
 
   /**
     * Deletes a configuration recursively (all the bound items are removed from the configuration before)
+    *
     * @param id the config to delete
     */
   def deleteConfig(id: Int): Future[Int] =
@@ -60,6 +61,8 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
     db.run(productsJoin.filter(pair => pair._2.id === id && pair._2.eventId === id).map(_._1._1).distinct.result)
 
   def getConfigs: Future[Seq[ScanningConfiguration]] = db.run(scanningConfigurations.result)
+
+  def getConfigsForEvent(eventId: Int): Future[Seq[ScanningConfiguration]] = db.run(scanningConfigurations.filter(_.eventId === eventId).result)
 
   def getConfig(id: Int): Future[Option[(ScanningConfiguration, Seq[ScanningItem])]] = db.run(configJoin.filter(el => el._1.id === id).result).map(joinToPair)
 

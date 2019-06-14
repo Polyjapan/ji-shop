@@ -28,7 +28,11 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
     model.getConfigs.map(result => Ok(Json.toJson(result)))
   } requiresPermission SELL_ON_SITE
 
-  def getConfig(id: Int): Action[AnyContent] = Action.async {
+  def getConfigsForEvent(eventId: Int): Action[AnyContent] = Action.async {
+    model.getConfigsForEvent(eventId).map(result => Ok(Json.toJson(result)))
+  } requiresPermission SELL_ON_SITE
+
+  def getConfig(eventId: Int, id: Int): Action[AnyContent] = Action.async {
     model
       .getFullConfig(id)
       .map {
@@ -39,13 +43,14 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
 
   /**
     * Delete a POS configuration
+    *
     * @param id the id of the POS configuration to delete
     */
-  def deleteConfig(id: Int): Action[AnyContent] = Action.async {
+  def deleteConfig(eventId: Int, id: Int): Action[AnyContent] = Action.async {
     model.deleteConfig(id).map(r => if (r >= 1) success else notFound("config"))
   } requiresPermission ADMIN_POS_MANAGE
 
-  def addProductToConfig(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request =>
+  def addProductToConfig(eventId: Int, id: Int): Action[JsValue] = Action.async(parse.json) { implicit request =>
     val addProductForm = Form(
       mapping("productId" -> number, "row" -> number, "col" -> number, "color" -> nonEmptyText, "textColor" -> nonEmptyText)(Tuple5.apply)(Tuple5.unapply))
 
@@ -57,15 +62,21 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
       model.getConfig(id).flatMap(opt => {
         if (opt.isDefined) {
           if (opt.get._2.exists(e => e.productId == form._1)) success.asFuture // We don't have to insert, it's already there
-          else model.addProduct(config).map(r => if (r == 1) success else dbError).recover { case _ => dbError } // insert
-
+          else {
+            products.getOptionalProduct(eventId, config.productId).flatMap(opt => {
+              if (opt.isDefined)
+                model.addProduct(config)
+                  .map(r => if (r == 1) success else dbError)
+                  .recover { case _ => dbError }
+              else notFound("productId").asFuture
+            })
+          } // insert
         } else notFound("config").asFuture
       })
-
     })
   } requiresPermission ADMIN_POS_MANAGE
 
-  def removeProductFromConfig(id: Int): Action[String] = Action.async(parse.text) { implicit request =>
+  def removeProductFromConfig(eventId: Int, id: Int): Action[String] = Action.async(parse.text) { implicit request =>
     try {
       val productId = request.body.toInt
 

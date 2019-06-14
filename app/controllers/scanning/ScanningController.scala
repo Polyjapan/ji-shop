@@ -68,11 +68,15 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
     scanModel.getConfigs.map(result => Ok(Json.toJson(result)))
   } requiresPermission SCAN_TICKET
 
-  def getConfig(id: Int): Action[AnyContent] = Action.async {
+  def getConfigsForEvent(eventId: Int): Action[AnyContent] = Action.async {
+    scanModel.getConfigsForEvent(eventId).map(result => Ok(Json.toJson(result)))
+  } requiresPermission SCAN_TICKET
+
+  def getConfig(eventId: Int, id: Int): Action[AnyContent] = Action.async {
     scanModel.getConfig(id).map(result => if (result.isDefined) Ok(Json.toJson(result.get._1)) else notFound("id"))
   } requiresPermission SCAN_TICKET
 
-  def getFullConfig(id: Int): Action[AnyContent] = Action.async {
+  def getFullConfig(eventId: Int, id: Int): Action[AnyContent] = Action.async {
     scanModel.getFullConfig(id).map(result => {
       if (result.isDefined) Ok(Json.toJson(result.map(pair => (pair._1, products.buildItemList(pair._2))).get))
       else notFound("id")
@@ -84,7 +88,7 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
     * Delete a scanning configuration
     * @param id the id of the scanning configuration to delete
     */
-  def deleteConfig(id: Int): Action[AnyContent] = Action.async {
+  def deleteConfig(eventId: Int, id: Int): Action[AnyContent] = Action.async {
     scanModel.deleteConfig(id).map(r => if (r >= 1) success else notFound("config"))
   } requiresPermission ADMIN_SCAN_MANAGE
 
@@ -104,15 +108,15 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
     })
   } requiresPermission ADMIN_SCAN_MANAGE
 
-  def addProductToConfig(id: Int): Action[String] = Action.async(parse.text) { implicit r =>
-    addOrRemoveProduct(id, remove = false)
+  def addProductToConfig(eventId: Int, id: Int): Action[String] = Action.async(parse.text) { implicit r =>
+    addOrRemoveProduct(eventId, id, remove = false)
   } requiresPermission ADMIN_SCAN_MANAGE
 
-  def removeProductFromConfig(id: Int): Action[String] = Action.async(parse.text) { implicit r =>
-    addOrRemoveProduct(id, remove = true)
+  def removeProductFromConfig(eventId: Int, id: Int): Action[String] = Action.async(parse.text) { implicit r =>
+    addOrRemoveProduct(eventId, id, remove = true)
   } requiresPermission ADMIN_SCAN_MANAGE
 
-  private def addOrRemoveProduct(id: Int, remove: Boolean)(implicit request: Request[String]): Future[Result] = {
+  private def addOrRemoveProduct(eventId: Int, id: Int, remove: Boolean)(implicit request: Request[String]): Future[Result] = {
     try {
       val productId = request.body.toInt
 
@@ -123,7 +127,15 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
             else success.asFuture // We don't have to remove, it's not there anymore
           } else {
             if (opt.get._2.exists(e => e.acceptedItem == productId)) success.asFuture // We don't have to insert, it's already there
-            else scanModel.addProduct(id, productId).map(r => if (r == 1) success else dbError).recover { case _ => dbError } // insert
+            else {
+              products.getOptionalProduct(eventId, productId).flatMap(opt => {
+                if (opt.isDefined)
+                  scanModel.addProduct(id, productId)
+                    .map(r => if (r == 1) success else dbError)
+                    .recover { case _ => dbError }
+                else notFound("productId").asFuture
+              })
+            } // insert
           }
         } else notFound("config").asFuture
       })

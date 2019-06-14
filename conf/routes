@@ -1,120 +1,121 @@
 # TODO : replace with CORS checks
 
-OPTIONS        /                                                   controllers.OptionsController.rootOptions
-OPTIONS        /*url                                               controllers.OptionsController.options(url: String)
+OPTIONS        /                                                      controllers.OptionsController.rootOptions
+OPTIONS        /*url                                                  controllers.OptionsController.options(url: String)
 
 
-GET            /shop/items                                         controllers.shop.ItemsController.getItems
-GET            /shop/items/all                                     controllers.shop.ItemsController.getAllItems
-GET            /shop/items/invisible                               controllers.shop.ItemsController.getInvisibleItems
+GET            /shop/items                                            controllers.shop.ItemsController.getItems
+GET            /shop/items/all                                        controllers.shop.ItemsController.getAllItems
+GET            /shop/items/invisible                                  controllers.shop.ItemsController.getInvisibleItems
 
 +nocsrf
-POST           /users/login                                        controllers.users.LoginController.postLogin
+POST           /users/login                                           controllers.users.LoginController.postLogin
 +nocsrf
-POST           /users/firstLogin                                   controllers.users.FirstLoginController.postFirstLogin
+POST           /users/firstLogin                                      controllers.users.FirstLoginController.postFirstLogin
 +nocsrf
-POST           /users/signup                                       controllers.users.RegisterController.postSignup
-
-
-+nocsrf
-POST           /orders/create                                      controllers.orders.CheckoutController.checkout
-+nocsrf
-POST           /orders/ipn                                         controllers.orders.TicketsController.ipn
-
-GET            /orders/download/:barcode.pdf                       controllers.orders.TicketsController.getTicket(barcode: String)
-GET            /orders/view                                        controllers.orders.OrdersController.getOrders
-GET            /orders/view/:id                                    controllers.orders.OrdersController.getOrder(id: Int)
-
-+nocsrf
-POST           /admin/orders/validate                              controllers.admin.OrdersController.validateOrder
-
-GET            /admin/orders/resend/:id                            controllers.admin.OrdersController.resendEmail(id: Int)
-
-+nocsrf
-POST           /scan/process/:id                                   controllers.scanning.ScanningController.scanCode(id: Int)
-GET            /scan/configurations                                controllers.scanning.ScanningController.getConfigs
-
-+nocsrf
-POST           /scan/configurations/:eventId                       controllers.scanning.ScanningController.createConfig(eventId: Int)
-+nocsrf
-PUT            /scan/configurations/:eventId/:id                   controllers.scanning.ScanningController.updateConfig(eventId: Int, id: Int)
-GET            /scan/configurations/:id                            controllers.scanning.ScanningController.getConfig(id: Int)
-GET            /scan/configurations/:id/full                       controllers.scanning.ScanningController.getFullConfig(id: Int)
-+nocsrf
-POST           /scan/configurations/:id/addProduct                 controllers.scanning.ScanningController.addProductToConfig(id: Int)
-+nocsrf
-POST           /scan/configurations/:id/removeProduct              controllers.scanning.ScanningController.removeProductFromConfig(id: Int)
-+nocsrf
-DELETE         /scan/configurations/:id                            controllers.scanning.ScanningController.deleteConfig(id: Int)
+POST           /users/signup                                          controllers.users.RegisterController.postSignup
 
 
 +nocsrf
-GET            /pos/configurations                                 controllers.pos.PosController.getConfigs
-GET            /pos/configurations/:id                             controllers.pos.PosController.getConfig(id: Int)
+POST           /orders/create                                         controllers.orders.CheckoutController.checkout
 +nocsrf
-POST           /pos/configurations/:eventId                        controllers.pos.PosController.createConfig(eventId: Int)
-+nocsrf
-PUT            /pos/configurations/:eventId/:id                    controllers.pos.PosController.updateConfig(eventId: Int, id: Int)
-+nocsrf
-POST           /pos/checkout                                       controllers.pos.PosController.checkout
-+nocsrf
-POST           /pos/paymentLog/:orderId                            controllers.pos.PosController.processPayment(orderId: Int)
-+nocsrf
-POST           /pos/configurations/:id/addProduct                  controllers.pos.PosController.addProductToConfig(id: Int)
-+nocsrf
-POST           /pos/configurations/:id/removeProduct               controllers.pos.PosController.removeProductFromConfig(id: Int)
+POST           /orders/ipn                                            controllers.orders.TicketsController.ipn
+
+GET            /orders/download/:barcode.pdf                          controllers.orders.TicketsController.getTicket(barcode: String)
+GET            /orders/view                                           controllers.orders.OrdersController.getOrders
+GET            /orders/view/:id                                       controllers.orders.OrdersController.getOrder(id: Int)
 
 +nocsrf
-DELETE         /pos/configurations/:id                             controllers.pos.PosController.deleteConfig(id: Int)
+POST           /admin/orders/validate                                 controllers.admin.OrdersController.validateOrder
+
+GET            /admin/orders/resend/:id                               controllers.admin.OrdersController.resendEmail(id: Int)
 
 +nocsrf
-POST           /admin/orders/import/:event                         controllers.admin.OrdersController.importOrder(event: Int)
-
-GET            /admin/orders/export/:event/:date                   controllers.admin.OrdersController.export(event: Int, date: String)
-GET            /admin/orders/:event                                controllers.admin.OrdersController.getOrders(event: Int)
-GET            /admin/orders/userInfo/:id                          controllers.admin.OrdersController.getOrderUserInfo(id: Int)
-GET            /admin/orders/posLogs/:id                           controllers.admin.OrdersController.getPosPaymentLogs(id: Int)
-GET            /admin/orders/logs/:id                              controllers.admin.OrdersController.getOrderLogs(id: Int)
-GET            /admin/orders/byUser/:id                            controllers.admin.OrdersController.getOrdersByUser(id: Int)
-+nocsrf
-DELETE         /admin/orders/:id                                   controllers.admin.OrdersController.removeOrder(id: Int)
-
-GET            /admin/tickets/:barcode                             controllers.admin.TicketsController.getTicketData(barcode: String)
-
-GET            /admin/stats/:event                                 controllers.admin.StatsController.getSales(event: Int, start: Long ?= 0, end: Long ?= 0)
-GET            /admin/stats/:event/salesData.csv                   controllers.admin.StatsController.getOrdersStats(event: Int, start: Long ?= 0, end: Long ?= 0, source: Option[String] ?= None)
-
-GET            /admin/events                                       controllers.admin.EventsController.getEvents
-GET            /admin/events/:event                                controllers.admin.EventsController.getEvent(event: Int)
+POST           /scan/process/:id                                      controllers.scanning.ScanningController.scanCode(id: Int)
+GET            /scan/configurations                                   controllers.scanning.ScanningController.getConfigs
+GET            /scan/configurations/:eventId                          controllers.scanning.ScanningController.getConfigsForEvent(eventId: Int)
 
 +nocsrf
-DELETE         /admin/events/:event                                controllers.admin.EventsController.deleteEvent(event: Int)
+POST           /scan/configurations/:eventId                          controllers.scanning.ScanningController.createConfig(eventId: Int)
++nocsrf
+PUT            /scan/configurations/:eventId/:id                      controllers.scanning.ScanningController.updateConfig(eventId: Int, id: Int)
+GET            /scan/configurations/:eventId/:id                      controllers.scanning.ScanningController.getConfig(eventId: Int, id: Int)
+GET            /scan/configurations/:eventId/:id/full                 controllers.scanning.ScanningController.getFullConfig(eventId: Int, id: Int)
++nocsrf
+POST           /scan/configurations/:eventId/:id/addProduct           controllers.scanning.ScanningController.addProductToConfig(eventId: Int, id: Int)
++nocsrf
+POST           /scan/configurations/:eventId/:id/removeProduct        controllers.scanning.ScanningController.removeProductFromConfig(eventId: Int, id: Int)
++nocsrf
+DELETE         /scan/configurations/:eventId/:id                      controllers.scanning.ScanningController.deleteConfig(eventId: Int, id: Int)
+
+
+GET            /pos/configurations                                    controllers.pos.PosController.getConfigs
+GET            /pos/configurations/:eventId                           controllers.pos.PosController.getConfigsForEvent(eventId: Int)
+GET            /pos/configurations/:eventId/:id                       controllers.pos.PosController.getConfig(eventId: Int, id: Int)
++nocsrf
+POST           /pos/configurations/:eventId                           controllers.pos.PosController.createConfig(eventId: Int)
++nocsrf
+PUT            /pos/configurations/:eventId/:id                       controllers.pos.PosController.updateConfig(eventId: Int, id: Int)
++nocsrf
+POST           /pos/checkout                                          controllers.pos.PosController.checkout
++nocsrf
+POST           /pos/paymentLog/:orderId                               controllers.pos.PosController.processPayment(orderId: Int)
++nocsrf
+POST           /pos/configurations/:eventId/:id/addProduct            controllers.pos.PosController.addProductToConfig(eventId: Int, id: Int)
++nocsrf
+POST           /pos/configurations/:eventId/:id/removeProduct         controllers.pos.PosController.removeProductFromConfig(eventId: Int, id: Int)
 
 +nocsrf
-POST           /admin/events                                       controllers.admin.EventsController.createEvent
-+nocsrf
-POST           /admin/events/clone/:id                             controllers.admin.EventsController.cloneEvent(id: Int)
-+nocsrf
-PUT            /admin/events/:id                                   controllers.admin.EventsController.updateEvent(id: Int)
-
-
-GET            /admin/events/:event/products                       controllers.admin.ProductsController.getProducts(event: Int)
-GET            /admin/events/:event/products/purge                 controllers.admin.ProductsController.purgeUnsoldProducts(event: Int)
-GET            /admin/events/:event/products/:product              controllers.admin.ProductsController.getProduct(event: Int, product: Int)
+DELETE         /pos/configurations/:eventId/:id                       controllers.pos.PosController.deleteConfig(eventId: Int, id: Int)
 
 +nocsrf
-POST           /admin/events/:event/products                       controllers.admin.ProductsController.createProduct(event: Int)
+POST           /admin/orders/import/:event                            controllers.admin.OrdersController.importOrder(event: Int)
+
+GET            /admin/orders/export/:event/:date                      controllers.admin.OrdersController.export(event: Int, date: String)
+GET            /admin/orders/:event                                   controllers.admin.OrdersController.getOrders(event: Int)
+GET            /admin/orders/userInfo/:id                             controllers.admin.OrdersController.getOrderUserInfo(id: Int)
+GET            /admin/orders/posLogs/:id                              controllers.admin.OrdersController.getPosPaymentLogs(id: Int)
+GET            /admin/orders/logs/:id                                 controllers.admin.OrdersController.getOrderLogs(id: Int)
+GET            /admin/orders/byUser/:id                               controllers.admin.OrdersController.getOrdersByUser(id: Int)
 +nocsrf
-PUT            /admin/events/:event/products/:id                   controllers.admin.ProductsController.updateProduct(event: Int, id: Int)
-GET            /admin/events/:event/products/:id/acceptedBy        controllers.admin.ProductsController.getAcceptingConfigs(event: Int, id: Int)
+DELETE         /admin/orders/:id                                      controllers.admin.OrdersController.removeOrder(id: Int)
 
+GET            /admin/tickets/:barcode                                controllers.admin.TicketsController.getTicketData(barcode: String)
 
+GET            /admin/stats/:event                                    controllers.admin.StatsController.getSales(event: Int, start: Long ?= 0, end: Long ?= 0)
+GET            /admin/stats/:event/salesData.csv                      controllers.admin.StatsController.getOrdersStats(event: Int, start: Long ?= 0, end: Long ?= 0, source: Option[String] ?= None)
 
-GET            /admin/users                                        controllers.admin.UsersController.getUsers
-GET            /admin/users/withPerm/:perm                         controllers.admin.UsersController.getUsersWithPermission(perm: String)
-GET            /admin/users/:user                                  controllers.admin.UsersController.getUser(user: Int)
+GET            /admin/events                                          controllers.admin.EventsController.getEvents
+GET            /admin/events/:event                                   controllers.admin.EventsController.getEvent(event: Int)
 
 +nocsrf
-POST           /admin/users/:user/permissions/add                  controllers.admin.UsersController.addPermission(user: Int)
+DELETE         /admin/events/:event                                   controllers.admin.EventsController.deleteEvent(event: Int)
+
 +nocsrf
-POST           /admin/users/:user/permissions/remove               controllers.admin.UsersController.removePermission(user: Int)
+POST           /admin/events                                          controllers.admin.EventsController.createEvent
++nocsrf
+POST           /admin/events/clone/:id                                controllers.admin.EventsController.cloneEvent(id: Int)
++nocsrf
+PUT            /admin/events/:id                                      controllers.admin.EventsController.updateEvent(id: Int)
+
+
+GET            /admin/events/:event/products                          controllers.admin.ProductsController.getProducts(event: Int)
+GET            /admin/events/:event/products/purge                    controllers.admin.ProductsController.purgeUnsoldProducts(event: Int)
+GET            /admin/events/:event/products/:product                 controllers.admin.ProductsController.getProduct(event: Int, product: Int)
+
++nocsrf
+POST           /admin/events/:event/products                          controllers.admin.ProductsController.createProduct(event: Int)
++nocsrf
+PUT            /admin/events/:event/products/:id                      controllers.admin.ProductsController.updateProduct(event: Int, id: Int)
+GET            /admin/events/:event/products/:id/acceptedBy           controllers.admin.ProductsController.getAcceptingConfigs(event: Int, id: Int)
+
+
+
+GET            /admin/users                                           controllers.admin.UsersController.getUsers
+GET            /admin/users/withPerm/:perm                            controllers.admin.UsersController.getUsersWithPermission(perm: String)
+GET            /admin/users/:user                                     controllers.admin.UsersController.getUser(user: Int)
+
++nocsrf
+POST           /admin/users/:user/permissions/add                     controllers.admin.UsersController.addPermission(user: Int)
++nocsrf
+POST           /admin/users/:user/permissions/remove                  controllers.admin.UsersController.removePermission(user: Int)

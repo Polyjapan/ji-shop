@@ -47,7 +47,10 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
     db.run(products.filter(_.eventId === event).result)
 
   def getProduct(event: Int, id: Int): Future[data.Product] =
-    db.run(products.filter(p => p.id === id && p.eventId === event).result.head)
+    getOptionalProduct(event, id).map(_.get)
+
+  def getOptionalProduct(event: Int, id: Int): Future[Option[data.Product]] =
+    db.run(products.filter(p => p.id === id && p.eventId === event).result.headOption)
 
   def createProduct(event: Int, product: data.Product): Future[Int] =
     db.run(products += product)

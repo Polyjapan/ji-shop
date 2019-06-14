@@ -55,6 +55,9 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
 
   def getConfigs: Future[Seq[PosConfiguration]] = db.run(posConfigurations.result)
 
+  def getConfigsForEvent(eventId: Int): Future[Seq[PosConfiguration]] =
+    db.run(posConfigurations.filter(_.eventId === eventId).result)
+
   def getConfig(id: Int): Future[Option[(PosConfiguration, Seq[PosConfigItem])]] = db.run(configJoin.filter(el => el._1.id === id).result).map(joinToPair)
 
   def getFullConfig(id: Int): Future[Option[JsonGetConfigResponse]] =
