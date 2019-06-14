@@ -8,7 +8,7 @@ import constants.results.Errors._
 import data.Event
 import exceptions.HasItemsException
 import javax.inject.Inject
-import models.{EventsModel, ProductsModel}
+import models.{EventsModel, PosModel, ProductsModel, ScanningModel}
 import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
@@ -24,7 +24,7 @@ import scala.util.control.NonFatal
 /**
   * @author zyuiop
   */
-class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, conf: Configuration) extends AbstractController(cc) {
+class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, products: ProductsModel, pos: PosModel, scan: ScanningModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, conf: Configuration) extends AbstractController(cc) {
 
   def getEvents: Action[AnyContent] = Action.async {
     events.getEvents.map(e => Ok(Json.toJson(e)))
@@ -53,10 +53,15 @@ class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, 
   def cloneEvent(id: Int): Action[JsValue] = createOrUpdateEvent(
     ev => events.createEvent(ev.copy(Option.empty))
       .flatMap(newEvent => {
-        products.cloneProducts(id, newEvent)
-          .map(_ => newEvent) // ignore result and just return the new event id
-
-      }).map(id => Ok(Json.toJson(id))))
+        products.cloneProducts(id, newEvent).map(eq => (eq, newEvent))
+      })
+      .flatMap {
+        case (equiv, newEvent) =>
+          pos.cloneConfigs(id, newEvent, equiv) flatMap {
+            _ => scan.cloneConfigs(id, newEvent, equiv)
+          } map (_ => newEvent)
+      }
+      .map(id => Ok(Json.toJson(id))))
 
   def updateEvent(id: Int): Action[JsValue] = createOrUpdateEvent(
     ev => events.updateEvent(id, ev.copy(Some(id))).map(_ => Ok(Json.toJson(id))))

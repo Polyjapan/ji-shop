@@ -1,6 +1,6 @@
 package models
 
-import data.{PosConfigItem, PosConfiguration, PosPaymentLog}
+import data.{Event, PosConfigItem, PosConfiguration, PosPaymentLog}
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.{Json, OFormat}
@@ -18,6 +18,7 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
   import profile.api._
 
   private val configJoin = posConfigurations joinLeft posConfigItems on (_.id === _.configId)
+  private val eventsJoin = posConfigurations join events on (_.eventId === _.id)
   private val productsJoin = posConfigurations join posConfigItems on (_.id === _.configId) join products on (_._2.itemId === _.id)
   private val productsLeftJoin = posConfigurations joinLeft posConfigItems on (_.id === _.configId) joinLeft products on (_._2.map(_.itemId) === _.id)
 
@@ -27,6 +28,7 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
 
   /**
     * Deletes a configuration recursively (all the bound items are removed from the configuration before)
+    *
     * @param id the config to delete
     */
   def deleteConfig(id: Int): Future[Int] =
@@ -53,7 +55,12 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
       .map(pair => JsonPosConfigItem(pair._1._2.get, pair._2.get))))
   }
 
-  def getConfigs: Future[Seq[PosConfiguration]] = db.run(posConfigurations.result)
+  def getConfigs: Future[Map[Event, Seq[PosConfiguration]]] =
+    db.run(eventsJoin.filterNot(_._2.archived).result)
+      .map(res => res.groupBy(_._2).mapValues(_.map(_._1)))
+
+  def getConfigsForEvent(eventId: Int): Future[Seq[PosConfiguration]] =
+    db.run(posConfigurations.filter(_.eventId === eventId).result)
 
   def getConfig(id: Int): Future[Option[(PosConfiguration, Seq[PosConfigItem])]] = db.run(configJoin.filter(el => el._1.id === id).result).map(joinToPair)
 
@@ -61,6 +68,27 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
     db.run(productsLeftJoin.filter(el => el._1._1.id === id).result)
       .map(joinToPairWithProduct)
       .map(opt => opt.map(pair => JsonGetConfigResponse(pair._1, pair._2)))
+
+  def cloneConfigs(sourceEvent: Int, targetEvent: Int, productsIdMapping: Map[Int, Int]) = {
+    db.run(
+      posConfigurations.filter(p => p.eventId === sourceEvent).result
+        .map(configs => configs.map(config => (config.id.get, config.copy(id = None, eventId = targetEvent))))
+        .flatMap(configs => {
+          (posConfigurations returning posConfigurations.map(_.id) ++= configs.map(_._2))
+            .map(ids => configs.map(_._1) zip ids)
+        })
+        .flatMap(configs => {
+          DBIO.sequence(
+            configs.map {
+              case (oldId, id) =>
+                posConfigItems.filter(_.configId === oldId).result
+                  .map(content => content.map(item => item.copy(configurationId = id, productId = productsIdMapping(item.productId))))
+                  .flatMap(toInsert => posConfigItems ++= toInsert)
+            }
+          )
+        })
+    )
+  }
 }
 
 

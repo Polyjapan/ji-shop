@@ -25,10 +25,15 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
   private val configForm = Form(mapping("name" -> nonEmptyText, "acceptCards" -> boolean)(Tuple2.apply)(Tuple2.unapply))
 
   def getConfigs: Action[AnyContent] = Action.async {
-    model.getConfigs.map(result => Ok(Json.toJson(result)))
+    model.getConfigs
+      .map(result => Ok(Json.toJson(result.map(pair => Json.obj("event" -> pair._1, "configs" -> pair._2)))))
   } requiresPermission SELL_ON_SITE
 
-  def getConfig(id: Int): Action[AnyContent] = Action.async {
+  def getConfigsForEvent(eventId: Int): Action[AnyContent] = Action.async {
+    model.getConfigsForEvent(eventId).map(result => Ok(Json.toJson(result)))
+  } requiresPermission SELL_ON_SITE
+
+  def getConfig(eventId: Int, id: Int): Action[AnyContent] = Action.async {
     model
       .getFullConfig(id)
       .map {
@@ -39,13 +44,14 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
 
   /**
     * Delete a POS configuration
+    *
     * @param id the id of the POS configuration to delete
     */
-  def deleteConfig(id: Int): Action[AnyContent] = Action.async {
+  def deleteConfig(eventId: Int, id: Int): Action[AnyContent] = Action.async {
     model.deleteConfig(id).map(r => if (r >= 1) success else notFound("config"))
   } requiresPermission ADMIN_POS_MANAGE
 
-  def addProductToConfig(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request =>
+  def addProductToConfig(eventId: Int, id: Int): Action[JsValue] = Action.async(parse.json) { implicit request =>
     val addProductForm = Form(
       mapping("productId" -> number, "row" -> number, "col" -> number, "color" -> nonEmptyText, "textColor" -> nonEmptyText)(Tuple5.apply)(Tuple5.unapply))
 
@@ -57,15 +63,21 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
       model.getConfig(id).flatMap(opt => {
         if (opt.isDefined) {
           if (opt.get._2.exists(e => e.productId == form._1)) success.asFuture // We don't have to insert, it's already there
-          else model.addProduct(config).map(r => if (r == 1) success else dbError).recover { case _ => dbError } // insert
-
+          else {
+            products.getOptionalProduct(eventId, config.productId).flatMap(opt => {
+              if (opt.isDefined)
+                model.addProduct(config)
+                  .map(r => if (r == 1) success else dbError)
+                  .recover { case _ => dbError }
+              else notFound("productId").asFuture
+            })
+          } // insert
         } else notFound("config").asFuture
       })
-
     })
   } requiresPermission ADMIN_POS_MANAGE
 
-  def removeProductFromConfig(id: Int): Action[String] = Action.async(parse.text) { implicit request =>
+  def removeProductFromConfig(eventId: Int, id: Int): Action[String] = Action.async(parse.text) { implicit request =>
     try {
       val productId = request.body.toInt
 
@@ -83,8 +95,8 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
     }
   } requiresPermission ADMIN_POS_MANAGE
 
-  def createConfig: Action[JsValue] = Action.async(parse.json) { implicit request => {
-    handleConfig(config => {
+  def createConfig(eventId: Int): Action[JsValue] = Action.async(parse.json) { implicit request => {
+    handleConfig(eventId, config => {
       model.createConfig(config)
         .map(inserted => Ok(Json.toJson(inserted)))
         .recover { case _ => dbError }
@@ -92,8 +104,8 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
   }
   } requiresPermission ADMIN_POS_MANAGE
 
-  def updateConfig(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request => {
-    handleConfig(config => {
+  def updateConfig(eventId: Int, id: Int): Action[JsValue] = Action.async(parse.json) { implicit request => {
+    handleConfig(eventId, config => {
       model.updateConfig(id, config.copy(Some(id)))
         .map(_ => Ok(Json.toJson(id)))
         .recover { case _ => dbError }
@@ -101,11 +113,11 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
   }
   } requiresPermission ADMIN_POS_MANAGE
 
-  private def handleConfig(saver: PosConfiguration => Future[Result])(implicit request: Request[JsValue]): Future[Result] = {
+  private def handleConfig(eventId: Int, saver: PosConfiguration => Future[Result])(implicit request: Request[JsValue]): Future[Result] = {
     configForm.bindFromRequest().fold(withErrors => {
       formError(withErrors).asFuture // If the name is absent from the request
     }, form => {
-      val config = PosConfiguration(None, form._1, form._2)
+      val config = PosConfiguration(None, eventId, form._1, form._2)
 
       saver(config)
     })

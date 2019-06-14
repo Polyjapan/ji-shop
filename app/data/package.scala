@@ -167,7 +167,7 @@ package object data {
     * @param name               a name identifying the configuration
     * @param acceptOrderTickets if true, order barcodes will be accepted by this configuration
     */
-  case class ScanningConfiguration(id: Option[Int], name: String, acceptOrderTickets: Boolean)
+  case class ScanningConfiguration(id: Option[Int], eventId: Int, name: String, acceptOrderTickets: Boolean)
 
   /**
     * Describes an item that can be scanned by a configuration
@@ -183,7 +183,7 @@ package object data {
     * @param id   the id of the configuration
     * @param name the name of the configuration
     */
-  case class PosConfiguration(id: Option[Int], name: String, acceptCards: Boolean)
+  case class PosConfiguration(id: Option[Int], eventId: Int, name: String, acceptCards: Boolean)
 
   /**
     * Describes an item in a PointOfSale configuration

@@ -3,7 +3,7 @@ package models
 import java.sql.Timestamp
 import java.time.Instant
 
-import data.{ClaimedTicket, Client, Event, ScanningConfiguration, ScanningItem}
+import data.{ClaimedTicket, Client, Event, PosConfiguration, ScanningConfiguration, ScanningItem}
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.MySQLProfile
@@ -20,6 +20,7 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
   import profile.api._
 
   private val configJoin = scanningConfigurations joinLeft scanningItems on (_.id === _.scanningConfigurationId)
+  private val eventsJoin = scanningConfigurations join events on (_.eventId === _.id)
   private val productsJoin = scanningConfigurations join scanningItems on (_.id === _.scanningConfigurationId) join products on (_._2.acceptedItemId === _.id)
   private val productsLeftJoin = scanningConfigurations
     .joinLeft(scanningItems).on(_.id === _.scanningConfigurationId)
@@ -33,6 +34,7 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
 
   /**
     * Deletes a configuration recursively (all the bound items are removed from the configuration before)
+    *
     * @param id the config to delete
     */
   def deleteConfig(id: Int): Future[Int] =
@@ -59,7 +61,11 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
   def getConfigsAcceptingProduct(event: Int, id: Int): Future[Seq[ScanningConfiguration]] =
     db.run(productsJoin.filter(pair => pair._2.id === id && pair._2.eventId === id).map(_._1._1).distinct.result)
 
-  def getConfigs: Future[Seq[ScanningConfiguration]] = db.run(scanningConfigurations.result)
+  def getConfigs: Future[Map[Event, Seq[ScanningConfiguration]]] =
+    db.run(eventsJoin.filterNot(_._2.archived).result)
+      .map(res => res.groupBy(_._2).mapValues(_.map(_._1)))
+
+  def getConfigsForEvent(eventId: Int): Future[Seq[ScanningConfiguration]] = db.run(scanningConfigurations.filter(_.eventId === eventId).result)
 
   def getConfig(id: Int): Future[Option[(ScanningConfiguration, Seq[ScanningItem])]] = db.run(configJoin.filter(el => el._1.id === id).result).map(joinToPair)
 
@@ -79,6 +85,27 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
     val insertValidation = claimedTickets += ClaimedTicket(ticketId, Timestamp.from(Instant.now()), userId)
 
     db.run(checkCodeStillValid andThen insertValidation)
+  }
+
+  def cloneConfigs(sourceEvent: Int, targetEvent: Int, productsIdMapping: Map[Int, Int]) = {
+    db.run(
+      scanningConfigurations.filter(p => p.eventId === sourceEvent).result
+        .map(configs => configs.map(config => (config.id.get, config.copy(id = None, eventId = targetEvent))))
+        .flatMap(configs => {
+          DBIO.sequence(
+            configs.map {
+              case (oldId, config) =>
+                (scanningConfigurations returning scanningConfigurations.map(_.id) += config)
+                  .flatMap(id =>
+                    scanningItems
+                      .filter(_.scanningConfigurationId === oldId).result
+                      .map(content => content.map(item => item.copy(scanningConfiguration = id, acceptedItem = productsIdMapping(item.acceptedItem))))
+                      .flatMap(toInsert => scanningItems ++= toInsert)
+                  )
+            }
+          )
+        })
+    )
   }
 }
 

@@ -150,11 +150,14 @@ package object models {
 
   private[models] class ScanningConfigurations(tag: Tag) extends Table[ScanningConfiguration](tag, "scanning_configurations") {
     def id = column[Int]("scanning_configuration_id", O.PrimaryKey, O.AutoInc)
+    def eventId = column[Int]("event_id")
     def name = column[String]("scanning_configuration_name", O.SqlType("VARCHAR(250)"))
     def acceptOrderTickets = column[Boolean]("accept_order_tickets")
 
+    def event = foreignKey("scanning_configurations_events_event_id_fk", eventId, events)(_.id)
+
     def * =
-      (id.?, name, acceptOrderTickets).shaped <> (ScanningConfiguration.tupled, ScanningConfiguration.unapply)
+      (id.?, eventId, name, acceptOrderTickets).shaped <> (ScanningConfiguration.tupled, ScanningConfiguration.unapply)
   }
   private[models] val scanningConfigurations = TableQuery[ScanningConfigurations]
 
@@ -176,11 +179,14 @@ package object models {
 
   private[models] class PosConfigurations(tag: Tag) extends Table[PosConfiguration](tag, "pos_configurations") {
     def id = column[Int]("pos_configuration_id", O.PrimaryKey, O.AutoInc)
+    def eventId = column[Int]("event_id")
     def name = column[String]("pos_configuration_name", O.SqlType("VARCHAR(250)"))
     def acceptCards = column[Boolean]("pos_configuration_accept_cards")
 
+    def event = foreignKey("pos_configurations_events_event_id_fk", eventId, events)(_.id)
+
     def * =
-      (id.?, name, acceptCards).shaped <> (PosConfiguration.tupled, PosConfiguration.unapply)
+      (id.?, eventId, name, acceptCards).shaped <> (PosConfiguration.tupled, PosConfiguration.unapply)
   }
 
   private[models] val posConfigurations = TableQuery[PosConfigurations]
