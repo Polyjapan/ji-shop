@@ -35,9 +35,9 @@ POST           /scan/process/:id                                   controllers.s
 GET            /scan/configurations                                controllers.scanning.ScanningController.getConfigs
 
 +nocsrf
-POST           /scan/configurations                                controllers.scanning.ScanningController.createConfig
+POST           /scan/configurations/:eventId                       controllers.scanning.ScanningController.createConfig(eventId: Int)
 +nocsrf
-PUT            /scan/configurations/:id                            controllers.scanning.ScanningController.updateConfig(id: Int)
+PUT            /scan/configurations/:eventId/:id                   controllers.scanning.ScanningController.updateConfig(eventId: Int, id: Int)
 GET            /scan/configurations/:id                            controllers.scanning.ScanningController.getConfig(id: Int)
 GET            /scan/configurations/:id/full                       controllers.scanning.ScanningController.getFullConfig(id: Int)
 +nocsrf
@@ -52,9 +52,9 @@ DELETE         /scan/configurations/:id                            controllers.s
 GET            /pos/configurations                                 controllers.pos.PosController.getConfigs
 GET            /pos/configurations/:id                             controllers.pos.PosController.getConfig(id: Int)
 +nocsrf
-POST           /pos/configurations                                 controllers.pos.PosController.createConfig
+POST           /pos/configurations/:eventId                        controllers.pos.PosController.createConfig(eventId: Int)
 +nocsrf
-PUT            /pos/configurations/:id                             controllers.pos.PosController.updateConfig(id: Int)
+PUT            /pos/configurations/:eventId/:id                    controllers.pos.PosController.updateConfig(eventId: Int, id: Int)
 +nocsrf
 POST           /pos/checkout                                       controllers.pos.PosController.checkout
 +nocsrf

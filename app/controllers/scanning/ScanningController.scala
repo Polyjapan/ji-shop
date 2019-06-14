@@ -88,16 +88,16 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
     scanModel.deleteConfig(id).map(r => if (r >= 1) success else notFound("config"))
   } requiresPermission ADMIN_SCAN_MANAGE
 
-  def createConfig: Action[JsValue] = Action.async(parse.json) { implicit request =>
-    handleConfig(config => {
+  def createConfig(eventId: Int): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    handleConfig(eventId, config => {
       scanModel.createConfig(config)
         .map(inserted => Ok(Json.toJson(inserted)))
         .recover { case _ => dbError }
     })
   } requiresPermission ADMIN_SCAN_MANAGE
 
-  def updateConfig(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    handleConfig(config => {
+  def updateConfig(eventId: Int, id: Int): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    handleConfig(eventId, config => {
       scanModel.updateConfig(id, config.copy(Some(id)))
         .map(inserted => if (inserted == 1) Ok(Json.toJson(id)) else notFound("id"))
         .recover { case _ => dbError }
@@ -135,11 +135,11 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
     }
   }
 
-  private def handleConfig(saver: ScanningConfiguration => Future[Result])(implicit request: Request[JsValue]): Future[Result] = {
+  private def handleConfig(eventId: Int, saver: ScanningConfiguration => Future[Result])(implicit request: Request[JsValue]): Future[Result] = {
     configForm.bindFromRequest().fold(withErrors => {
       formError(withErrors).asFuture // If the code is absent from the request
     }, form => {
-      val config = data.ScanningConfiguration(None, form._1, form._2)
+      val config = data.ScanningConfiguration(None, eventId, form._1, form._2)
 
       saver(config)
     })

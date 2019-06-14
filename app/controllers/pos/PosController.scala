@@ -83,8 +83,8 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
     }
   } requiresPermission ADMIN_POS_MANAGE
 
-  def createConfig: Action[JsValue] = Action.async(parse.json) { implicit request => {
-    handleConfig(config => {
+  def createConfig(eventId: Int): Action[JsValue] = Action.async(parse.json) { implicit request => {
+    handleConfig(eventId, config => {
       model.createConfig(config)
         .map(inserted => Ok(Json.toJson(inserted)))
         .recover { case _ => dbError }
@@ -92,8 +92,8 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
   }
   } requiresPermission ADMIN_POS_MANAGE
 
-  def updateConfig(id: Int): Action[JsValue] = Action.async(parse.json) { implicit request => {
-    handleConfig(config => {
+  def updateConfig(eventId: Int, id: Int): Action[JsValue] = Action.async(parse.json) { implicit request => {
+    handleConfig(eventId, config => {
       model.updateConfig(id, config.copy(Some(id)))
         .map(_ => Ok(Json.toJson(id)))
         .recover { case _ => dbError }
@@ -101,11 +101,11 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
   }
   } requiresPermission ADMIN_POS_MANAGE
 
-  private def handleConfig(saver: PosConfiguration => Future[Result])(implicit request: Request[JsValue]): Future[Result] = {
+  private def handleConfig(eventId: Int, saver: PosConfiguration => Future[Result])(implicit request: Request[JsValue]): Future[Result] = {
     configForm.bindFromRequest().fold(withErrors => {
       formError(withErrors).asFuture // If the name is absent from the request
     }, form => {
-      val config = PosConfiguration(None, form._1, form._2)
+      val config = PosConfiguration(None, eventId, form._1, form._2)
 
       saver(config)
     })
