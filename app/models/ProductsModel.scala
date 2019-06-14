@@ -58,11 +58,22 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
   def updateProduct(event: Int, id: Int, product: data.Product): Future[Int] =
     db.run(products.filter(p => p.id === id && p.eventId === event).update(product))
 
-  def cloneProducts(sourceEvent: Int, targetEvent: Int): Future[Int] =
+  /**
+    * Clone the products from an event to an other one, and returns a map with oldProductId -> clonedProductId
+    * @param sourceEvent
+    * @param targetEvent
+    * @return
+    */
+  def cloneProducts(sourceEvent: Int, targetEvent: Int): Future[Map[Int, Int]] =
     db.run(products.filter(p => p.eventId === sourceEvent).result
-      .map(list => list.map(prod => prod.copy(Option.empty, eventId = targetEvent)))
-      .flatMap(list => products ++= list)
-      .map(res => res.getOrElse(0)))
+      .map(list => (list.map(prod => prod.copy(Option.empty, eventId = targetEvent)), list))
+      .flatMap(pair => {
+        val list = pair._1
+        val old = pair._2.map(_.id.get)
+        val ret = products returning products.map(_.id) ++= list
+
+        ret.map(res => (old zip res).toMap)
+      }))
 
   /**
     * Removes from the database all the products from an event that were not sold and that don't appear in a POS/Scan configuration

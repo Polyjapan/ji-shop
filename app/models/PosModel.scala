@@ -27,6 +27,7 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
 
   /**
     * Deletes a configuration recursively (all the bound items are removed from the configuration before)
+    *
     * @param id the config to delete
     */
   def deleteConfig(id: Int): Future[Int] =
@@ -64,6 +65,27 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
     db.run(productsLeftJoin.filter(el => el._1._1.id === id).result)
       .map(joinToPairWithProduct)
       .map(opt => opt.map(pair => JsonGetConfigResponse(pair._1, pair._2)))
+
+  def cloneConfigs(sourceEvent: Int, targetEvent: Int, productsIdMapping: Map[Int, Int]) = {
+    db.run(
+      posConfigurations.filter(p => p.eventId === sourceEvent).result
+        .map(configs => configs.map(config => (config.id.get, config.copy(id = None, eventId = targetEvent))))
+        .flatMap(configs => {
+          (posConfigurations returning posConfigurations.map(_.id) ++= configs.map(_._2))
+            .map(ids => configs.map(_._1) zip ids)
+        })
+        .flatMap(configs => {
+          DBIO.sequence(
+            configs.map {
+              case (oldId, id) =>
+                posConfigItems.filter(_.configId === oldId).result
+                  .map(content => content.map(item => item.copy(configurationId = id, productId = productsIdMapping(item.productId))))
+                  .flatMap(toInsert => posConfigItems ++= toInsert)
+            }
+          )
+        })
+    )
+  }
 }
 
 

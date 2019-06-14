@@ -83,6 +83,27 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
 
     db.run(checkCodeStillValid andThen insertValidation)
   }
+
+  def cloneConfigs(sourceEvent: Int, targetEvent: Int, productsIdMapping: Map[Int, Int]) = {
+    db.run(
+      scanningConfigurations.filter(p => p.eventId === sourceEvent).result
+        .map(configs => configs.map(config => (config.id.get, config.copy(id = None, eventId = targetEvent))))
+        .flatMap(configs => {
+          DBIO.sequence(
+            configs.map {
+              case (oldId, config) =>
+                (scanningConfigurations returning scanningConfigurations.map(_.id) += config)
+                  .flatMap(id =>
+                    scanningItems
+                      .filter(_.scanningConfigurationId === oldId).result
+                      .map(content => content.map(item => item.copy(scanningConfiguration = id, acceptedItem = productsIdMapping(item.acceptedItem))))
+                      .flatMap(toInsert => scanningItems ++= toInsert)
+                  )
+            }
+          )
+        })
+    )
+  }
 }
 
 case class AlreadyValidatedTicketException(claimedTicket: ClaimedTicket, claimedBy: Client) extends IllegalStateException

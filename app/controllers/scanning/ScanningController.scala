@@ -6,7 +6,7 @@ import constants.results.Errors
 import constants.results.Errors._
 import data._
 import javax.inject.Inject
-import models.{AlreadyValidatedTicketException, OrdersModel, ProductsModel, ScanningModel}
+import models.{AlreadyValidatedTicketException, OrdersModel, ProductsModel, ScanningModel, posConfigItems, posConfigurations}
 import play.api.Configuration
 import play.api.data.Forms.{mapping, _}
 import play.api.data.{Form, FormError}
