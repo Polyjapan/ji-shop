@@ -25,7 +25,8 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
   private val configForm = Form(mapping("name" -> nonEmptyText, "acceptCards" -> boolean)(Tuple2.apply)(Tuple2.unapply))
 
   def getConfigs: Action[AnyContent] = Action.async {
-    model.getConfigs.map(result => Ok(Json.toJson(result)))
+    model.getConfigs
+      .map(result => Ok(Json.toJson(result.map(pair => Json.obj("event" -> pair._1, "configs" -> pair._2)))))
   } requiresPermission SELL_ON_SITE
 
   def getConfigsForEvent(eventId: Int): Action[AnyContent] = Action.async {

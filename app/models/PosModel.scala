@@ -1,6 +1,6 @@
 package models
 
-import data.{PosConfigItem, PosConfiguration, PosPaymentLog}
+import data.{Event, PosConfigItem, PosConfiguration, PosPaymentLog}
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.{Json, OFormat}
@@ -18,6 +18,7 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
   import profile.api._
 
   private val configJoin = posConfigurations joinLeft posConfigItems on (_.id === _.configId)
+  private val eventsJoin = posConfigurations join events on (_.eventId === _.id)
   private val productsJoin = posConfigurations join posConfigItems on (_.id === _.configId) join products on (_._2.itemId === _.id)
   private val productsLeftJoin = posConfigurations joinLeft posConfigItems on (_.id === _.configId) joinLeft products on (_._2.map(_.itemId) === _.id)
 
@@ -54,7 +55,9 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
       .map(pair => JsonPosConfigItem(pair._1._2.get, pair._2.get))))
   }
 
-  def getConfigs: Future[Seq[PosConfiguration]] = db.run(posConfigurations.result)
+  def getConfigs: Future[Map[Event, Seq[PosConfiguration]]] =
+    db.run(eventsJoin.filterNot(_._2.archived).result)
+      .map(res => res.groupBy(_._2).mapValues(_.map(_._1)))
 
   def getConfigsForEvent(eventId: Int): Future[Seq[PosConfiguration]] =
     db.run(posConfigurations.filter(_.eventId === eventId).result)

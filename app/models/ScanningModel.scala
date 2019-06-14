@@ -3,7 +3,7 @@ package models
 import java.sql.Timestamp
 import java.time.Instant
 
-import data.{ClaimedTicket, Client, Event, ScanningConfiguration, ScanningItem}
+import data.{ClaimedTicket, Client, Event, PosConfiguration, ScanningConfiguration, ScanningItem}
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.MySQLProfile
@@ -20,6 +20,7 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
   import profile.api._
 
   private val configJoin = scanningConfigurations joinLeft scanningItems on (_.id === _.scanningConfigurationId)
+  private val eventsJoin = scanningConfigurations join events on (_.eventId === _.id)
   private val productsJoin = scanningConfigurations join scanningItems on (_.id === _.scanningConfigurationId) join products on (_._2.acceptedItemId === _.id)
   private val productsLeftJoin = scanningConfigurations
     .joinLeft(scanningItems).on(_.id === _.scanningConfigurationId)
@@ -60,7 +61,9 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
   def getConfigsAcceptingProduct(event: Int, id: Int): Future[Seq[ScanningConfiguration]] =
     db.run(productsJoin.filter(pair => pair._2.id === id && pair._2.eventId === id).map(_._1._1).distinct.result)
 
-  def getConfigs: Future[Seq[ScanningConfiguration]] = db.run(scanningConfigurations.result)
+  def getConfigs: Future[Map[Event, Seq[ScanningConfiguration]]] =
+    db.run(eventsJoin.filterNot(_._2.archived).result)
+      .map(res => res.groupBy(_._2).mapValues(_.map(_._1)))
 
   def getConfigsForEvent(eventId: Int): Future[Seq[ScanningConfiguration]] = db.run(scanningConfigurations.filter(_.eventId === eventId).result)
 

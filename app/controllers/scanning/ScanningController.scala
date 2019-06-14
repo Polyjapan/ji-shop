@@ -65,7 +65,8 @@ class ScanningController @Inject()(cc: ControllerComponents, orders: OrdersModel
   } requiresPermission SCAN_TICKET
 
   def getConfigs: Action[AnyContent] = Action.async {
-    scanModel.getConfigs.map(result => Ok(Json.toJson(result)))
+    scanModel.getConfigs
+      .map(result => Ok(Json.toJson(result.map(pair => Json.obj("event" -> pair._1, "configs" -> pair._2)))))
   } requiresPermission SCAN_TICKET
 
   def getConfigsForEvent(eventId: Int): Action[AnyContent] = Action.async {
