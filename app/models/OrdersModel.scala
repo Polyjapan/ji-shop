@@ -483,77 +483,89 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     * @return a future holding the barcodes as well as the client to which they should be sent
     */
   def acceptOrder(order: Int): Future[(Seq[GeneratedBarCode], data.Client, data.Order)] = {
-    // This query updates the confirm time of the order
-    val updateConfirmTimeQuery = confirmOrderQuery(order)
-    // This query selects the tickets in the command
-    val orderedTicketsQuery = productJoin
-      .filter { case (orderedProduct, product, _) => orderedProduct.orderId === order && product.isTicket }
+    // Get the content of the order
+    val orderedProducts = productJoin
+      .filter { case (orderedProduct, _, _) => orderedProduct.orderId === order }
       .result
 
-    // This query insert tickets for the tickets and return their barcodes
+    val (orderedTickets, orderedGoodies) = {
+      val part = orderedProducts.map(_.partition(_._2.isTicket))
+      (part.map(_._1), part.map(_._2))
+    }
+
+    // This query insert barcodes for the tickets and return them
     // Due to DB constraints, a given ordered_product cannot have more than one ticket
     // Thanks to atomic execution, if a given order has already been IPN-ed, its tickets won't be regenerated
-    val orderedTicketsBarcodesQuery: DBIOAction[Seq[GeneratedBarCode], _, _] = (orderedTicketsQuery flatMap {
-      result =>
-        DBIO.sequence(result.map(product => (product, Ticket(Option.empty, barcodeGen(ProductCode)))).map {
-          case ((orderedProduct, product, event), ticket) =>
-            // Add a ticket in the database and get its id back
-            ((tickets returning tickets.map(_.id)) += ticket)
-              // Create a pair (orderedProduct, ticket)
-              .map(ticketId => (orderedProduct.id.get, ticketId))
-              // Insert that pair
-              .flatMap(pair => orderedProductTickets += pair)
-              // Map the result to return a TicketBarCode object
-              .flatMap(_ => DBIO.successful(TicketBarCode(product, ticket.barCode, event)))
-        }
+    val insertTicketBarcodes: DBIOAction[Seq[GeneratedBarCode], _, _] =
+    orderedTickets
+      .flatMap { result =>
+        DBIO.sequence(
+          result
+            .map(product => (product, Ticket(Option.empty, barcodeGen(ProductCode))))
+            .map {
+              case ((orderedProduct, product, event), ticket) =>
+                // Add a ticket in the database and get its id back
+                ((tickets returning tickets.map(_.id)) += ticket)
+                  // Create a pair (orderedProduct, ticket)
+                  .map(ticketId => (orderedProduct.id.get, ticketId))
+                  // Insert that pair
+                  .flatMap(pair => orderedProductTickets += pair)
+                  // Map the result to return a TicketBarCode object
+                  .map(_ => TicketBarCode(product, ticket.barCode, event))
+            }
         )
-    }).transactionally // Do all this atomically to prevent the creation of thousands of useless tickets
-
-    // This query selects the products in the command that are not tickets
-    val otherProducts = productJoin
-      .filter { case (orderedProduct, product, _) => orderedProduct.orderId === order && !product.isTicket }
-      .result
+      }.transactionally // Do all this atomically to prevent the creation of thousands of useless tickets
 
     // This query inserts a single ticket for the order and return its barcode
-    val orderBarcodeQuery = (otherProducts flatMap (r => {
-      if (r.nonEmpty) {
+    val insertOrderBarcode = orderedGoodies
+      .flatMap(r => {
+        if (r.nonEmpty) {
+          val event = r.headOption.map { case (_, _, pairEvent) => pairEvent }.getOrElse(data.Event(None, "unknown_event", "unknown_location", visible = false, archived = true))
+          val products = r.map { case (_, product, _) => product }.groupBy(p => p).mapValues(_.size)
+          // If we have items:
+          // Create a ticket
+          val ticket = Ticket(Option.empty, barcodeGen(OrderCode))
+          ((tickets returning tickets.map(_.id)) += ticket)
+            // Link it to the order
+            .flatMap(ticketId => orderTickets += (order, ticketId))
+            .map(_ => Some(OrderBarCode(order, products, ticket.barCode, event)))
+        } else {
+          DBIO.successful(None)
+        }
+      }).transactionally
 
-        val event = r.headOption.map { case (_, _, pairEvent) => pairEvent }.getOrElse(data.Event(None, "unknown_event", "unknown_location", visible = false, archived = true))
-        val products = r.map { case (_, product, _) => product }.groupBy(p => p).mapValues(_.size)
-        // If we have items:
-        // Create a ticket
-        val ticket = Ticket(Option.empty, barcodeGen(OrderCode))
-        ((tickets returning tickets.map(_.id)) += ticket)
-          // Link it to the order
-          .flatMap(ticketId => orderTickets += (order, ticketId))
-          .flatMap(_ => DBIO.successful(OrderBarCode(order, products, ticket.barCode, event)))
-      } else {
-        DBIO.successful(null)
+    val insertBarCodes = insertTicketBarcodes.flatMap(tickets => {
+      insertOrderBarcode.map {
+        case Some(orderBarCode) => tickets :+ orderBarCode
+        case None => tickets
       }
-    })).transactionally
-
-    val orderQuery = orderJoin.filter(_._1.id === order).take(1).result
-
-    val allProductsQuery = productJoin
-      .filter { case (orderedProduct, _, _) => orderedProduct.orderId === order } // Get all products in the order
-      .map { case (_, product, _) => product } // keep only the product itself
-      .filter(_.maxItems > 0).result // if their maxItems value is > 0...
-
-    val updateRemainingStockQuery = allProductsQuery.flatMap(res =>
-      DBIO.sequence(
-        res.map(p => products.filter(_.id === p.id).map(_.maxItems).update(p.maxItems - 1))
-      )) // decrease the maxItems value
-
-    val computeResult = orderedTicketsBarcodesQuery flatMap
-      (seq => orderBarcodeQuery.flatMap(code => {
-        if (code != null) DBIO.successful(seq :+ code)
-        else DBIO.successful(seq)
-      })) flatMap // get the order code
-      (seq => orderQuery.flatMap(cli => DBIO.successful((seq, cli.head._2, cli.head._1)))) flatMap // get the client
-      (res => updateRemainingStockQuery.flatMap(_ => DBIO.successful(res))) // execute the 4th request, ignoring its result
+    })
 
 
-    db.run((updateConfirmTimeQuery andThen computeResult).transactionally).recover {
+    val updateRemainingStock =
+      orderedProducts
+        .map(_.filter(_._2.maxItems > 0)) // get products that have limited quantities
+        .map(res => res.groupBy(_._2).mapValues(_.size)) // keep only the number of products ordered
+        .flatMap(res => DBIO.sequence(
+        res.map {
+          case (p, num) =>
+            val newQuantity = Math.max(p.maxItems - num, 0)
+            products.filter(_.id === p.id).map(_.maxItems).update(newQuantity) // decrease the maxItems value
+        }
+      ))
+
+    val insertAndReturnCodes = insertBarCodes // get the order code
+      .flatMap(codes => orderJoin
+      .filter(_._1.id === order).result.head
+      .map {
+        case (client, order) => (codes, order, client) // get the client
+      })
+
+
+    // This query updates the confirm time of the order
+    val updateConfirmTime = confirmOrderQuery(order)
+
+    db.run((updateConfirmTime >> updateRemainingStock >> insertAndReturnCodes).transactionally).recover {
       case _: SQLIntegrityConstraintViolationException | _: IllegalStateException =>
         println("Duplicate IPN request for " + order + ", returning empty result")
         (Seq(), null, null)
