@@ -38,13 +38,9 @@ class FirstLoginController @Inject()(cc: ControllerComponents, clients: ClientsM
                 val client = data.Client(Option.empty, id, formData.lastName, formData.firstName, email, acceptNewsletter = formData.acceptNews)
                 clients
                   .createClient(client)
-                  .map(r => {
-                    val session = JwtSession() + ("user", AuthenticatedUser(client.copy(id = Some(r)), Seq()))
-                    Ok(Json.obj("success" -> true, "requireInfo" -> false, "errors" -> JsArray(), "token" -> session.serialize)).withJwtSession(session)
-                  })
-              case Some((client, perms)) =>
-                val session = JwtSession() + ("user", AuthenticatedUser(client, perms))
-                Ok(Json.obj("success" -> true, "requireInfo" -> false, "errors" -> JsArray(), "token" -> session.serialize)).withJwtSession(session).asFuture
+                  .flatMap(r => clients.generateLoginResponse(r).map(obj => Ok(obj)))
+              case Some(client) =>
+                clients.generateLoginResponse(client.id.get).map(obj => Ok(obj))
             }
 
           case _ =>

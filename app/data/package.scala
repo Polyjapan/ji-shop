@@ -198,6 +198,11 @@ package object data {
   case class PosConfigItem(configurationId: Int, productId: Int, row: Int, col: Int, color: String, fontColor: String)
 
 
+  case class RefreshToken(id: Option[Int], clientId: Int, created: Option[Timestamp] = None, disabled: Boolean = false, userAgent: String)
+
+  case class RefreshTokenLog(tokenId: Int, time: Option[Timestamp], userAgent: String, ip: String)
+
+
   sealed trait PaymentMethod
 
   case object Cash extends PaymentMethod

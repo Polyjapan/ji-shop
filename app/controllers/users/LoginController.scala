@@ -33,14 +33,12 @@ class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel,
           if (ticketType == TicketType.LoginTicket || ticketType == TicketType.PasswordResetTicket || ticketType == TicketType.EmailConfirmTicket) {
             // Get user
 
-            clients.findClientByCasId(userId).map {
-              case Some((client, perms)) =>
-                val session = JwtSession() + ("user", AuthenticatedUser(client, perms))
-                Ok(Json.obj("success" -> true, "requireInfo" -> false, "errors" -> JsArray(), "token" -> session.serialize)).withJwtSession(session)
-
+            clients.findClientByCasId(userId).flatMap {
+              case Some(client) =>
+                clients.generateLoginResponse(client.id.get).map(r => Ok(r))
               case None =>
                 val session = JwtSession(Seq[(String, JsValueWrapper)]("casId" -> userId, "casEmail" -> userEmail): _*)
-                Ok(Json.obj("success" -> true, "requireInfo" -> true, "errors" -> JsArray(), "token" -> session.serialize)).withJwtSession(session)
+                Ok(Json.obj("success" -> true, "requireInfo" -> true, "errors" -> JsArray(), "token" -> session.serialize)).withJwtSession(session).asFuture
 
             }
           } else {

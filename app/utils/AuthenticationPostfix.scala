@@ -67,7 +67,9 @@ object AuthenticationPostfix {
   }
 
   implicit class UserRequestHeader(request: RequestHeader)(implicit conf: Configuration) {
-    def optUser: Option[AuthenticatedUser] = request.jwtSession.getAs[AuthenticatedUser]("user")
+    private def session = Some(request.jwtSession).filter(_.claim.isValid)
+
+    def optUser: Option[AuthenticatedUser] = session.flatMap(_.getAs[AuthenticatedUser]("user"))
 
     def user: AuthenticatedUser = optUser.get
   }
