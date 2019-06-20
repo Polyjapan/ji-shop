@@ -36,11 +36,11 @@ object Errors {
 
   def formError(err: Form[_]): Result = BadRequest.asFormErrorSeq(err.errors)
 
-  def notAuthenticated: Result = Forbidden.asError(ErrorCodes.AUTH_MISSING)
+  def notAuthenticated: Result = Unauthorized.asError(ErrorCodes.AUTH_MISSING)
 
   def dbError: Result = InternalServerError.asError(ErrorCodes.DATABASE)
 
-  def noPermissions: Result = Unauthorized.asError(ErrorCodes.PERMS_MISSING)
+  def noPermissions: Result = Forbidden.asError(ErrorCodes.PERMS_MISSING)
 
   def unknownError: Result = InternalServerError.asError(ErrorCodes.UNKNOWN)
 

@@ -25,6 +25,8 @@ class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel,
     // Is it valid?
     val ticket = request.body
 
+    println("'" + ticket + "'")
+
     if (!api.isValidTicket(ticket)) {
       notFound().asFuture
     } else {
