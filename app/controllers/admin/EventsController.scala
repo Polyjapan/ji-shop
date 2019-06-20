@@ -42,7 +42,7 @@ class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, 
         // If we have errors, we show the form again with the errors
         formError(withErrors).asFuture
       }, data => {
-        handler(data)
+        handler(if (data.archived && data.visible) data.copy(visible = false) else data) // Cannot be both visible and archived!
       })
   }
   } requiresPermission ADMIN_EVENT_MANAGE

@@ -28,10 +28,18 @@ class EventsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     db.run(events.filter(ev => ev.id === id).result.head)
 
   def createEvent(event: Event): Future[Int] =
-    db.run(events.returning(events.map(e => e.id)) += event)
+    db.run(hideAllEvents(event) >> (events.returning(events.map(e => e.id)) += event))
 
   def updateEvent(id: Int, event: Event): Future[Int] =
-    db.run(events.filter(e => e.id === id).update(event))
+    db.run(hideAllEvents(event) >> events.filter(e => e.id === id).update(event))
+
+  /**
+    * Check if the event is visible, and if so hides all visible events
+    * @param event the event to set
+    * @return a request to hide all events if the event is visible, a dummy request if not
+    */
+  private def hideAllEvents(event: Event) =
+    if (event.visible) events.map(_.visible).update(false) else DBIO.successful(0)
 
 
   /**
