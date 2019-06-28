@@ -1,6 +1,7 @@
 package controllers.orders
 
 
+import constants.emails.OrderEmail
 import constants.results.Errors._
 import constants.{ErrorCodes, Permissions}
 import data._
@@ -10,8 +11,9 @@ import models.{OrdersModel, ProductsModel}
 import play.api.Configuration
 import play.api.data.FormError
 import play.api.libs.json.{JsValue, Json}
+import play.api.libs.mailer.{AttachmentData, MailerClient}
 import play.api.mvc._
-import services.PolybankingClient
+import services.{PolybankingClient, TicketGenerator}
 import utils.AuthenticationPostfix._
 import utils.Implicits._
 
@@ -20,7 +22,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel, products: ProductsModel, pb: PolybankingClient)(implicit ec: ExecutionContext, conf: Configuration) extends AbstractController(cc) {
+class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel, products: ProductsModel, pb: PolybankingClient, pdfGen: TicketGenerator)(implicit ec: ExecutionContext, conf: Configuration, mailer: MailerClient) extends AbstractController(cc) {
   /**
     * Execute an order
     *
@@ -28,9 +30,27 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
     */
   def checkout: Action[JsValue] = Action.async(parse.json) { implicit request =>
     request.body.asOpt[CheckedOutOrder] match {
-      case None | Some(CheckedOutOrder(Seq(), _)) => BadRequest.asError(ErrorCodes.NO_REQUESTED_ITEM).asFuture
-      case Some(order) => parseOrder(order, request.user)
+      case Some(order) if order.items.nonEmpty => parseOrder(order, request.user)
+      case _ => BadRequest.asError(ErrorCodes.NO_REQUESTED_ITEM).asFuture
     }
+  }.requiresAuthentication
+
+  def validateOrder(orderId: Int): Action[AnyContent] = Action.async { implicit request => {
+    orders.selfValidateFreeOrder(orderId, request.user).map {
+      case (Seq(), _, _) => NotFound.asError("error.order_not_found")
+      case (oldSeq, client, _) =>
+        val attachments =
+          oldSeq.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))
+
+        OrderEmail.sendOrderEmail(attachments, client)
+        orders.insertLog(orderId, "ipn_accepted", "Free order self accepted and order accepted", accepted =true)
+
+        Ok
+      case _ =>
+        orders.insertLog(orderId, "ipn_duplicate", "Error while accepting order")
+        BadRequest.asError("error.already_accepted")
+    }
+  }
   }.requiresAuthentication
 
   private def checkPermissions(source: Option[Source], user: AuthenticatedUser): Boolean = source match {
@@ -110,16 +130,21 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
         if (success) {
           // TODO: the client should check that the returned ordered list contains the same items that the one requested
           // If the user comes from the site, we generate a payment link and make him pay
-          if (source == Web) pb.startPayment(totalPrice, orderId, list).map {
-            case (true, url) =>
-              // Insert log
-              orders.insertLog(orderId, "payment_start", "polybankingUrl=" + url)
-              Ok(Json.obj("ordered" -> list, "success" -> true, "redirect" -> url))
-            case (false, err) =>
-              orders.insertLog(orderId, "payment_start_fail", "error=" + err)
-              InternalServerError.asError(ErrorCodes.POLYBANKING(err))
-          }
-          else Future(Ok(Json.obj("ordered" -> list, "success" -> true, "orderId" -> orderId)))
+          if (source == Web) {
+
+
+            if (totalPrice > 0D) pb.startPayment(totalPrice, orderId, list).map {
+              case (true, url) =>
+                // Insert log
+                orders.insertLog(orderId, "payment_start", "polybankingUrl=" + url)
+                Ok(Json.obj("ordered" -> list, "success" -> true, "redirect" -> url))
+              case (false, err) =>
+                orders.insertLog(orderId, "payment_start_fail", "error=" + err)
+                InternalServerError.asError(ErrorCodes.POLYBANKING(err))
+            } else {
+              orders.acceptOrder()
+            }
+          } else Future(Ok(Json.obj("ordered" -> list, "success" -> true, "orderId" -> orderId)))
 
         } else dbError.asFuture
       })

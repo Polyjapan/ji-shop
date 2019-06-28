@@ -412,6 +412,15 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     })
   }
 
+  def selfValidateFreeOrder(orderId: Int, user: AuthenticatedUser): Future[(Seq[GeneratedBarCode], data.Client, data.Order)] = {
+    db.run(orders
+      .filter(o => o.id === orderId && o.paymentConfirmed.isEmpty && o.clientId === user.id && o.totalPrice < 0.05D)
+      .result.headOption).flatMap {
+      case Some(order) => acceptOrder(order.id.get)
+      case None => Future((Seq.empty, null, null))
+    }
+  }
+
   private def findProduct(barcode: String, barcodeId: Int): DBIOAction[Option[(GeneratedBarCode, data.Client, Int)], NoStream, Effect.Read] = {
     val join =
       orderedProductTickets.filter(_.ticketId === barcodeId) // find the orderedProductTicket by ticketId
@@ -449,7 +458,10 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     * @return a future holding all the [[CheckedOutItem]], as well as the inserted order ID and the total price
     */
   def postOrder(user: AuthenticatedUser, map: Map[Product, Seq[CheckedOutItem]], source: Source): Future[(Iterable[CheckedOutItem], Int, Double)] = {
-    def sumPrice(list: Iterable[CheckedOutItem]) = list.map(p => p.itemPrice.get * p.itemAmount).sum
+    def sumPrice(list: Iterable[CheckedOutItem]) = {
+      val sum = list.map(p => p.itemPrice.get * p.itemAmount).sum
+      if (sum <= 0.05D) 0D else sum // Remove almost free orders price
+    }
 
     if (source == data.Reseller)
       throw new IllegalArgumentException("Order source cannot be Reseller")
