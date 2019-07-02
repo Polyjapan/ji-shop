@@ -1,9 +1,7 @@
 package controllers.admin
 
-import com.mysql.jdbc.exceptions.MySQLIntegrityConstraintViolationException
 import constants.ErrorCodes
 import constants.Permissions._
-import constants.results.Errors
 import constants.results.Errors._
 import data.Event
 import exceptions.HasItemsException
@@ -19,7 +17,6 @@ import utils.AuthenticationPostfix._
 import utils.Implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.control.NonFatal
 
 /**
   * @author zyuiop
@@ -34,7 +31,7 @@ class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, 
     events.getEvent(id).map(e => Ok(Json.toJson(e)))
   } requiresPermission ADMIN_ACCESS
 
-  val form = Form(mapping("id" -> optional(number), "name" -> nonEmptyText, "location" -> nonEmptyText, "ticketsImage" -> nonEmptyText, "visible" -> boolean, "archived" -> boolean)(Event.apply)(Event.unapply))
+  val form = Form(mapping("id" -> optional(number), "name" -> nonEmptyText, "location" -> nonEmptyText, "ticketsImage" -> optional(text), "visible" -> boolean, "archived" -> boolean)(Event.apply)(Event.unapply))
 
   private def createOrUpdateEvent(handler: Event => Future[Result]): Action[JsValue] = Action.async(parse.json) { implicit request => {
     form.bindFromRequest.fold( // We bind the request to the form
@@ -68,6 +65,7 @@ class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, 
 
   /**
     * Delete an event. One can delete an event only if it has no product.
+    *
     * @param id the id of the event to delete
     */
   def deleteEvent(id: Int): Action[AnyContent] = Action.async {

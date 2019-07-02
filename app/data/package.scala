@@ -32,7 +32,7 @@ package object data {
     * @param visible      whether or not the event is visible (in general, you only want a single visible event)
     * @param archived     whether or not the event is archived
     */
-  case class Event(id: Option[Int], name: String, location: String, ticketsImage: String, visible: Boolean, archived: Boolean)
+  case class Event(id: Option[Int], name: String, location: String, ticketsImage: Option[String], visible: Boolean, archived: Boolean)
 
   sealed trait Source
 

@@ -28,7 +28,7 @@ package object models {
     def id = column[Int]("event_id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("event_name", O.SqlType("VARCHAR(250)"))
     def location = column[String]("event_location", O.SqlType("VARCHAR(250)"))
-    def image = column[String]("event_tickets_image", O.SqlType("VARCHAR(250)"))
+    def image = column[Option[String]]("event_tickets_image", O.SqlType("VARCHAR(250) NULL"))
     def visible = column[Boolean]("event_visible")
     def archived = column[Boolean]("event_archived", O.Default(false))
 

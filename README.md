@@ -50,6 +50,3 @@ To start a local development server, just run `sbt boot` in the root directory.
 For tickets generation, we use Twirl templates. The base template is defined in `views/template.scala.html`. It defines 
 the header (title, poster, top barcode) and the footer (warning text, generation time, bottom barcode). Then, there is a
 template for order tickets (`orderTicket.scala.html`) and an other one for admission tickets (`ticket.scala.html`).
-
-The path to the poster image is defined in the configuration (`polyjapan.posterFile`). As it is embedded in the PDF 
-tickets, you have to make it light (max 500 KiB). The templates will work better if the image is 627px wide.
