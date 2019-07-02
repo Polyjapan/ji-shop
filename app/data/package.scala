@@ -197,6 +197,7 @@ package object data {
     */
   case class PosConfigItem(configurationId: Int, productId: Int, row: Int, col: Int, color: String, fontColor: String)
 
+  case class Image(id: Option[Int], category: String, name: String, width: Int, height: Int, size: Int)
 
   case class RefreshToken(id: Option[Int], clientId: Int, created: Option[Timestamp] = None, disabled: Boolean = false, userAgent: String)
 
@@ -217,6 +218,8 @@ package object data {
       case "CARD" => Card
     }
   }
+
+
 
   /**
     * Describes a line of log in a PointOfSale payment processing
@@ -280,4 +283,5 @@ package object data {
   implicit val orderFormat = Json.format[Order]
   implicit val posLogFormat = Json.format[PosPaymentLog]
   implicit val logFormat = Json.format[OrderLog]
+  implicit val imageFormat = Json.format[Image]
 }

@@ -120,3 +120,8 @@ GET            /admin/users/:user                                     controller
 POST           /admin/users/:user/permissions/add                     controllers.admin.UsersController.addPermission(user: Int)
 +nocsrf
 POST           /admin/users/:user/permissions/remove                  controllers.admin.UsersController.removePermission(user: Int)
+
+GET            /admin/images                                          controllers.admin.UploadsController.listCategories
+GET            /admin/images/:category                                controllers.admin.UploadsController.listCategory(category: String)
++nocsrf
+POST           /admin/images/:category                                controllers.admin.UploadsController.uploadImage(category: String)
