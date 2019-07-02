@@ -1,4 +1,4 @@
-@(event: data.Event, title: String, poster: String, topCode: String, smallCode: String, bottomCode: String, code: String)(content: Html)
+@(event: data.Event, title: String, topCode: String, smallCode: String, bottomCode: String, code: String)(content: Html)
 
 <html>
     <head>
@@ -25,7 +25,7 @@
         <h2>@event.location</h2>
         <table>
             <tr>
-                <td><img src='data:image/png;base64,@poster'/></td>
+                <td><img src='@event.ticketsImage'/></td>
                 <td><img src='data:image/png;base64,@topCode'/></td>
             </tr>
         </table>

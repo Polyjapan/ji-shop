@@ -1,6 +1,6 @@
-@(poster: String, event: data.Event, product: data.Product, codes: (String, String, String), code: String)
+@(event: data.Event, product: data.Product, codes: (String, String, String), code: String)
 
-@template(event, product.name, poster, codes._1, codes._2, codes._3, code) {
+@template(event, product.name, codes._1, codes._2, codes._3, code) {
 
     <h3>@product.name</h3>
 

@@ -23,14 +23,14 @@ import scala.io.Source
   * @author zyuiop
   */
 class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(implicit ec: ExecutionContext) {
-  val imageFile = new File("result.jpg")
+  // val imageFile = new File("result.jpg")
 
-  println(s"Image will be loaded from ${imageFile.getAbsolutePath}")
+  // println(s"Image will be loaded from ${imageFile.getAbsolutePath}")
 
   /*
   The poster image
    */
-  lazy val image: String = Base64.getEncoder.encodeToString(FileUtils.readFileToByteArray(imageFile))
+  // lazy val image: String = Base64.getEncoder.encodeToString(FileUtils.readFileToByteArray(imageFile))
 
 
   private def genCodes(code: String): (String, String, String) = {
@@ -58,14 +58,14 @@ class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(imp
     val codes = genCodes(ticket.barcode)
 
 
-    pdfGen.toBytes(views.html.ticket(image, ticket.event, ticket.product, codes, ticket.barcode), "goodies_" + ticket.barcode + ".pdf", Seq())
+    pdfGen.toBytes(views.html.ticket(ticket.event, ticket.product, codes, ticket.barcode), "goodies_" + ticket.barcode + ".pdf", Seq())
   }
 
   private def doGenPdf(ticket: OrderBarCode): Array[Byte] = {
     val codes = genCodes(ticket.barcode)
 
 
-    pdfGen.toBytes(views.html.orderTicket(image, ticket.event, ticket.products, ticket.order, codes, ticket.barcode), "ticket_" + ticket.barcode + ".pdf", Seq())
+    pdfGen.toBytes(views.html.orderTicket(ticket.event, ticket.products, ticket.order, codes, ticket.barcode), "ticket_" + ticket.barcode + ".pdf", Seq())
   }
 
   def genPdf(ticket: GeneratedBarCode): (String, Array[Byte]) = ticket match {

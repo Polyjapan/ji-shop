@@ -34,7 +34,7 @@ class EventsController @Inject()(cc: ControllerComponents, events: EventsModel, 
     events.getEvent(id).map(e => Ok(Json.toJson(e)))
   } requiresPermission ADMIN_ACCESS
 
-  val form = Form(mapping("id" -> optional(number), "name" -> nonEmptyText, "location" -> nonEmptyText, "visible" -> boolean, "archived" -> boolean)(Event.apply)(Event.unapply))
+  val form = Form(mapping("id" -> optional(number), "name" -> nonEmptyText, "location" -> nonEmptyText, "ticketsImage" -> nonEmptyText, "visible" -> boolean, "archived" -> boolean)(Event.apply)(Event.unapply))
 
   private def createOrUpdateEvent(handler: Event => Future[Result]): Action[JsValue] = Action.async(parse.json) { implicit request => {
     form.bindFromRequest.fold( // We bind the request to the form
