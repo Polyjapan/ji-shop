@@ -75,7 +75,7 @@ class PdfGenerationService @Inject()(pdfGen: PdfGenerator, config: Configuration
           .groupBy(op => (op.productId, op.paidPrice))
           .mapValues(_.size)
         .map(pair => (pair._2, pair._1._2)).toSeq)
-    val fileName = "invoice_" + order.id + ".pdf"
+    val fileName = "invoice_" + order.id.get + ".pdf"
     val pdf = pdfGen.toBytes(views.html.invoice(user, event, order, productsMap), fileName, Seq())
 
     (fileName, pdf)

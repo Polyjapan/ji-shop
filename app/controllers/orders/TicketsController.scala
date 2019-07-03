@@ -7,11 +7,12 @@ import constants.results.Errors._
 import data._
 import javax.inject.Inject
 import models.OrdersModel
+import models.OrdersModel.{OrderBarCode, TicketBarCode}
 import play.api.Configuration
 import play.api.libs.mailer.{AttachmentData, MailerClient}
 import play.api.mvc._
 import services.PolybankingClient.CorrectIpn
-import services.{PolybankingClient, PdfGenerationService}
+import services.{PdfGenerationService, PolybankingClient}
 import utils.AuthenticationPostfix._
 import utils.Implicits._
 
@@ -29,19 +30,27 @@ class TicketsController @Inject()(cc: ControllerComponents, pdfGen: PdfGeneratio
         if (!valid) {
           orders.insertLog(order, "ipn_refused", "Postfinance refused the order")
           BadRequest.asError("error.postfinance_refused").asFuture
-        } else orders.acceptOrder(order).map {
-          case (Seq(), _, _) => NotFound.asError("error.order_not_found")
-          case (oldSeq, client, _) =>
-            val attachments =
-              oldSeq.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))
+        } else orders.acceptOrder(order).flatMap {
+          case (Seq(), _, _) => NotFound.asError("error.order_not_found").asFuture
+          case (oldSeq, client, order) =>
+            orders.getOrderProducts(order.id.get).map(seq => {
 
-            OrderEmail.sendOrderEmail(attachments, client)
-            orders.insertLog(order, "ipn_accepted", "IPN was accepted and tickets were generated", accepted =true)
+              val invoice = pdfGen.genInvoice(client, oldSeq.head match {
+                case TicketBarCode(_, _, event) => event
+                case OrderBarCode(_, _, _, event) => event
+              }, order, seq)
 
-            Ok
+              val attachments =
+                (oldSeq.map(pdfGen.genPdf) :+ invoice).map(p => AttachmentData(p._1, p._2, "application/pdf"))
+
+              OrderEmail.sendOrderEmail(attachments, client)
+              orders.insertLog(order.id.get, "ipn_accepted", "IPN was accepted and tickets were generated", accepted =true)
+
+              Ok
+            })
           case _ =>
             orders.insertLog(order, "ipn_duplicate", "Duplicate IPN request for order? (or other db error)")
-            BadRequest.asError("error.already_accepted")
+            BadRequest.asError("error.already_accepted").asFuture
         }
       case a@_ =>
         println("Wrong IPN request found.")

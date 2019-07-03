@@ -200,6 +200,11 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     }
   }
 
+  def getOrderProducts(orderId: Int): Future[Seq[(OrderedProduct, Product)]] =
+    db.run(
+      productJoin.filter(_._1.orderId === orderId).map { case (op, p, _) => (op, p) }.result
+    )
+
   def insertProducts(list: Iterable[CheckedOutItem], orderId: Int): Future[Boolean] = {
     // Create a list of [[OrderedProduct]] to insert
     val items = list.flatMap(coItem =>
