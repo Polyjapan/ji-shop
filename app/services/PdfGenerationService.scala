@@ -22,7 +22,7 @@ import scala.io.Source
 /**
   * @author zyuiop
   */
-class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(implicit ec: ExecutionContext) {
+class PdfGenerationService @Inject()(pdfGen: PdfGenerator, config: Configuration)(implicit ec: ExecutionContext) {
   // val imageFile = new File("result.jpg")
 
   // println(s"Image will be loaded from ${imageFile.getAbsolutePath}")
@@ -66,6 +66,19 @@ class TicketGenerator @Inject()(pdfGen: PdfGenerator, config: Configuration)(imp
 
 
     pdfGen.toBytes(views.html.orderTicket(ticket.event, ticket.products, ticket.order, codes, ticket.barcode), "ticket_" + ticket.barcode + ".pdf", Seq())
+  }
+
+  def genInvoice(user: data.Client, event: data.Event, order: data.Order, products: Seq[(data.OrderedProduct, data.Product)]): (String, Array[Byte]) = {
+    val productsMap = products.groupBy(_._2)
+      .mapValues(seq =>
+        seq.map(_._1)
+          .groupBy(op => (op.productId, op.paidPrice))
+          .mapValues(_.size)
+        .map(pair => (pair._2, pair._1._2)).toSeq)
+    val fileName = "invoice_" + order.id + ".pdf"
+    val pdf = pdfGen.toBytes(views.html.invoice(user, event, order, productsMap), fileName, Seq())
+
+    (fileName, pdf)
   }
 
   def genPdf(ticket: GeneratedBarCode): (String, Array[Byte]) = ticket match {

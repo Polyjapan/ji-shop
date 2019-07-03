@@ -1,0 +1,88 @@
+@(user: data.Client, event: data.Event, order: data.Order, products: Map[data.Product, Seq[(Int, Double)]])
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+                .bordered td, .bordered th {
+                    border: 1px solid black;
+                    padding-left: 2px;
+                }
+
+                table {
+                    border-collapse: collapse;
+                    width: 100%;
+                }
+
+                body {
+                    font-family: sans-serif;
+                }
+
+                ul {
+                    list-style: none;
+                    padding-left: 0;
+                }
+        </style>
+
+    </head>
+    <body>
+
+        <ul style="display: inline-block; margin-right: 10px; padding-right: 10px; border-right: 1px solid black;">
+            <li>PolyJapan - AGEPoly</li>
+            <li>Esplanade 15 - CP 16</li>
+            <li>CH-1015 Lausanne EPFL</li>
+            <li>TVA : CHE-113.397.612</li>
+        </ul>
+        <ul style="display: inline-block;">
+            <li>Tél. : +41 21 693 2095</li>
+            <li>Fax. : +41 21 693 2097</li>
+            <li>Email : comite@@japan-impact.ch</li>
+        </ul>
+
+        <h2>@event.name - Facture #@order.id.get</h2>
+
+        <ul>
+            <li>Date de commande : @order.enterDate.get</li>
+            <li>Nom du client : @user.firstname @user.lastname</li>
+        </ul>
+
+        <br>
+
+        <table class="bordered">
+            <tr>
+                <th style="width: 70%;">Nom produit</th>
+                <th style="width: 10%;">Numéro produit</th>
+                <th style="width: 10%;">Quantité</th>
+                <th style="width: 10%;">Prix TTC</th>
+                <th style="width: 10%;">TVA</th>
+                <th style="width: 10%;">Montant</th>
+            </tr>
+
+            @for((p, ops) <- products; op <- ops) {
+                <tr>
+                    <td>@p.name</td>
+                    <td>@p.id.get</td>
+                    <td>@op._1</td>
+                    <td>@op._2</td>
+                    <td>7.7 %</td>
+                    <td>@{
+                        op._1 * op._2
+                    }</td>
+                </tr>
+            }
+
+            <tr>
+                <td colspan="4" offset><b>Total</b></td>
+                <td>CHF TTC</td>
+                <td>@{
+                    products.flatMap(p => p._2.map(pair => pair._1 * pair._2)).sum
+                }</td>
+            </tr>
+        </table>
+
+        <br>
+
+        <p><b>Attention ! Ceci n'est pas un billet !</b></p>
+        <p><b>Beware! This is not a ticket!</b></p>
+    </body>
+</html>

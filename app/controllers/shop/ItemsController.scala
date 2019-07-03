@@ -9,7 +9,7 @@ import play.api.i18n.I18nSupport
 import play.api.libs.json.Json
 import play.api.libs.mailer.MailerClient
 import play.api.mvc._
-import services.{PolybankingClient, TicketGenerator}
+import services.{PolybankingClient, PdfGenerationService}
 import utils.AuthenticationPostfix._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -17,7 +17,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class ItemsController @Inject()(cc: MessagesControllerComponents, pdfGen: TicketGenerator, orders: OrdersModel, products: ProductsModel, mailerClient: MailerClient, pb: PolybankingClient)(implicit ec: ExecutionContext, config: Configuration) extends MessagesAbstractController(cc) with I18nSupport {
+class ItemsController @Inject()(cc: MessagesControllerComponents, pdfGen: PdfGenerationService, orders: OrdersModel, products: ProductsModel, mailerClient: MailerClient, pb: PolybankingClient)(implicit ec: ExecutionContext, config: Configuration) extends MessagesAbstractController(cc) with I18nSupport {
   private def itemsAsResult(getter: ProductsModel => Future[Map[Event, Seq[data.Product]]]): Future[Result] =
     getter(products).map(data => {
       val common = data.mapValues(_.partition(_.isTicket))

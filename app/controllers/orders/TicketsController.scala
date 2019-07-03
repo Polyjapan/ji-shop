@@ -11,7 +11,7 @@ import play.api.Configuration
 import play.api.libs.mailer.{AttachmentData, MailerClient}
 import play.api.mvc._
 import services.PolybankingClient.CorrectIpn
-import services.{PolybankingClient, TicketGenerator}
+import services.{PolybankingClient, PdfGenerationService}
 import utils.AuthenticationPostfix._
 import utils.Implicits._
 
@@ -20,7 +20,7 @@ import scala.concurrent.ExecutionContext
 /**
   * @author zyuiop
   */
-class TicketsController @Inject()(cc: ControllerComponents, pdfGen: TicketGenerator, orders: OrdersModel, pb: PolybankingClient)(implicit ec: ExecutionContext, mailerClient: MailerClient, conf: Configuration) extends AbstractController(cc) {
+class TicketsController @Inject()(cc: ControllerComponents, pdfGen: PdfGenerationService, orders: OrdersModel, pb: PolybankingClient)(implicit ec: ExecutionContext, mailerClient: MailerClient, conf: Configuration) extends AbstractController(cc) {
 
   def ipn: Action[Map[String, Seq[String]]] = Action.async(parse.formUrlEncoded) { implicit request => {
     pb.checkIpn(request.body) match {

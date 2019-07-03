@@ -17,7 +17,7 @@ import play.api.data.Forms.{mapping, _}
 import play.api.libs.json.{JsArray, JsValue, Json, OFormat}
 import play.api.libs.mailer.{AttachmentData, Email, MailerClient}
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
-import services.TicketGenerator
+import services.PdfGenerationService
 import utils.AuthenticationPostfix._
 import utils.Implicits._
 
@@ -27,7 +27,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, pdfGen: TicketGenerator, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, conf: Configuration) extends AbstractController(cc) {
+class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, pdfGen: PdfGenerationService, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, conf: Configuration) extends AbstractController(cc) {
   private val validationRequest = Form(mapping("orderId" -> number, "targetEmail" -> optional(email))(Tuple2.apply)(Tuple2.unapply))
 
   private lazy val dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")

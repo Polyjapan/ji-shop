@@ -186,6 +186,20 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     db.run(orders.filter(_.id === orderId).filterNot(_.removed).result.headOption)
   }
 
+  def getOrderDetails(orderId: Int): Future[Option[(Order, Client, data.Event, Seq[(OrderedProduct, Product)])]] = {
+    db.run(
+      orderJoin.filter(_._1.id === orderId)
+        .join(productJoin).on(_._1.id === _._1.orderId)
+        .result
+    ).map {
+      case seq if seq.nonEmpty =>
+        val ((order, client), (_, _, event)) = seq.head
+        val rest = seq.map(_._2).map { case (op, p, _) => (op, p) }
+        Some((order, client, event, rest))
+      case _ => None
+    }
+  }
+
   def insertProducts(list: Iterable[CheckedOutItem], orderId: Int): Future[Boolean] = {
     // Create a list of [[OrderedProduct]] to insert
     val items = list.flatMap(coItem =>
