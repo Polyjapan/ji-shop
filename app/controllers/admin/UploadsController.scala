@@ -1,6 +1,7 @@
 package controllers.admin
 
 import java.nio.ByteBuffer
+import java.nio.file.attribute.PosixFilePermissions
 import java.nio.file.{Files, Paths}
 import java.util.{Base64, UUID}
 
@@ -16,7 +17,7 @@ import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponent
 import utils.AuthenticationPostfix._
 import utils.Implicits._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * @author Louis Vialar
@@ -24,7 +25,7 @@ import scala.concurrent.ExecutionContext
 class UploadsController @Inject()(cc: ControllerComponents, images: ImagesModel)(implicit ec: ExecutionContext, conf: Configuration) extends AbstractController(cc) {
   lazy val uploadPath = conf.get[String]("polyjapan.images.path")
   lazy val uploadUrl = conf.get[String]("polyjapan.images.url")
-  val allowedTypes = Set("image/jpeg", "image/png", "image/bmp")
+  val allowedTypes = Map("image/jpeg" -> ".jpg", "image/png" -> ".png", "image/bmp" -> ".bmp")
   val maxSize = Math.pow(2, 10) * 150 // 150 kB
 
   /**
@@ -64,23 +65,23 @@ class UploadsController @Inject()(cc: ControllerComponents, images: ImagesModel)
     }
 
     val file = request.body
-    val name: String = file.path.getFileName.toString
-    val ext: String = name.split(".").last
-    val fileName: String = randomId + "." + ext
-
     val mime = Files.probeContentType(file.path)
     val size = Files.size(file.path)
 
-    if (!allowedTypes(mime)) {
+    if (!allowedTypes.keySet(mime)) {
       BadRequest.asError("Invalid mime " + mime).asFuture
     } else if (size > maxSize) {
       BadRequest.asError("Max size is 150kB, actual is " + size).asFuture
     } else {
+      val fileName: String = randomId + allowedTypes(mime)
+
       val image = ImageIO.read(file.path.toFile)
-
       images.createImage(Image(None, category, fileName, image.getWidth(), image.getHeight, size.toInt)).map(r => {
+        Future {
+          request.body.moveFileTo(Paths.get(uploadPath + fileName), replace = true)
+          Files.setPosixFilePermissions(Paths.get(uploadPath + fileName), PosixFilePermissions.fromString("rw-r--r--"))
+        }
 
-        request.body.moveFileTo(Paths.get(uploadPath + fileName), replace = true)
         Ok(Json.toJson(r))
       })
     }

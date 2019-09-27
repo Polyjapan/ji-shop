@@ -297,7 +297,7 @@ package object models {
 
   //   case class Image(id: Option[Int], event: Int, category: String, name: String, width: Int, height: Int, size: Int)
   private[models] class Images(tag: Tag) extends Table[Image](tag, "images") {
-    def id = column[Int]("image_id")
+    def id = column[Int]("image_id", O.AutoInc)
     def category = column[String]("image_category")
     def name = column[String]("image_name")
     def width = column[Int]("image_width")
