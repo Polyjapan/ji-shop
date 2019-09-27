@@ -12,7 +12,7 @@ import javax.imageio.ImageIO
 import javax.inject.Inject
 import models.ImagesModel
 import play.api.Configuration
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import utils.AuthenticationPostfix._
 import utils.Implicits._
@@ -44,11 +44,10 @@ class UploadsController @Inject()(cc: ControllerComponents, images: ImagesModel)
     * @return a list of the images in a category
     */
   def listCategory(category: String) = Action.async {
-    images.getImages(category).map(e =>
-      Ok(Json.toJson(
-        // Add the url of the picture in the return type
-        e.map(el => Json.toJson(el).as[JsObject].+("url" -> uploadUrl + el.name))
-      )))
+    images.getImages(category).map(e => {
+      val lst: Seq[JsObject] = e.map(el => Json.toJsObject(el) + ("url" -> JsString(uploadUrl + el.name)))
+      Ok(Json.toJson(lst))
+    })
   } requiresPermission ADMIN_ACCESS
 
   /**
