@@ -2,6 +2,7 @@ package controllers.admin
 
 import constants.Permissions._
 import constants.results.Errors._
+import data.Event
 import javax.inject.Inject
 import models.OrdersModel
 import play.api.Configuration
@@ -17,8 +18,6 @@ import scala.concurrent.ExecutionContext
   * @author zyuiop
   */
 class TicketsController @Inject()(cc: ControllerComponents, orders: OrdersModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, conf: Configuration) extends AbstractController(cc) {
-
-
   def getTicketData(ticket: String): Action[AnyContent] = Action.async {
     orders.findOrderByBarcode(ticket).flatMap {
       case Some((ticketData, orderId)) =>

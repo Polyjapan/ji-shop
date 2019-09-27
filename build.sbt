@@ -39,4 +39,6 @@ libraryDependencies += "ch.japanimpact" %% "jiauthframework" % "0.1-SNAPSHOT"
 
 unmanagedResourceDirectories in Test <+=  baseDirectory ( _ /"target/web/public/test" )
 
-      
+sources in (Compile, doc) := Seq.empty
+
+publishArtifact in (Compile, packageDoc) := false

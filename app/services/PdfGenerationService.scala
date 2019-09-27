@@ -1,28 +1,32 @@
 package services
 
 import java.awt.image.BufferedImage
-import java.io.{ByteArrayOutputStream, File, FileInputStream}
+import java.io.ByteArrayOutputStream
 import java.util.Base64
 
 import com.hhandoko.play.pdf.PdfGenerator
+import data.Event
 import javax.inject.Inject
 import models.OrdersModel.{GeneratedBarCode, OrderBarCode, TicketBarCode}
-import org.apache.commons.io.{FileUtils, IOUtils}
 import org.krysalis.barcode4j.HumanReadablePlacement
 import org.krysalis.barcode4j.impl.AbstractBarcodeBean
 import org.krysalis.barcode4j.impl.code128.Code128Bean
-import org.krysalis.barcode4j.impl.datamatrix.{DataMatrixBean, SymbolShapeHint}
+import org.krysalis.barcode4j.impl.datamatrix.DataMatrixBean
 import org.krysalis.barcode4j.output.bitmap.BitmapCanvasProvider
-import play.api.Configuration
-import play.api.mvc.{Action, AnyContent}
+import play.api.{ConfigLoader, Configuration}
 
 import scala.concurrent.ExecutionContext
-import scala.io.Source
 
 /**
   * @author zyuiop
   */
 class PdfGenerationService @Inject()(pdfGen: PdfGenerator, config: Configuration)(implicit ec: ExecutionContext) {
+  private val uploadsUrl = config.get[String]("polyjapan.images.url")
+  private val uploadsPath = config.get[String]("polyjapan.images.path")
+
+  private val replacer = (url: String) => url.replaceFirst(uploadsUrl, "file://" + uploadsPath)
+  private val evReplacer = (event: Event) => event.copy(ticketsImage = event.ticketsImage.map(replacer))
+
   // val imageFile = new File("result.jpg")
 
   // println(s"Image will be loaded from ${imageFile.getAbsolutePath}")
@@ -58,14 +62,14 @@ class PdfGenerationService @Inject()(pdfGen: PdfGenerator, config: Configuration
     val codes = genCodes(ticket.barcode)
 
 
-    pdfGen.toBytes(views.html.ticket(ticket.event, ticket.product, codes, ticket.barcode), "goodies_" + ticket.barcode + ".pdf", Seq())
+    pdfGen.toBytes(views.html.ticket(evReplacer(ticket.event), ticket.product, codes, ticket.barcode), null, Seq())
   }
 
   private def doGenPdf(ticket: OrderBarCode): Array[Byte] = {
     val codes = genCodes(ticket.barcode)
 
 
-    pdfGen.toBytes(views.html.orderTicket(ticket.event, ticket.products, ticket.order, codes, ticket.barcode), "ticket_" + ticket.barcode + ".pdf", Seq())
+    pdfGen.toBytes(views.html.orderTicket(evReplacer(ticket.event), ticket.products, ticket.order, codes, ticket.barcode), null, Seq())
   }
 
   def genInvoice(user: data.Client, event: data.Event, order: data.Order, products: Seq[(data.OrderedProduct, data.Product)]): (String, Array[Byte]) = {
