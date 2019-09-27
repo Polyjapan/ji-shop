@@ -45,10 +45,14 @@ class UploadsController @Inject()(cc: ControllerComponents, images: ImagesModel)
     */
   def listCategory(category: String) = Action.async {
     images.getImages(category).map(e => {
-      val lst: Seq[JsObject] = e.map(el => Json.toJsObject(el) + ("url" -> JsString(uploadUrl + el.name)))
+      val lst: Seq[JsObject] = e.map(encodeImage)
       Ok(Json.toJson(lst))
     })
   } requiresPermission ADMIN_ACCESS
+
+  private def encodeImage(img: Image): JsObject =
+    Json.toJsObject(img) + ("url" -> JsString(uploadUrl + img.name))
+
 
   /**
     * Upload a new image on the service
@@ -81,7 +85,7 @@ class UploadsController @Inject()(cc: ControllerComponents, images: ImagesModel)
           Files.setPosixFilePermissions(Paths.get(uploadPath + fileName), PosixFilePermissions.fromString("rw-r--r--"))
         }
 
-        Ok(Json.toJson(r))
+        Ok(Json.toJson(encodeImage(r)))
       })
     }
   } requiresPermission ADMIN_ACCESS
