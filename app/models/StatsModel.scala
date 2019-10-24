@@ -30,7 +30,9 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
       .join(orderedProducts).on((order, orderedProduct) => orderedProduct.orderId === order._1.id).map { case ((order, log), orderedProduct) => (order.source, orderedProduct, log.map(_.paymentMethod)) }
       .join(products).on((pair, product) => pair._2.productId === product.id).map { case ((source, orderedProduct, log), product) => (product, (source, orderedProduct.paidPrice, log)) }
 
-  def getEntranceStats(event: Int, groupBy: Int = 60) = {
+  def getEntranceStats(event: Int, group: Int = 60) = {
+    val groupBy = group * 1000
+
     db.run(
       products.filter(p => p.eventId === event && p.isTicket)
         .join(orderedProducts).on((p, o) => o.productId === p.id)
@@ -56,8 +58,8 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
         }
 
         .map {
-          case (false, _, Some(date)) => (false, (date.getTime / (groupBy * 1000)) * groupBy * 1000)
-          case (true, date, _) => (true, (date.getTime / (groupBy * 1000)) * groupBy * 1000)
+          case (false, _, Some(date)) => (false, (date.getTime / (groupBy)) * groupBy)
+          case (true, date, _) => (true, (date.getTime / (groupBy)) * groupBy)
         }
 
         .groupBy(pair => (pair._2))
@@ -72,6 +74,41 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
           case (key, (sold, scanned)) => ((key, sold), (key, scanned))
         }
         .unzip
+    })
+  }
+
+  def getSalesStats(event: Int, group: Int = 24) = {
+    val groupBy = group * 3600 * 1000
+
+    def splitStats(seq: Seq[(data.Source, Timestamp)], start: Long, end: Long) = {
+      val numbers = seq.map(_._2)
+        .groupBy(time => (time.getTime / groupBy) * groupBy)
+        .mapValues(times => times.size)
+
+      (start.to(end, groupBy) map (t => (t, numbers.getOrElse(t, 0)))).toList
+    }
+
+    db.run(
+      products.filter(p => p.eventId === event && p.isTicket)
+        .join(orderedProducts).on((p, o) => o.productId === p.id)
+        .join(orders).on((po, o) => o.id === po._2.orderId && !o.removed)
+        .filter(po => po._2.paymentConfirmed.nonEmpty)
+        .map {
+          case (_, order) => (order.source, order.paymentConfirmed.get)
+        }
+        .result
+    ).map(seq => {
+      val times = seq.map(_._2.getTime)
+      val (min, max) = ((times.min / groupBy) * groupBy, (times.max / groupBy) * groupBy)
+
+      val map = seq
+        .groupBy(_._1) // group by source
+        .mapValues(seq => splitStats(seq, min, max))
+
+      // val total = splitStats(seq)
+
+      // (total, map)
+      map
     })
   }
 

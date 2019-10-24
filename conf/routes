@@ -85,6 +85,7 @@ GET            /admin/tickets/:barcode                                controller
 GET            /admin/stats/:event                                    controllers.admin.StatsController.getSales(event: Int, start: Long ?= 0, end: Long ?= 0)
 GET            /admin/stats/:event/salesData.csv                      controllers.admin.StatsController.getOrdersStats(event: Int, start: Long ?= 0, end: Long ?= 0, source: Option[String] ?= None)
 GET            /admin/stats/:event/entrances                          controllers.admin.StatsController.getEntranceStats(event: Int, groupBy: Int ?= 60)
+GET            /admin/stats/:event/sales                              controllers.admin.StatsController.getSalesStats(event: Int, groupBy: Int ?= 24)
 
 GET            /admin/events                                          controllers.admin.EventsController.getEvents
 GET            /admin/events/:event                                   controllers.admin.EventsController.getEvent(event: Int)
