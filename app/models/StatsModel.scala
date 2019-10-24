@@ -3,7 +3,7 @@ package models
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 
-import data.{Card, Cash}
+import data.{Card, Cash, OnSite}
 import javax.inject.Inject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.libs.json.{Json, OFormat}
@@ -29,6 +29,51 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
       .joinLeft(posPaymentLogs).on((order, log) => order.id === log.orderId && log.accepted === true)
       .join(orderedProducts).on((order, orderedProduct) => orderedProduct.orderId === order._1.id).map { case ((order, log), orderedProduct) => (order.source, orderedProduct, log.map(_.paymentMethod)) }
       .join(products).on((pair, product) => pair._2.productId === product.id).map { case ((source, orderedProduct, log), product) => (product, (source, orderedProduct.paidPrice, log)) }
+
+  def getEntranceStats(event: Int, groupBy: Int = 60) = {
+    db.run(
+      products.filter(p => p.eventId === event && p.isTicket)
+        .join(orderedProducts).on((p, o) => o.productId === p.id)
+        .join(orders).on((po, o) => o.id === po._2.orderId && !o.removed)
+        .filter(po => po._2.paymentConfirmed.nonEmpty)
+        .joinLeft(orderedProductTickets.join(claimedTickets).on(_.ticketId === _.ticketId)).on((po, opt) => po._1._2.id === opt._1.orderedProductId)
+
+        .map {
+          case (((product, orderedProduct), order), optional) =>
+            val source = order.source
+
+            (source === OnSite.asInstanceOf[data.Source], order.paymentConfirmed, optional.map(_._2.claimedAt))
+        }
+
+        .filter(_._2.isDefined)
+        .map { case (isOnSite, confirmDate, claimDate) => (isOnSite, confirmDate.get, claimDate) }
+        .result
+    ).map(seq => {
+      seq
+        .filter {
+          case (false, _, None) => false // not onsite and not scanned
+          case _ => true // onsite or scanned
+        }
+
+        .map {
+          case (false, _, Some(date)) => (false, (date.getTime / (groupBy * 1000)) * groupBy * 1000)
+          case (true, date, _) => (true, (date.getTime / (groupBy * 1000)) * groupBy * 1000)
+        }
+
+        .groupBy(pair => (pair._2))
+        .mapValues(seq => {
+          val (sold, scanned) = seq.partition(_._1)
+
+          (sold.size, scanned.size)
+        })
+        .toList
+        .sortBy(_._1)
+        .map {
+          case (key, (sold, scanned)) => ((key, sold), (key, scanned))
+        }
+        .unzip
+    })
+  }
 
   private def eventFilteredStatsRequest(event: Int, ordersFilter: OrdersFilter) =
     statsRequest(ordersFilter).filter { case (product, _) => product.eventId === event }

@@ -25,6 +25,10 @@ class StatsController @Inject()(cc: ControllerComponents, orders: OrdersModel, s
     stats.getOrdersStats(event, start, end, source.flatMap(s => Source.asOpt(s))).map(list => Ok(list.mkString("\n")))
   } requiresPermission ADMIN_VIEW_STATS
 
+  def getEntranceStats(event: Int, groupBy: Int = 60): Action[AnyContent] = Action.async {
+    stats.getEntranceStats(event, groupBy).map { case (sold, scanned) => Ok(Json.obj("sold" -> sold, "scanned" -> scanned))}
+  } requiresPermission ADMIN_VIEW_STATS
+
   private def mapStats(resp: Seq[(data.Product, Map[data.Source, SalesData])]): Result =
     Ok(Json.toJson(
       // Map the Source to a String before JSon formatting to build a pretty map
