@@ -12,8 +12,6 @@ GET            /shop/items/invisible                                  controller
 POST           /users/login                                           controllers.users.LoginController.postLogin
 GET            /users/refresh                                         controllers.users.RefreshTokenController.getRefresh
 +nocsrf
-POST           /users/firstLogin                                      controllers.users.FirstLoginController.postFirstLogin
-+nocsrf
 POST           /users/signup                                          controllers.users.RegisterController.postSignup
 
 
