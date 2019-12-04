@@ -35,7 +35,7 @@ libraryDependencies ++= Seq(
 libraryDependencies += "com.typesafe.play" %% "play-mailer" % "6.0.1"
 libraryDependencies += "com.typesafe.play" %% "play-mailer-guice" % "6.0.1"
 libraryDependencies += "net.sf.barcode4j" % "barcode4j" % "2.1"
-libraryDependencies += "ch.japanimpact" %% "jiauthframework" % "0.1-SNAPSHOT"
+libraryDependencies += "ch.japanimpact" %% "jiauthframework" % "0.2-SNAPSHOT"
 
 
 unmanagedResourceDirectories in Test <+=  baseDirectory ( _ /"target/web/public/test" )

@@ -31,7 +31,7 @@ class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel,
       notFound().asFuture
     } else {
       api.getAppTicket(ticket).flatMap {
-        case Left(AppTicketResponse(userId, userEmail, ticketType, _)) =>
+        case Left(AppTicketResponse(userId, userEmail, ticketType, _, user)) =>
           if (ticketType == TicketType.LoginTicket || ticketType == TicketType.PasswordResetTicket || ticketType == TicketType.EmailConfirmTicket) {
             // Get user
 
