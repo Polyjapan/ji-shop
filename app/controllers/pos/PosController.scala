@@ -22,7 +22,7 @@ import scala.concurrent.{ExecutionContext, Future}
   * @author zyuiop
   */
 class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, model: PosModel, products: ProductsModel)(implicit ec: ExecutionContext, conf: Configuration, mailerClient: MailerClient) extends AbstractController(cc) {
-  private val configForm = Form(mapping("name" -> nonEmptyText, "acceptCards" -> boolean)(Tuple2.apply)(Tuple2.unapply))
+  private val configForm = Form(mapping("name" -> nonEmptyText, "acceptCards" -> boolean, "acceptCamipro" -> boolean)(Tuple3.apply)(Tuple3.unapply))
 
   def getConfigs: Action[AnyContent] = Action.async {
     model.getConfigs
@@ -117,7 +117,7 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
     configForm.bindFromRequest().fold(withErrors => {
       formError(withErrors).asFuture // If the name is absent from the request
     }, form => {
-      val config = PosConfiguration(None, eventId, form._1, form._2)
+      val config = PosConfiguration(None, eventId, form._1, form._2, form._3)
 
       saver(config)
     })

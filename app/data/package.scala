@@ -184,7 +184,7 @@ package object data {
     * @param id   the id of the configuration
     * @param name the name of the configuration
     */
-  case class PosConfiguration(id: Option[Int], eventId: Int, name: String, acceptCards: Boolean)
+  case class PosConfiguration(id: Option[Int], eventId: Int, name: String, acceptCards: Boolean, acceptCamipro: Boolean)
 
   /**
     * Describes an item in a PointOfSale configuration
@@ -211,12 +211,15 @@ package object data {
 
   case object Card extends PaymentMethod
 
+  case object Camipro extends PaymentMethod
+
   object PaymentMethod {
     def unapply(arg: PaymentMethod): String = arg.toString.toUpperCase
 
     def apply(string: String): PaymentMethod = string.toUpperCase match {
       case "CASH" => Cash
       case "CARD" => Card
+      case "CAMIPRO" => Camipro
     }
   }
 

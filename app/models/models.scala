@@ -184,11 +184,12 @@ package object models {
     def eventId = column[Int]("event_id")
     def name = column[String]("pos_configuration_name", O.SqlType("VARCHAR(250)"))
     def acceptCards = column[Boolean]("pos_configuration_accept_cards")
+    def acceptCamipro = column[Boolean]("pos_configuration_accept_camipro")
 
     def event = foreignKey("pos_configurations_events_event_id_fk", eventId, events)(_.id)
 
     def * =
-      (id.?, eventId, name, acceptCards).shaped <> (PosConfiguration.tupled, PosConfiguration.unapply)
+      (id.?, eventId, name, acceptCards, acceptCamipro).shaped <> (PosConfiguration.tupled, PosConfiguration.unapply)
   }
 
   private[models] val posConfigurations = TableQuery[PosConfigurations]
@@ -223,7 +224,7 @@ package object models {
   private[models] class PosPaymentLogs(tag: Tag) extends Table[PosPaymentLog](tag, "pos_payment_logs") {
     def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
     def orderId = column[Int]("order_id")
-    def paymentMethod = column[PaymentMethod]("pos_payment_method", O.SqlType("SET('CASH', 'CARD')"))
+    def paymentMethod = column[PaymentMethod]("pos_payment_method", O.SqlType("SET('CASH', 'CARD', 'CAMIPRO')"))
     def logDate = column[Timestamp]("log_date", O.SqlType("TIMESTAMP DEFAULT now()"))
     def accepted = column[Boolean]("accepted")
 
