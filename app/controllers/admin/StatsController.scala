@@ -22,7 +22,7 @@ class StatsController @Inject()(cc: ControllerComponents, orders: OrdersModel, s
   } requiresPermission ADMIN_VIEW_STATS
 
   def getOrdersStats(event: Int, start: Long = 0, end: Long = 0, source: Option[String]): Action[AnyContent] = Action.async {
-    stats.getOrdersStats(event, start, end, source.flatMap(s => Source.asOpt(s))).map(list => Ok(list.mkString("\n")))
+    stats.getOrdersStats(event, start, end, source.flatMap(s => Source.asOpt(s))).map(list => Ok(list.mkString("\n")).as("text/csv; charset=utf-8"))
   } requiresPermission ADMIN_VIEW_STATS
 
   def getEntranceStats(event: Int, groupBy: Int = 60): Action[AnyContent] = Action.async {
