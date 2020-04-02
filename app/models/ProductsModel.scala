@@ -19,8 +19,7 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
 
   private val productsJoin = events join products on (_.id === _.eventId)
 
-  private val joinToMap: Seq[(Event, data.Product)] => Map[Event, Seq[data.Product]] =
-    _.groupBy(_._1).mapValues(_.map(_._2))
+  private val joinToMap: Seq[(Event, data.Product)] => Map[Event, Seq[data.Product]] = _.groupMap(_._1)(_._2)
 
 
   def buildItemList(map: Map[Event, Seq[Product]]): List[JsObject] =
@@ -41,7 +40,7 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
     db.run(productsJoin.filter(pair => (pair._1.visible === true || includeHiddenEvents) && pair._1.archived === false).filter(_._2.isVisible === true || includeHidden).result).map(_.map(_._2))
 
   def splitTickets(map: Map[Event, Seq[data.Product]]): Map[Event, (Seq[data.Product], Seq[data.Product])] =
-    map.mapValues(_.partition(_.isTicket))
+    map.view.mapValues(_.partition(_.isTicket)).toMap
 
   def getProducts(event: Int): Future[Seq[data.Product]] =
     db.run(products.filter(_.eventId === event).result)

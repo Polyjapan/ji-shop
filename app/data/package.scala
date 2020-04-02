@@ -269,7 +269,7 @@ package object data {
 
   implicit val tsFormat: Format[Timestamp] = new Format[Timestamp] {
     override def reads(json: JsValue): JsResult[Timestamp] = json match {
-      case JsNumber(num) => JsSuccess(new Timestamp(num.longValue()))
+      case JsNumber(num) => JsSuccess(new Timestamp(num.longValue))
       case _ => JsError("Invalid type")
     }
 

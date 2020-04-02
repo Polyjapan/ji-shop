@@ -74,11 +74,12 @@ class PdfGenerationService @Inject()(pdfGen: PdfGenerator, config: Configuration
 
   def genInvoice(user: data.Client, event: data.Event, order: data.Order, products: Seq[(data.OrderedProduct, data.Product)]): (String, Array[Byte]) = {
     val productsMap = products.groupBy(_._2)
+      .view
       .mapValues(seq =>
         seq.map(_._1)
           .groupBy(op => (op.productId, op.paidPrice))
-          .mapValues(_.size)
-        .map(pair => (pair._2, pair._1._2)).toSeq)
+          .view.mapValues(_.size)
+        .map(pair => (pair._2, pair._1._2)).toSeq).toMap
     val fileName = "invoice_" + order.id.get + ".pdf"
     val pdf = pdfGen.toBytes(views.html.invoice(user, event, order, productsMap), fileName, Seq())
 

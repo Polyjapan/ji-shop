@@ -102,7 +102,7 @@ class UploadsController @Inject()(cc: ControllerComponents, images: ImagesModel)
       val image = ImageIO.read(file.path.toFile)
       images.createImage(Image(None, category, fileName, image.getWidth(), image.getHeight, size.toInt)).map(r => {
         Future {
-          request.body.moveFileTo(Paths.get(uploadPath + fileName), replace = true)
+          request.body.moveTo(Paths.get(uploadPath + fileName), replace = true)
           Files.setPosixFilePermissions(Paths.get(uploadPath + fileName), PosixFilePermissions.fromString("rw-r--r--"))
         }
 

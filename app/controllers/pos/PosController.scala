@@ -182,10 +182,10 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
   private def getProducts(items: Map[Int, Seq[CheckedOutItem]], dbItems: Seq[data.Product]): Map[Product, Seq[CheckedOutItem]] =
     dbItems.map(p => (p, items.get(p.id.get))).toMap // map the DB product to the one in the order
       .filter { case (_, Some(seq)) if seq.nonEmpty => true; case _ => false } // remove the DB products that are not in the order
-      .mapValues(s => s.get) // we get the option
+      .view.mapValues(s => s.get) // we get the option
       .toSeq
       .flatMap { case (product, checkedOutItems) => checkedOutItems.map(item => (product, item)) }
-      .groupBy(_._1).mapValues(_.map(_._2))
+      .groupMap(_._1)(_._2)
 
   private def insertProducts(result: (Iterable[CheckedOutItem], Int, Double)): Future[Result] = result match {
     case (list: Iterable[CheckedOutItem], orderId: Int, totalPrice: Double) =>

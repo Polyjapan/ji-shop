@@ -12,6 +12,8 @@ import slick.jdbc.MySQLProfile
 import utils.Barcodes
 import utils.Barcodes.{BarcodeType, OrderCode, ProductCode}
 
+import scala.language.postfixOps
+
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
@@ -67,7 +69,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     val bytes = new Array[Byte](8)
     new SecureRandom().nextBytes(bytes)
 
-    barcodeType.getId + usedFormat(BigInt(bytes))
+    s"${barcodeType.getId}${usedFormat(BigInt(bytes))}"
   }
 
   def setOrderRemoved(orderId: Int, removed: Boolean) = {
@@ -247,7 +249,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
           if (!seq.forall(_._3.isTicket)) {
             // There is an order barcode
             val headTuple = seq.find(p => p._6.isDefined).get
-            val products = seq.map { case (_, _, product, _, _, _, _) => product }.filterNot(p => p.isTicket).groupBy(p => p).mapValues(_.size)
+            val products = seq.map { case (_, _, product, _, _, _, _) => product }.filterNot(p => p.isTicket).groupMapReduce(p => p)(l => 1)(_ + _)
 
             val s = productTickets.:+(OrderBarCode(headTuple._1.id.get, products, headTuple._6.get, headTuple._4))
             (s, user)
@@ -286,7 +288,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
           .map { case (_, o, p, pc, _) => (o, p, pc.map(_._2.barCode)) } // Keep only (orderedProduct, product, barcode)
           .groupBy(p => (p._1.productId, p._1.paidPrice)) // Group the data by (orderedProduct, product)
           .map(pair => ((pair._2.head._1, pair._2.head._2), pair._2))
-          .mapValues(seq => (seq.length, seq.map(_._3).filter(_.nonEmpty).map(_.get))) // compute the amt of items then the list of codes
+          .view.mapValues(seq => (seq.length, seq.map(_._3).filter(_.nonEmpty).map(_.get))).toMap // compute the amt of items then the list of codes
 
         seq.headOption.map { case (ord, _, _, _, orderCode) =>
           OrderData(ord, productMap, orderCode.map(_._2.barCode))
@@ -423,7 +425,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       }
 
     join.result.map(seq => {
-      val products = seq.map { case (_, product, _, _) => product }.filterNot(p => p.isTicket).groupBy(p => p).mapValues(_.size)
+      val products = seq.map { case (_, product, _, _) => product }.filterNot(p => p.isTicket).groupMapReduce(p => p)(p => 1)(_ + _)
 
       seq.headOption.map {
         case (orderId, _, event, client) => (OrderBarCode(orderId, products, barcode, event), client, barcodeId)
@@ -489,7 +491,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     .map(_.paymentConfirmed)
     .filter(_.isEmpty)
     .update(Some(new Timestamp(System.currentTimeMillis())))
-    .flatMap(r => if (r >= 1) DBIO.successful(Unit) else DBIO.failed(new IllegalStateException()))
+    .flatMap(r => if (r >= 1) DBIO.successful(()) else DBIO.failed(new IllegalStateException()))
 
   def setOrderAccepted(order: Int) = {
     db.run(confirmOrderQuery(order))
@@ -540,7 +542,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
       .flatMap(goodies => {
         if (goodies.nonEmpty) {
           val event = goodies.head._3
-          val products = goodies.map { case (_, product, _) => product }.groupBy(p => p).mapValues(_.size)
+          val products = goodies.map { case (_, product, _) => product }.groupMapReduce(p => p)(p => 1)(_ + _)
           // If we have items:
           // Create a ticket
           val ticket = Ticket(Option.empty, barcodeGen(OrderCode))

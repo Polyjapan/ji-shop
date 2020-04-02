@@ -1,5 +1,7 @@
 package models
 
+import java.time.Clock
+
 import com.google.common.base.Preconditions
 import data.{AuthenticatedUser, Client, RefreshToken, RefreshTokenLog}
 import javax.inject.Inject
@@ -16,7 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class ClientsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext, configuration: Configuration)
+class ClientsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext, configuration: Configuration, clock: Clock)
   extends HasDatabaseConfigProvider[MySQLProfile] {
 
   import profile.api._

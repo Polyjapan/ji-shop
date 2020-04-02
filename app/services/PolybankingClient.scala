@@ -83,7 +83,7 @@ class PolybankingClient @Inject()(config: Configuration, ws: WSClient)(implicit 
 
     if (missing.nonEmpty) return MissingFields(missing)
 
-    val single = map.mapValues(_.head)
+    val single = map.view.mapValues(_.head).toMap
     val sig = removeLeadingZeroes(computeSignature(single - "sign", ipnKey))
     val packageSig = removeLeadingZeroes(single("sign"))
 

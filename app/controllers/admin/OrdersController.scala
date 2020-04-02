@@ -4,6 +4,7 @@ import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Date
 
+import com.fasterxml.jackson.module.scala.deser.overrides.MutableList
 import constants.ErrorCodes
 import constants.Permissions._
 import constants.emails.OrderEmail
@@ -83,7 +84,7 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
   }
 
   def importOrder(event: Int): Action[Seq[ImportedItemData]] = Action.async(parse.json[Seq[ImportedItemData]]) { implicit request => {
-    val log = new mutable.MutableList[String]
+    val log = new mutable.ArrayDeque[String]
 
     log += "Processing " + request.body.size + " codes..."
 

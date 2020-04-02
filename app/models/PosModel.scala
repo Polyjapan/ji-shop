@@ -57,7 +57,7 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
 
   def getConfigs: Future[Map[Event, Seq[PosConfiguration]]] =
     db.run(eventsJoin.filterNot(_._2.archived).result)
-      .map(res => res.groupBy(_._2).mapValues(_.map(_._1)))
+      .map(res => res.groupMap(_._2)(_._1))
 
   def getConfigsForEvent(eventId: Int): Future[Seq[PosConfiguration]] =
     db.run(posConfigurations.filter(_.eventId === eventId).result)

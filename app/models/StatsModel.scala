@@ -168,19 +168,20 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
         .groupBy { case (product, _) => product }
         .map {
           case (product, seq) =>
-            (product, seq.map(_._2).groupBy { case (source, _, _) => source }.mapValues(seq => seq.map { case (_, amt, log) => (amt, log) }).map {
+            (product, seq.map(_._2).groupBy { case (source, _, _) => source }.view.mapValues(seq => seq.map { case (_, amt, log) => (amt, log) }).map {
               case (source, pricesAndLog) =>
                 val globalSum = pricesAndLog.map(_._1).sum
                 val sumBy = pricesAndLog.groupBy(_._2)
+                  .view
                   .filterKeys(_.isDefined)
                   .map { case (key, sq) => (key.get, Some(sq.map(_._1).sum)) }
+                  .toMap
                   .withDefaultValue(None)
 
-                (source, SalesData(pricesAndLog.size, pricesAndLog.map(_._1).sum, sumBy(Cash), sumBy(Card)))
-            })
-        }.toSeq
-
-
+                (source, SalesData(pricesAndLog.size, globalSum, sumBy(Cash), sumBy(Card)))
+            }.toMap)
+        }
+        .toSeq
     })
   }
 

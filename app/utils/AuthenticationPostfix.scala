@@ -1,5 +1,7 @@
 package utils
 
+import java.time.Clock
+
 import constants.results.Errors.{noPermissions, notAuthenticated}
 import data.AuthenticatedUser
 import pdi.jwt.JwtSession._
@@ -66,7 +68,7 @@ object AuthenticationPostfix {
     def requiresAuthorizationCheck(authorization: AuthorizationHandler)(implicit conf: Configuration): Action[T] = AuthenticationAction(action, authorization)
   }
 
-  implicit class UserRequestHeader(request: RequestHeader)(implicit conf: Configuration) {
+  implicit class UserRequestHeader(request: RequestHeader)(implicit conf: Configuration, clock: Clock = Clock.systemUTC()) {
     private def session = Some(request.jwtSession).filter(_.claim.isValid)
 
     def optUser: Option[AuthenticatedUser] = session.flatMap(_.getAs[AuthenticatedUser]("user"))

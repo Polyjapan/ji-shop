@@ -52,8 +52,12 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
   private def joinToPairWithProduct(seq: Seq[(((ScanningConfiguration, Option[ScanningItem]), Option[data.Product]), Option[data.Event])]): Option[(ScanningConfiguration, Map[data.Event, Seq[data.Product]])] = {
     if (seq.isEmpty) None
     else {
-      val map = seq.groupBy(_._2).filterKeys(opt => opt.isDefined).map(pair => (pair._1.get, pair._2))
-      Some((seq.head._1._1._1, map.mapValues(seq => seq.map(_._1._2).filter(opt => opt.isDefined).map(_.get))))
+      val map = seq.groupBy(_._2).view
+        .filterKeys(opt => opt.isDefined)
+        .mapValues(seq => seq.map(_._1._2).filter(opt => opt.isDefined).map(_.get))
+        .map(pair => (pair._1.get, pair._2))
+
+      Some((seq.head._1._1._1, map.toMap))
     }
   }
 
@@ -63,7 +67,7 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
 
   def getConfigs: Future[Map[Event, Seq[ScanningConfiguration]]] =
     db.run(eventsJoin.filterNot(_._2.archived).result)
-      .map(res => res.groupBy(_._2).mapValues(_.map(_._1)))
+      .map(res => res.groupMap(_._2)(_._1))
 
   def getConfigsForEvent(eventId: Int): Future[Seq[ScanningConfiguration]] = db.run(scanningConfigurations.filter(_.eventId === eventId).result)
 
@@ -79,7 +83,7 @@ class ScanningModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
       .filter(_._1.ticketId === ticketId)
       .result
       .flatMap(r =>
-        if (r.isEmpty) DBIO.successful(Unit) // if no result returned: the ticket is still valid
+        if (r.isEmpty) DBIO.successful(()) // if no result returned: the ticket is still valid
         else DBIO.failed(new AlreadyValidatedTicketException(r.head._1, r.head._2))) // if a result was returned: the ticket is no longer valid and we return it
 
     val insertValidation = claimedTickets += ClaimedTicket(ticketId, Timestamp.from(Instant.now()), userId)

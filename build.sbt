@@ -18,27 +18,22 @@ resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repos
 resolvers += Resolver.jcenterRepo
 resolvers += Resolver.mavenLocal
 
-scalaVersion := "2.12.2"
+scalaVersion := "2.13.1"
 
 libraryDependencies ++= Seq( ehcache , ws , specs2 % Test , guice )
 libraryDependencies ++= Seq(
-  "com.typesafe.play" %% "play-slick" % "4.0.0",
-  "com.typesafe.play" %% "play-slick-evolutions" % "4.0.0",
+  "com.typesafe.play" %% "play-slick" % "5.0.0",
+  "com.typesafe.play" %% "play-slick-evolutions" % "5.0.0",
   "mysql" % "mysql-connector-java" % "5.1.34",
   "org.mindrot" % "jbcrypt" % "0.3m",
-  "com.pauldijou" %% "jwt-play" % "2.1.0",
-  "com.hhandoko" %% "play27-scala-pdf" % "4.1.0",
-  "net.codingwell" %% "scala-guice" % "4.1.0"
-
+  "com.pauldijou" %% "jwt-play" % "4.2.0",
+  "com.hhandoko" %% "play27-scala-pdf" % "4.2.0"
 )
 
-libraryDependencies += "com.typesafe.play" %% "play-mailer" % "6.0.1"
-libraryDependencies += "com.typesafe.play" %% "play-mailer-guice" % "6.0.1"
+libraryDependencies += "com.typesafe.play" %% "play-mailer" % "8.0.0"
+libraryDependencies += "com.typesafe.play" %% "play-mailer-guice" % "8.0.0"
 libraryDependencies += "net.sf.barcode4j" % "barcode4j" % "2.1"
-libraryDependencies += "ch.japanimpact" %% "jiauthframework" % "0.2-SNAPSHOT"
-
-
-unmanagedResourceDirectories in Test <+=  baseDirectory ( _ /"target/web/public/test" )
+libraryDependencies += "ch.japanimpact" %% "jiauthframework" % "0.3-SNAPSHOT"
 
 sources in (Compile, doc) := Seq.empty
 

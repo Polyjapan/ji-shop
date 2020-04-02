@@ -54,7 +54,7 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
   private def sanitizeInput(items: Map[Int, Seq[CheckedOutItem]], dbItems: Seq[data.Product], source: Source): Map[Product, Seq[CheckedOutItem]] =
     dbItems.map(p => (p, items.get(p.id.get))).toMap // map the DB product to the one in the order
       .filter { case (_, Some(seq)) if seq.nonEmpty => true; case _ => false } // remove the DB products that are not in the order
-      .mapValues(s => s.get) // we get the option
+      .view.mapValues(s => s.get) // we get the option
       .toSeq
       .flatMap { case (product, checkedOutItems) => checkedOutItems.map(item => (product, item)) } // we create pairs
       .map { // Check the item prices
@@ -70,7 +70,7 @@ class CheckoutController @Inject()(cc: ControllerComponents, orders: OrdersModel
         // round the prices to 2 decimals
         case (product, coItem) => (product, coItem.copy(itemPrice = coItem.itemPrice.map(d => math.round(d * 100) / 100D)))
       }
-      .groupBy(_._1).mapValues(_.map(_._2)) // change the output form
+      .groupMap(_._1)(_._2) // change the output form
 
   /**
     * Check that the items in the order are available, i.e. that they exist and that there are sufficient quantities remaining
