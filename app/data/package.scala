@@ -22,6 +22,10 @@ package object data {
   implicit val clientFormat: Format[Client] = Json.format[Client]
 
 
+  case class TemporaryToken(casId: Int, lastname: String, firstname: String, email: String)
+
+  implicit val temporaryTokenFormat: Format[TemporaryToken] = Json.format[TemporaryToken]
+
   /**
    * Defines an Event, in general it will be a Japan Impact edition, but who knows what could come next?
    *

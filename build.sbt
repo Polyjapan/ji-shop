@@ -33,7 +33,7 @@ libraryDependencies ++= Seq(
 libraryDependencies += "com.typesafe.play" %% "play-mailer" % "8.0.0"
 libraryDependencies += "com.typesafe.play" %% "play-mailer-guice" % "8.0.0"
 libraryDependencies += "net.sf.barcode4j" % "barcode4j" % "2.1"
-libraryDependencies += "ch.japanimpact" %% "jiauthframework" % "0.3-SNAPSHOT"
+libraryDependencies += "ch.japanimpact" %% "jiauthframework" % "1.0-SNAPSHOT"
 
 sources in (Compile, doc) := Seq.empty
 

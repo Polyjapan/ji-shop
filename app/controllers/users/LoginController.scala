@@ -1,9 +1,13 @@
 package controllers.users
 
-import ch.japanimpact.auth.api.{AuthApi, TokenValidationService}
+import java.time.Clock
+
+import ch.japanimpact.auth.api.cas.CASService
 import constants.results.Errors._
+import data.{Client, TemporaryToken}
 import javax.inject.Inject
 import models.ClientsModel
+import pdi.jwt.JwtSession
 import play.api.Configuration
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc._
@@ -20,22 +24,31 @@ import scala.concurrent.{ExecutionContext, Future}
  *
  * @author zyuiop
  */
-class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel, api: AuthApi, tvs: TokenValidationService)(implicit ec: ExecutionContext, config: Configuration) extends AbstractController(cc) {
+class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel, cas: CASService)(implicit ec: ExecutionContext, config: Configuration, clock: Clock) extends AbstractController(cc) {
 
   def postLogin: Action[String] = Action.async(parse.text(1000)) { implicit request => {
     // Is it valid?
     val ticket = request.body
 
-    tvs.validateToken(ticket) match {
-      case Some(user) =>
-        clients.findClientByCasId(user.userId).flatMap {
+    cas.proxyValidate(ticket, None).flatMap {
+      case Left(err) =>
+        println("CAS Error: " + err + " (for ticket " + ticket + ")")
+        notFound("ticket").asFuture
+      case Right(user) if user.user.forall(_.isDigit)  =>
+        val userId = user.user.toInt
+        clients.findClientByCasId(userId).flatMap {
           case None =>
-            Future.successful(Ok(Json.toJson(Json.obj("success" -> false, "requireInfo" -> true, "errors" -> JsArray()))))
+            val session = JwtSession() ++ ("casData" -> TemporaryToken(userId, user.lastname.get, user.firstname.get, user.email.get))
+
+            Future.successful(Ok(Json.toJson(Json.obj("success" -> false, "requireInfo" -> true, "errors" -> JsArray(), "idToken" -> session.serialize))))
           case Some(client) =>
-            clients.generateLoginResponse(user.userId).map(e => Ok(Json.toJson(e)))
+            clients.generateLoginResponse(client.id.get).map(e => Ok(Json.toJson(e)))
         }
-      case None => notFound().asFuture
+      case r =>
+        println("Invalid cas result " + r)
+        notFound("ticket").asFuture
     }
+
   }
   }
 }

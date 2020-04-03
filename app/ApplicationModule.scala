@@ -1,13 +1,8 @@
 import java.time.Clock
 
-import ch.japanimpact.auth.api.AuthApi
 import com.google.inject.{AbstractModule, Provides}
 import com.hhandoko.play.pdf.PdfGenerator
-import javax.inject.Singleton
-import play.api.{Configuration, Environment}
-import play.api.libs.ws.WSClient
-
-import scala.concurrent.ExecutionContext
+import play.api.Environment
 
 class ApplicationModule extends AbstractModule {
 
@@ -26,9 +21,6 @@ class ApplicationModule extends AbstractModule {
 
     pdfGen
   }
-
-  @Provides
-  def provideAuthClient(ws: WSClient)(implicit ec: ExecutionContext, config: Configuration): AuthApi = AuthApi(ws)
 
   @Provides
   def provideClock() = Clock.systemUTC()

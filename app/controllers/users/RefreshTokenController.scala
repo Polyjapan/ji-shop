@@ -2,7 +2,6 @@ package controllers.users
 
 import java.time.Clock
 
-import ch.japanimpact.auth.api.AuthApi
 import constants.ErrorCodes
 import constants.results.Errors._
 import data.AuthenticatedUser
@@ -20,7 +19,7 @@ import scala.concurrent.duration.Duration
 /**
   * @author zyuiop
   */
-class RefreshTokenController @Inject()(cc: ControllerComponents, clients: ClientsModel, api: AuthApi)(implicit ec: ExecutionContext, config: Configuration, clock: Clock) extends AbstractController(cc) {
+class RefreshTokenController @Inject()(cc: ControllerComponents, clients: ClientsModel)(implicit ec: ExecutionContext, config: Configuration, clock: Clock) extends AbstractController(cc) {
   def REFRESH_MAX_AGE(implicit conf:Configuration): Option[Long] = conf.getOptional[Duration]("play.http.refreshToken.maxAge").map(_.toSeconds)
 
   def getRefresh: Action[AnyContent] = Action.async { implicit request => {
