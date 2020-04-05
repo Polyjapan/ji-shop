@@ -12,7 +12,7 @@ GET            /shop/items/invisible                                  controller
 POST           /users/login                                           controllers.users.LoginController.postLogin
 GET            /users/refresh                                         controllers.users.RefreshTokenController.getRefresh
 +nocsrf
-POST           /users/firstLogin                                          controllers.users.RegisterController.postSignup
+POST           /users/firstLogin                                      controllers.users.RegisterController.postSignup
 
 
 +nocsrf

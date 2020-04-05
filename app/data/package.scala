@@ -204,7 +204,7 @@ package object data {
    */
   case class PosConfigItem(configurationId: Int, productId: Int, row: Int, col: Int, color: String, fontColor: String)
 
-  case class Image(id: Option[Int], category: String, name: String, width: Int, height: Int, size: Int)
+  case class Image(id: Option[Int], category: String, url: String, size: Int)
 
   case class RefreshToken(id: Option[Int], clientId: Int, created: Option[Timestamp] = None, disabled: Boolean = false, userAgent: String)
 
