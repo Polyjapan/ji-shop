@@ -103,12 +103,12 @@ class StatsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvide
 
       val map = seq
         .groupBy(_._1) // group by source
-        .mapValues(seq => splitStats(seq, min, max))
+        .view.mapValues(seq => splitStats(seq, min, max))
 
       // val total = splitStats(seq)
 
       // (total, map)
-      map
+      map.toMap
     })
   }
 
