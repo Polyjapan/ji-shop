@@ -43,8 +43,7 @@ class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel,
             clients.createClient(client)
               .map(id => client.copy(id = Some(id)))
           case Some(client) => Future.successful(client)
-        }.flatMap(client => clients.generateLoginResponse(client.id.get))
-          .map(e => Ok(Json.toJson(e)))
+        }.flatMap(client => clients.generateLoginResponse(client.id.get)).map(e => Ok(e))
       case r =>
         println("Invalid cas result " + r)
         notFound("ticket").asFuture

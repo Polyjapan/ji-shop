@@ -269,31 +269,4 @@ package object models {
 
   private[models] val orderLogs = TableQuery[OrderLogs]
 
-
-  private[models] class RefreshTokens(tag: Tag) extends Table[RefreshToken](tag, "refresh_tokens") {
-    def id = column[Int]("refresh_token_id", O.PrimaryKey, O.AutoInc)
-    def clientId = column[Int]("client_id")
-    def created = column[Timestamp]("refresh_token_created", O.SqlType("TIMESTAMP DEFAULT now()"))
-    def disabled = column[Boolean]("refresh_token_disabled")
-    def userAgent = column[String]("refresh_token_user_agent")
-
-    def client = foreignKey("refresh_tokens_clients_client_id_fk", clientId, clients)(_.id)
-
-    def * = (id.?, clientId, created.?, disabled, userAgent).shaped <> (RefreshToken.tupled, RefreshToken.unapply)
-  }
-
-  private[models] val refreshTokens = TableQuery[RefreshTokens]
-
-  private[models] class RefreshTokenLogs(tag: Tag) extends Table[RefreshTokenLog](tag, "refresh_tokens_logs") {
-    def id = column[Int]("refresh_token_id")
-    def time = column[Timestamp]("refresh_tokens_log_time", O.SqlType("TIMESTAMP DEFAULT now()"))
-    def userAgent = column[String]("refresh_tokens_log_user_agent")
-    def ip = column[String]("refresh_tokens_log_ip")
-
-    def token = foreignKey("refresh_tokens_logs_refresh_tokens_refresh_token_id_fk", id, refreshTokens)(_.id)
-
-    def * = (id, time.?, userAgent, ip).shaped <> (RefreshTokenLog.tupled, RefreshTokenLog.unapply)
-  }
-
-  private[models] val refreshTokenLogs = TableQuery[RefreshTokenLogs]
 }

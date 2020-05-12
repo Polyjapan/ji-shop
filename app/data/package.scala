@@ -206,11 +206,6 @@ package object data {
 
   case class Image(id: Option[Int], category: String, url: String, size: Int)
 
-  case class RefreshToken(id: Option[Int], clientId: Int, created: Option[Timestamp] = None, disabled: Boolean = false, userAgent: String)
-
-  case class RefreshTokenLog(tokenId: Int, time: Option[Timestamp], userAgent: String, ip: String)
-
-
   sealed trait PaymentMethod
 
   case object Cash extends PaymentMethod
