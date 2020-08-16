@@ -21,23 +21,7 @@ import scala.concurrent.ExecutionContext
   * @author zyuiop
   */
 class PdfGenerationService @Inject()(pdfGen: PdfGenerator, config: Configuration)(implicit ec: ExecutionContext) {
-  private val uploadsUrl = config.get[String]("polyjapan.images.url")
-  private val uploadsPath = config.get[String]("polyjapan.images.path")
-
-  private val replacer = (url: String) => url.replaceFirst(uploadsUrl, "file://" + uploadsPath)
-  private val evReplacer = (event: Event) => event.copy(ticketsImage = event.ticketsImage.map(replacer))
-
-  // val imageFile = new File("result.jpg")
-
-  // println(s"Image will be loaded from ${imageFile.getAbsolutePath}")
-
-  /*
-  The poster image
-   */
-  // lazy val image: String = Base64.getEncoder.encodeToString(FileUtils.readFileToByteArray(imageFile))
-
-
-  private def genCodes(code: String): (String, String, String) = {
+  private def generateBarcodeImages(code: String): (String, String, String) = {
     def getCode(bean: AbstractBarcodeBean, rotation: Int = 0, dpi: Int = 100): String = {
       val out = new ByteArrayOutputStream()
       val canvas = new BitmapCanvasProvider(out, "image/png", dpi, BufferedImage.TYPE_BYTE_BINARY, false, rotation)
@@ -59,17 +43,17 @@ class PdfGenerationService @Inject()(pdfGen: PdfGenerator, config: Configuration
   }
 
   private def doGenPdf(ticket: TicketBarCode): Array[Byte] = {
-    val codes = genCodes(ticket.barcode)
+    val codes = generateBarcodeImages(ticket.barcode)
 
 
-    pdfGen.toBytes(views.html.ticket(evReplacer(ticket.event), ticket.product, codes, ticket.barcode), null, Seq())
+    pdfGen.toBytes(views.html.documents.ticket(ticket.event, ticket.product, codes, ticket.barcode), null, Seq())
   }
 
   private def doGenPdf(ticket: OrderBarCode): Array[Byte] = {
-    val codes = genCodes(ticket.barcode)
+    val codes = generateBarcodeImages(ticket.barcode)
 
 
-    pdfGen.toBytes(views.html.orderTicket(evReplacer(ticket.event), ticket.products, ticket.order, codes, ticket.barcode), null, Seq())
+    pdfGen.toBytes(views.html.documents.orderTicket(ticket.event, ticket.products, ticket.order, codes, ticket.barcode), null, Seq())
   }
 
   def genInvoice(user: data.Client, event: data.Event, order: data.Order, products: Seq[(data.OrderedProduct, data.Product)]): (String, Array[Byte]) = {
@@ -81,7 +65,7 @@ class PdfGenerationService @Inject()(pdfGen: PdfGenerator, config: Configuration
           .view.mapValues(_.size)
         .map(pair => (pair._2, pair._1._2)).toSeq).toMap
     val fileName = "invoice_" + order.id.get + ".pdf"
-    val pdf = pdfGen.toBytes(views.html.invoice(user, event, order, productsMap), fileName, Seq())
+    val pdf = pdfGen.toBytes(views.html.documents.invoice(user, event, order, productsMap), fileName, Seq())
 
     (fileName, pdf)
   }

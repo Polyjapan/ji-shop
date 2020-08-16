@@ -220,7 +220,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     }
   }
 
-  def getBarcodes(orderId: Int): Future[(Seq[GeneratedBarCode], Option[data.Client])] = {
+  def getBarcodes(orderId: Int): Future[(Seq[GeneratedBarCode], Option[(data.Client, data.Event, data.Order)])] = {
     db.run(
       orderJoin.filter(_._1.id === orderId)
         .join(productJoin).on(_._1.id === _._1.orderId)
@@ -244,7 +244,9 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
               OrdersModel.TicketBarCode(product, barcode, event)
           }
 
-          val user = seq.headOption.map(_._7)
+          val userEventOrder: Option[(Client, data.Event, Order)] = seq.headOption.map {
+            case (order, _, _, event, _, _, user) => (user, event, order)
+          }
 
           if (!seq.forall(_._3.isTicket)) {
             // There is an order barcode
@@ -252,8 +254,8 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
             val products = seq.map { case (_, _, product, _, _, _, _) => product }.filterNot(p => p.isTicket).groupMapReduce(p => p)(l => 1)(_ + _)
 
             val s = productTickets.:+(OrderBarCode(headTuple._1.id.get, products, headTuple._6.get, headTuple._4))
-            (s, user)
-          } else (productTickets, user)
+            (s, userEventOrder)
+          } else (productTickets, userEventOrder)
         }
 
 
@@ -599,7 +601,10 @@ object OrdersModel {
   /**
     * A trait representing a barcode
     */
-  sealed trait GeneratedBarCode
+  sealed trait GeneratedBarCode {
+    val barcode: String
+    val event: data.Event
+  }
 
   /**
     * This class represents a barcode bound to a ticket (i.e. a product that allow you to enter the event)
@@ -607,7 +612,7 @@ object OrdersModel {
     * @param product the product representing the ticket (here: the product) (useful to find the template for the PDF generation)
     * @param barcode the actual barcode for the ticket
     */
-  case class TicketBarCode(product: data.Product, barcode: String, event: data.Event) extends GeneratedBarCode
+  case class TicketBarCode(product: data.Product, override val barcode: String, override val event: data.Event) extends GeneratedBarCode
 
   /**
     * This class represents a barcode bound to an order<br>
@@ -616,7 +621,7 @@ object OrdersModel {
     * @param order   the order this ticket/barcode is bound to
     * @param barcode the actual barcode for the ticket
     */
-  case class OrderBarCode(order: Int, products: Map[data.Product, Int], barcode: String, event: data.Event) extends GeneratedBarCode
+  case class OrderBarCode(order: Int, products: Map[data.Product, Int], override val barcode: String, override val event: data.Event) extends GeneratedBarCode
 
 }
 

@@ -4,21 +4,21 @@ import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Date
 
-import com.fasterxml.jackson.module.scala.deser.overrides.MutableList
 import constants.ErrorCodes
 import constants.Permissions._
-import constants.emails.OrderEmail
 import constants.results.Errors._
-import data.{Order, OrderedProduct, Physical, Reseller}
+import data.{Client, Order, OrderedProduct, Physical, Reseller}
 import javax.inject.Inject
-import models.{OrdersModel, ProductsModel}
+import models.OrdersModel
+import models.OrdersModel.GeneratedBarCode
 import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
 import play.api.libs.json.{JsArray, JsValue, Json, OFormat}
-import play.api.libs.mailer.{AttachmentData, Email, MailerClient}
+import play.api.libs.mailer.{AttachmentData, MailerClient}
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
-import services.PdfGenerationService
+import services.EmailService.{InviteEmail, OrderEmail, TicketsEmail}
+import services.{EmailService, PdfGenerationService}
 import utils.AuthenticationPostfix._
 import utils.Implicits._
 
@@ -26,32 +26,32 @@ import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
-  * @author zyuiop
-  */
-class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, pdfGen: PdfGenerationService, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, conf: Configuration) extends AbstractController(cc) {
+ * @author zyuiop
+ */
+class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, pdfGen: PdfGenerationService, mailing: EmailService)(implicit mailerClient: MailerClient, ec: ExecutionContext, conf: Configuration) extends AbstractController(cc) {
   private val validationRequest = Form(mapping("orderId" -> number, "targetEmail" -> optional(email))(Tuple2.apply)(Tuple2.unapply))
 
   private lazy val dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
   /**
-    * Force the validation of an order (i.e. bypass IPN). The body should be a json containing the orderId, and an
-    * optional targetEmail field that, when present, overrides the destination email and replaces the email content by
-    * a sweet invitation message
-    */
+   * Force the validation of an order (i.e. bypass IPN). The body should be a json containing the orderId, and an
+   * optional targetEmail field that, when present, overrides the destination email and replaces the email content by
+   * a sweet invitation message
+   */
   def validateOrder: Action[JsValue] = Action.async(parse.json) { implicit request => {
     validationRequest.bindFromRequest.fold(err =>
       formError(err).asFuture, {
       case (orderId, None) =>
         orders.insertLog(orderId, "admin_force_self", "Trying to force-accept order (with no specific target mail)")
-        processOrder(orderId, _ => sendOrderEmail(None))
-      case (orderId, Some(v)) =>
+        processOrder(orderId, _ => (tickets, client, order) => OrderEmail(order, client, tickets))
+      case (orderId, Some(targetEmail)) =>
         processOrder(orderId, {
           case Physical =>
-            orders.insertLog(orderId, "admin_force_send", "Sending an order email to " + v)
-            sendOrderEmail(Some(v))
+            orders.insertLog(orderId, "admin_force_send", "Sending an order email to " + targetEmail)
+            (tickets, client, order) => OrderEmail(order, client, tickets, Some(targetEmail))
           case _ =>
-            orders.insertLog(orderId, "admin_force_invite", "Trying to generate an invite for " + v)
-            sendInviteEmail(v)
+            orders.insertLog(orderId, "admin_force_invite", "Trying to generate an invite for " + targetEmail)
+            (tickets, _, _) => InviteEmail(tickets, targetEmail)
         })
     })
   }
@@ -59,12 +59,8 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
 
   def resendEmail(orderId: Int): Action[AnyContent] = Action.async { implicit request => {
     orders.getBarcodes(orderId).map {
-      case (codes, Some(client)) if codes.nonEmpty =>
-        val attachments: Seq[AttachmentData] =
-          codes.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))
-
-        Future(OrderEmail.sendOrderEmail(attachments, client))
-
+      case (codes, Some((client, event, order))) if codes.nonEmpty =>
+        Future(mailing.sendMail(OrderEmail(order, client, codes, None)))
         Ok.asSuccess
       case (_, None) =>
         notFound("order")
@@ -164,35 +160,16 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
   }
   } requiresPermission IMPORT_EXTERNAL
 
-  def sendInviteEmail(email: String)(attachments: Seq[AttachmentData], client: data.Client)(implicit mailerClient: MailerClient): String =
-    mailerClient.send(Email(
-      "Vos invitations JapanImpact",
-      "Comité JapanImpact <comite@japan-impact.ch>",
-      Seq(email),
-      bodyText = Some("Bonjour, " +
-        "\nLe comité JapanImpact a le plaisir de vous faire parvenir vos invitations à notre événement." +
-        "\nVous trouverez en pièce jointe vos billets. Vous pouvez les imprimer ou les présenter sur smartphone." +
-        "\n\nCordialement,," +
-        "\nLe Comité Japan Impact"),
-      attachments = attachments
-    ))
+  private type MailSender = data.Source => (Seq[GeneratedBarCode], Client, Order) => TicketsEmail
 
-  def sendOrderEmail(email: Option[String])(attachments: Seq[AttachmentData], client: data.Client)(implicit mailerClient: MailerClient): String =
-    OrderEmail.sendOrderEmail(attachments, client, email)
-
-  private type MailSender = data.Source => (Seq[AttachmentData], data.Client) => Any
-
-  private def processOrder(orderId: Int, mailSender: MailSender) = {
+  private def processOrder(orderId: Int, mailGen: MailSender) = {
     orders.acceptOrder(orderId).map {
       case (Seq(), _, _) =>
         orders.insertLog(orderId, "admin_force_duplicate", "Duplicate order validation")
         NotFound.asError(ErrorCodes.ALREADY_ACCEPTED)
-      case (oldSeq, client, order) if oldSeq.nonEmpty =>
-        val attachments: Seq[AttachmentData] =
-          oldSeq.map(pdfGen.genPdf).map(p => AttachmentData(p._1, p._2, "application/pdf"))
-
+      case (tickets, client, order) if tickets.nonEmpty =>
         orders.insertLog(orderId, "admin_force_ok", "Order forcefully accepted", accepted = true)
-        Future(mailSender(order.source)(attachments, client))
+        mailing.sendMail(mailGen(order.source)(tickets, client, order))
 
         Ok(Json.obj("success" -> true, "errors" -> JsArray()))
       case _ => dbError

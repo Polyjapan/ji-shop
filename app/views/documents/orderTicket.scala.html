@@ -1,3 +1,4 @@
+@import views.html.documents.template
 @(event: data.Event, products: Map[data.Product, Int], orderId: Int, codes: (String, String, String), code: String)
 
 @template(event, "Goodies #" + orderId, codes._1, codes._2, codes._3, code) {

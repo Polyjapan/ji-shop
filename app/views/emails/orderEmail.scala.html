@@ -1,0 +1,32 @@
+@(user: data.Client, event: data.Event, order: data.Order)
+
+<html>
+    <body>
+        <img src="@event.ticketsImage.get" alt="Japan Impact Poster" /><br>
+        <i>-- English Below --</i>
+        <h2>Boutique Japan Impact - Commande #@order.id.get acceptée</h2>
+        <p>Bonjour, <b>@user.firstname @user.lastname</b><br>
+            Vous avez réalisé des achats sur la boutique Japan Impact et nous vous en remercions.<br>
+            Vous trouverez en pièces jointes de cet email vos billets pour @event.name. Vous pouvez les imprimer ou les
+            présenter directement sur votre smartphone.<br>
+            Vos billets ne sont pas nominatifs, mais ils ne peuvent être utilisés qu'une seule fois.<br>
+            N'oubliez pas de prendre avec vous votre justificatif si votre billet est un billet à tarif réduit.<br>
+            <br>
+            Avec nos remerciements et en vous souhaitant une agréable visite !<br>
+            L'équipe Japan Impact
+        </p>
+
+        <hr>
+        <i>-- English -- </i>
+        <h2>Japan Impact Shop - Order #@order.id.get accepted</h2>
+        <p>Hello, <b>@user.firstname</b><br>
+            Thank you for your purchase on Japan Impact's shop!<br>
+            You will find your tickets for @event.name attached to this email. You can either print them or show them
+            directly on the screen of your phone.<br>
+            Your tickets are not nominative, but they can only be used once.<br>
+            If you have a reduced fare, please bring your justification with you.<br><br>
+            We wish you a pleasant visit!<br>
+            The Japan Impact team
+        </p>
+    </body>
+</html>
