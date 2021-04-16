@@ -85,10 +85,6 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
       .filter(pair => pair._2.isEmpty) // Only keep products that have no order
       .map(_._1) // Only keep the products
 
-      .joinLeft(scanningItems).on((product, scan) => product.id === scan.acceptedItemId) // Join to scanned products
-      .filter(pair => pair._2.isEmpty) // Only keep products that are not in a scan config
-      .map(_._1) // Only keep the products
-
       .joinLeft(posConfigItems).on((product, pos) => product.id === pos.itemId) // Join to POS products
       .filter(pair => pair._2.isEmpty) // Only keep products that are not in a POS config
       .map(_._1) // Only keep the products

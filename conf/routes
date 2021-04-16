@@ -27,25 +27,6 @@ POST           /admin/orders/validate                                 controller
 
 GET            /admin/orders/resend/:id                               controllers.admin.OrdersController.resendEmail(id: Int)
 
-+nocsrf
-POST           /scan/process/:id                                      controllers.scanning.ScanningController.scanCode(id: Int)
-GET            /scan/configurations                                   controllers.scanning.ScanningController.getConfigs
-GET            /scan/configurations/:eventId                          controllers.scanning.ScanningController.getConfigsForEvent(eventId: Int)
-
-+nocsrf
-POST           /scan/configurations/:eventId                          controllers.scanning.ScanningController.createConfig(eventId: Int)
-+nocsrf
-PUT            /scan/configurations/:eventId/:id                      controllers.scanning.ScanningController.updateConfig(eventId: Int, id: Int)
-GET            /scan/configurations/:eventId/:id                      controllers.scanning.ScanningController.getConfig(eventId: Int, id: Int)
-GET            /scan/configurations/:eventId/:id/full                 controllers.scanning.ScanningController.getFullConfig(eventId: Int, id: Int)
-+nocsrf
-POST           /scan/configurations/:eventId/:id/addProduct           controllers.scanning.ScanningController.addProductToConfig(eventId: Int, id: Int)
-+nocsrf
-POST           /scan/configurations/:eventId/:id/removeProduct        controllers.scanning.ScanningController.removeProductFromConfig(eventId: Int, id: Int)
-+nocsrf
-DELETE         /scan/configurations/:eventId/:id                      controllers.scanning.ScanningController.deleteConfig(eventId: Int, id: Int)
-
-
 GET            /pos/configurations                                    controllers.pos.PosController.getConfigs
 GET            /pos/configurations/:eventId                           controllers.pos.PosController.getConfigsForEvent(eventId: Int)
 GET            /pos/configurations/:eventId/:id                       controllers.pos.PosController.getConfig(eventId: Int, id: Int)
@@ -106,7 +87,6 @@ GET            /admin/events/:event/products/:product                 controller
 POST           /admin/events/:event/products                          controllers.admin.ProductsController.createProduct(event: Int)
 +nocsrf
 PUT            /admin/events/:event/products/:id                      controllers.admin.ProductsController.updateProduct(event: Int, id: Int)
-GET            /admin/events/:event/products/:id/acceptedBy           controllers.admin.ProductsController.getAcceptingConfigs(event: Int, id: Int)
 
 
 

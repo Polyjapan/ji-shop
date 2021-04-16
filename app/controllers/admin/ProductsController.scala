@@ -4,7 +4,7 @@ import constants.Permissions._
 import constants.results.Errors._
 import data.Product
 import javax.inject.Inject
-import models.{ProductsModel, ScanningModel}
+import models.ProductsModel
 import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
@@ -20,7 +20,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
   * @author zyuiop
   */
-class ProductsController @Inject()(cc: ControllerComponents, products: ProductsModel, configs: ScanningModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, conf: Configuration) extends AbstractController(cc) {
+class ProductsController @Inject()(cc: ControllerComponents, products: ProductsModel)(implicit mailerClient: MailerClient, ec: ExecutionContext, conf: Configuration) extends AbstractController(cc) {
 
   def getProducts(event: Int): Action[AnyContent] = Action.async {
     products.getProducts(event).map(e => Ok(Json.toJson(e)))
@@ -28,10 +28,6 @@ class ProductsController @Inject()(cc: ControllerComponents, products: ProductsM
 
   def getProduct(event: Int, id: Int): Action[AnyContent] = Action.async {
     products.getProduct(event, id).map(e => Ok(Json.toJson(e)))
-  } requiresPermission ADMIN_ACCESS
-
-  def getAcceptingConfigs(event: Int, id: Int): Action[AnyContent] = Action.async {
-    configs.getConfigsAcceptingProduct(event, id).map(e => Ok(Json.toJson(e)))
   } requiresPermission ADMIN_ACCESS
 
   val form = Form(mapping(
