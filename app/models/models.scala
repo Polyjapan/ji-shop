@@ -56,59 +56,6 @@ package object models {
   }
   private[models] val orders = TableQuery[Orders]
 
-
-  private[models] class Tickets(tag: Tag) extends Table[Ticket](tag, "tickets") {
-    def id = column[Int]("ticket_id", O.PrimaryKey, O.AutoInc)
-    def createdAt = column[Timestamp]("ticket_created_at", O.SqlType("timestamp DEFAULT now()"))
-    def barCode = column[String]("ticket_bar_code", O.SqlType("VARCHAR(50)"), O.Unique)
-    def removed = column[Boolean]("ticket_removed")
-
-
-    def * =
-      (id.?, barCode, createdAt.?, removed).shaped <> (Ticket.tupled, Ticket.unapply)
-  }
-  private[models] val tickets = TableQuery[Tickets]
-
-
-  private[models] class OrderedProductTickets(tag: Tag) extends Table[(Int, Int)](tag, "ordered_products_tickets") {
-    def orderedProductId = column[Int]("ordered_product_id", O.PrimaryKey, O.Unique)
-    def ticketId = column[Int]("ticket_id", O.PrimaryKey, O.Unique)
-
-    def product = foreignKey("ordered_products_tickets_product_fk", orderedProductId, orderedProducts)(_.id)
-    def ticket = foreignKey("ordered_products_tickets_ticket_fk", ticketId, tickets)(_.id)
-
-    def * = (orderedProductId, ticketId).shaped
-  }
-  private[models] val orderedProductTickets = TableQuery[OrderedProductTickets]
-
-  private[models] class OrdersTickets(tag: Tag) extends Table[(Int, Int)](tag, "orders_tickets") {
-    def orderId = column[Int]("order_id", O.PrimaryKey, O.Unique)
-    def ticketId = column[Int]("ticket_id", O.PrimaryKey, O.Unique)
-
-    def order = foreignKey("orders_tickets_order_fk", orderId, orders)(_.id)
-    def ticket = foreignKey("orders_tickets_ticket_fk", ticketId, tickets)(_.id)
-
-    def * = (orderId, ticketId).shaped
-  }
-  private[models] val orderTickets = TableQuery[OrdersTickets]
-
-
-
-  private[models] class ClaimedTickets(tag: Tag) extends Table[ClaimedTicket](tag, "claimed_tickets") {
-    def ticketId = column[Int]("ticket_id", O.PrimaryKey)
-    def claimedAt = column[Timestamp]("ticket_claimed_at", O.SqlType("timestamp DEFAULT now()"))
-    def claimedBy = column[Int]("ticket_claimed_by_admin")
-
-    def client = foreignKey("claimed_tickets_client_fk", claimedBy, clients)(_.id)
-    def ticket = foreignKey("claimed_tickets_ticket_fk", ticketId, tickets)(_.id)
-
-
-    def * =
-      (ticketId, claimedAt, claimedBy).shaped <> (ClaimedTicket.tupled, ClaimedTicket.unapply)
-  }
-  private[models] val claimedTickets = TableQuery[ClaimedTickets]
-
-
   private[models] class Products(tag: Tag) extends Table[Product](tag, "products") {
     def id = column[Int]("product_id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("product_name", O.SqlType("VARCHAR(250)"))

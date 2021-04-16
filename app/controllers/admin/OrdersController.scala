@@ -58,20 +58,15 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
   } requiresPermission FORCE_VALIDATION
 
   def resendEmail(orderId: Int): Action[AnyContent] = Action.async { implicit request => {
-    orders.getBarcodes(orderId).map {
+    /*orders.getBarcodes(orderId).map {
       case (codes, Some((client, event, order))) if codes.nonEmpty =>
         Future(mailing.sendMail(OrderEmail(order, client, codes, None)))
         Ok.asSuccess
       case (_, None) =>
         notFound("order")
-    }
+    }*/ ???
   }
   } requiresPermission FORCE_VALIDATION
-
-  def export(event: Int, date: String): Action[AnyContent] = Action.async {
-    // Hardcoded time 10 :00 as we don't care about it anyway
-    orders.dumpEvent(event, date + " 10 :00").map(list => Ok(list.mkString("\n")))
-  } requiresPermission EXPORT_TICKETS
 
   case class ImportedItemData(product: Int, barcode: String, paidPrice: Int, date: String, refunded: Boolean)
 
@@ -80,6 +75,8 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
   }
 
   def importOrder(event: Int): Action[Seq[ImportedItemData]] = Action.async(parse.json[Seq[ImportedItemData]]) { implicit request => {
+
+
     val log = new mutable.ArrayDeque[String]
 
     log += "Processing " + request.body.size + " codes..."
@@ -94,7 +91,8 @@ class OrdersController @Inject()(cc: ControllerComponents, orders: OrdersModel, 
     log += ""
 
     // 1. Filter out existing codes
-    orders.filterBarcodes(codes.map(_.barcode)).flatMap(existingCodes => {
+    // TODO: rewrite entirely
+    /*orders.filterBarcodes*/Future.successful(codes.map(_.barcode)).flatMap(existingCodes => {
       log ++= existingCodes.map(code => s"Removing code $code (already exists)")
       // TODO: we might want to report with a warning codes that already exist AND don't come from a reseller
       // TODO: we might want to report with a warning codes that already exist AND don't have the same product id

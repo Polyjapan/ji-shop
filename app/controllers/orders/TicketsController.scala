@@ -66,18 +66,6 @@ class TicketsController @Inject()(cc: ControllerComponents, pdfGen: PdfGeneratio
    * @return the pdf ticket
    */
   def getTicket(barCode: String) = Action.async { implicit request =>
-    orders.findBarcode(barCode) map {
-      case None =>
-        Errors.notFound()
-      case Some((code, client: Client, _)) =>
-        if (client.id.get != request.user.id && !request.user.hasPerm(Permissions.VIEW_OTHER_TICKET))
-        // Return the same error as if the ticket didn't exist
-        // It avoids leaking information about whether or not a ticket exists
-        Errors.notFound()
-        else {
-          // Generate the PDF
-          Ok(pdfGen.genPdf(code)._2).as("application/pdf")
-        }
-    }
+    ???
   }.requiresAuthentication
 }

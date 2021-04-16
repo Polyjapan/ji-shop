@@ -49,7 +49,6 @@ DELETE         /pos/configurations/:eventId/:id                       controller
 +nocsrf
 POST           /admin/orders/import/:event                            controllers.admin.OrdersController.importOrder(event: Int)
 
-GET            /admin/orders/export/:event/:date                      controllers.admin.OrdersController.export(event: Int, date: String)
 GET            /admin/orders/:event                                   controllers.admin.OrdersController.getOrders(event: Int)
 GET            /admin/orders/userInfo/:id                             controllers.admin.OrdersController.getOrderUserInfo(id: Int)
 GET            /admin/orders/posLogs/:id                              controllers.admin.OrdersController.getPosPaymentLogs(id: Int)
@@ -58,11 +57,8 @@ GET            /admin/orders/byUser/:id                               controller
 +nocsrf
 DELETE         /admin/orders/:id                                      controllers.admin.OrdersController.removeOrder(id: Int)
 
-GET            /admin/tickets/:barcode                                controllers.admin.TicketsController.getTicketData(barcode: String)
-
 GET            /admin/stats/:event                                    controllers.admin.StatsController.getSales(event: Int, start: Long ?= 0, end: Long ?= 0)
 GET            /admin/stats/:event/salesData.csv                      controllers.admin.StatsController.getOrdersStats(event: Int, start: Long ?= 0, end: Long ?= 0, source: Option[String] ?= None)
-GET            /admin/stats/:event/entrances                          controllers.admin.StatsController.getEntranceStats(event: Int, groupBy: Int ?= 60)
 GET            /admin/stats/:event/sales                              controllers.admin.StatsController.getSalesStats(event: Int, groupBy: Int ?= 24)
 
 GET            /admin/events                                          controllers.admin.EventsController.getEvents
