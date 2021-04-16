@@ -75,7 +75,7 @@ object EmailService {
       mailer.send(Email(
         s"Boutique Japan Impact - Commande ${order.id.get} acceptée",
         "Billetterie JapanImpact <ticket@japan-impact.ch>",
-        Seq(sendTo.getOrElse(client.email)),
+        sendTo.orElse(client.billingEmail).orElse(client.email).toList, // possibly 0 email
         bodyHtml = Some(views.html.emails.orderEmail(client, event, order).body),
         attachments = attachments
       ))

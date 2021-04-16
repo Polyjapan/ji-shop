@@ -39,7 +39,7 @@ class LoginController @Inject()(cc: ControllerComponents, clients: ClientsModel,
 
           case None =>
             // Legacy temporary
-            val client = Client(None, userId, user.lastname.get, user.firstname.get, user.email.get, acceptNewsletter = false)
+            val client = Client(None, Some(userId), user.lastname, user.firstname, None, None, user.email, acceptNewsletter = false)
             clients.createClient(client)
               .map(id => client.copy(id = Some(id)))
           case Some(client) => Future.successful(client)

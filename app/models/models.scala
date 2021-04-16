@@ -8,20 +8,6 @@ import slick.jdbc.MySQLProfile.api._
   * associated [[TableQuery]].
   */
 package object models {
-  private[models] class Clients(tag: Tag) extends Table[Client](tag, "clients") {
-    def id = column[Int]("client_id", O.PrimaryKey, O.AutoInc)
-    def casId = column[Int]("client_cas_user_id", O.Unique)
-    def firstname = column[String]("client_firstname", O.SqlType("VARCHAR(100)"))
-    def lastname = column[String]("client_lastname", O.SqlType("VARCHAR(100)"))
-    def email = column[String]("client_email", O.SqlType("VARCHAR(180)"), O.Unique)
-    def acceptNews = column[Boolean]("client_accept_newsletter", O.Default(false))
-
-    def * =
-      (id.?, casId, lastname, firstname, email, acceptNews).shaped <> (Client.tupled, Client.unapply)
-  }
-
-  private[models] val clients = TableQuery[Clients]
-
   private[models] class Events(tag: Tag) extends Table[Event](tag, "events") {
     def id = column[Int]("event_id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("event_name", O.SqlType("VARCHAR(250)"))
@@ -49,7 +35,7 @@ package object models {
     def source = column[Source]("order_source", O.SqlType("SET('WEB', 'ONSITE', 'RESELLER', 'GIFT', 'PHYSICAL') DEFAULT 'WEB'"))
     def removed = column[Boolean]("order_removed")
 
-    def client = foreignKey("order_client_fk", clientId, clients)(_.id)
+    // def client = foreignKey("order_client_fk", clientId, clients)(_.id)
 
     def * =
       (id.?, clientId, ticketsPrice, totalPrice, paymentConfirmed, enterDate.?, source, removed).shaped <> (Order.tupled, Order.unapply)

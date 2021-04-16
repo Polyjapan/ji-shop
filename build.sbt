@@ -33,14 +33,14 @@ resolvers += Resolver.mavenLocal
 
 scalaVersion := "2.13.1"
 
-libraryDependencies ++= Seq( ehcache , ws , specs2 % Test , guice )
+libraryDependencies ++= Seq( ehcache , ws , specs2 % Test , guice , jdbc , evolutions )
 libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-slick" % "5.0.0",
-  "com.typesafe.play" %% "play-slick-evolutions" % "5.0.0",
   "mysql" % "mysql-connector-java" % "5.1.34",
   "org.mindrot" % "jbcrypt" % "0.3m",
   "com.pauldijou" %% "jwt-play" % "4.2.0",
-  "com.hhandoko" %% "play27-scala-pdf" % "4.2.0"
+  "com.hhandoko" %% "play27-scala-pdf" % "4.2.0",
+  "org.playframework.anorm" %% "anorm" % "2.6.10"
 )
 
 libraryDependencies += "com.typesafe.play" %% "play-mailer" % "8.0.0"

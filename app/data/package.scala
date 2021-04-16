@@ -1,11 +1,19 @@
-import java.sql.Timestamp
-
+import anorm._
 import play.api.libs.json._
+
+import java.sql.Timestamp
+import java.time.Instant
 
 /**
  * @author zyuiop
  */
 package object data {
+
+  sealed trait Source
+
+  sealed trait PaymentMethod
+
+  implicit val clientFormat: Format[Client] = Json.format[Client]
 
   /**
    * Defines a Client
@@ -16,15 +24,25 @@ package object data {
    * @param firstname the first name of the client
    * @param email     the email of the client
    */
-  case class Client(id: Option[Int], casId: Int, lastname: String, firstname: String, email: String, acceptNewsletter: Boolean)
-
-
-  implicit val clientFormat: Format[Client] = Json.format[Client]
-
-
-  case class TemporaryToken(casId: Int, lastname: String, firstname: String, email: String)
+  case class Client(id: Option[Int],
+                    casUserId: Option[Int],
+                    firstname: Option[String],
+                    lastname: Option[String],
+                    gender: Option[String],
+                    company: Option[String],
+                    email: Option[String],
+                    billingEmail: Option[String] = None,
+                    acceptNewsletter: Boolean,
+                    pricing: BigDecimal = BigDecimal(100),
+                    vatNumber: Option[String] = None,
+                    remarks: Option[String] = None,
+                    creationTimestamp: Option[Instant] = None,
+                    lastModification: Option[Instant] = None
+                   )
 
   implicit val temporaryTokenFormat: Format[TemporaryToken] = Json.format[TemporaryToken]
+
+  case class TemporaryToken(casId: Int, lastname: String, firstname: String, email: String)
 
   /**
    * Defines an Event, in general it will be a Japan Impact edition, but who knows what could come next?
@@ -39,60 +57,6 @@ package object data {
    */
   case class Event(id: Option[Int], name: String, location: String, ticketsImage: Option[String],
                    description: Option[String], visible: Boolean, archived: Boolean)
-
-  sealed trait Source
-
-  /**
-   * An order made directly from the website. The clientId is then the client who made the order.
-   */
-  case object Web extends Source
-
-  /**
-   * An order made and paid on site, at a checkout. The clientId is the id of the staff that registered the order
-   */
-  case object OnSite extends Source
-
-  /**
-   * An order made and paid on a PolyJapan owned salepoint (i.e. Agepoly shop, advent calendar...). The clientId is the$
-   * id of the staff that registered the order
-   */
-  case object Physical extends Source
-
-  /**
-   * An order made on an external site (e.g. fnac.ch) that was imported in the database. The clientId is the id of the
-   * admin who imported the database
-   */
-  case object Reseller extends Source
-
-  /**
-   * An order made by an admin to generate free tickets. The clientId is the id of the admin who generated the tickets.
-   */
-  case object Gift extends Source
-
-  object Source {
-    def unapply(arg: Source): String = arg.toString.toUpperCase
-
-    def apply(string: String): Source = asOpt(string).get
-
-    def asOpt(string: String): Option[Source] = string.toUpperCase match {
-      case "ONSITE" => Some(OnSite)
-      case "RESELLER" => Some(Reseller)
-      case "WEB" => Some(Web)
-      case "GIFT" => Some(Gift)
-      case "PHYSICAL" => Some(Physical)
-      case _ => None
-    }
-
-    implicit val sourceFormat: Format[Source] = new Format[Source] {
-      override def reads(json: JsValue): JsResult[Source] = json match {
-        case JsString(str) => JsSuccess(Source(str))
-        case _ => JsError("Invalid type")
-      }
-
-      override def writes(o: Source): JsValue = JsString(Source.unapply(o))
-    }
-
-  }
 
   /**
    * Describes an order in the shop.
@@ -110,7 +74,6 @@ package object data {
   case class Order(id: Option[Int], clientId: Int, ticketsPrice: Double, totalPrice: Double,
                    paymentConfirmed: Option[Timestamp] = Option.empty, enterDate: Option[Timestamp] = Option.empty, source: Source = Web,
                    removed: Boolean = false)
-
 
   /**
    * Describes a product that can be bought
@@ -135,7 +98,6 @@ package object data {
   case class Product(id: Option[Int], name: String, price: Double, description: String, longDescription: String,
                      maxItems: Int, eventId: Int, isTicket: Boolean, freePrice: Boolean, isVisible: Boolean,
                      image: Option[String], isWebExclusive: Boolean = false, estimatedRealPrice: Int = -1)
-
 
   /**
    * Describes a product that has been ordered, i.e. that is part of an order
@@ -206,25 +168,6 @@ package object data {
 
   case class Image(id: Option[Int], category: String, url: String, size: Int)
 
-  sealed trait PaymentMethod
-
-  case object Cash extends PaymentMethod
-
-  case object Card extends PaymentMethod
-
-  case object Camipro extends PaymentMethod
-
-  object PaymentMethod {
-    def unapply(arg: PaymentMethod): String = arg.toString.toUpperCase
-
-    def apply(string: String): PaymentMethod = string.toUpperCase match {
-      case "CASH" => Cash
-      case "CARD" => Card
-      case "CAMIPRO" => Camipro
-    }
-  }
-
-
   /**
    * Describes a line of log in a PointOfSale payment processing
    *
@@ -260,6 +203,82 @@ package object data {
    */
   case class OrderLog(id: Option[Int], orderId: Int, logDate: Timestamp, name: String, details: Option[String],
                       accepted: Boolean)
+
+  object Client {
+    implicit val parser: RowParser[Client] = Macro.namedParser[Client](Macro.ColumnNaming.SnakeCase)
+    implicit val writer: ToParameterList[Client] = ToParameterList {
+      Macro.toParameters[Client]()
+        .andThen(list => list.map(np => np.copy(name = s"client_${np.name}")))
+    }
+  }
+
+  /**
+   * An order made directly from the website. The clientId is then the client who made the order.
+   */
+  case object Web extends Source
+
+  /**
+   * An order made and paid on site, at a checkout. The clientId is the id of the staff that registered the order
+   */
+  case object OnSite extends Source
+
+  /**
+   * An order made and paid on a PolyJapan owned salepoint (i.e. Agepoly shop, advent calendar...). The clientId is the$
+   * id of the staff that registered the order
+   */
+  case object Physical extends Source
+
+  /**
+   * An order made on an external site (e.g. fnac.ch) that was imported in the database. The clientId is the id of the
+   * admin who imported the database
+   */
+  case object Reseller extends Source
+
+  /**
+   * An order made by an admin to generate free tickets. The clientId is the id of the admin who generated the tickets.
+   */
+  case object Gift extends Source
+
+  object Source {
+    def unapply(arg: Source): String = arg.toString.toUpperCase
+
+    def apply(string: String): Source = asOpt(string).get
+
+    def asOpt(string: String): Option[Source] = string.toUpperCase match {
+      case "ONSITE" => Some(OnSite)
+      case "RESELLER" => Some(Reseller)
+      case "WEB" => Some(Web)
+      case "GIFT" => Some(Gift)
+      case "PHYSICAL" => Some(Physical)
+      case _ => None
+    }
+
+    implicit val sourceFormat: Format[Source] = new Format[Source] {
+      override def reads(json: JsValue): JsResult[Source] = json match {
+        case JsString(str) => JsSuccess(Source(str))
+        case _ => JsError("Invalid type")
+      }
+
+      override def writes(o: Source): JsValue = JsString(Source.unapply(o))
+    }
+
+  }
+
+  case object Cash extends PaymentMethod
+
+  case object Card extends PaymentMethod
+
+  case object Camipro extends PaymentMethod
+
+  object PaymentMethod {
+    def unapply(arg: PaymentMethod): String = arg.toString.toUpperCase
+
+    def apply(string: String): PaymentMethod = string.toUpperCase match {
+      case "CASH" => Cash
+      case "CARD" => Card
+      case "CAMIPRO" => Camipro
+    }
+  }
 
   implicit val eventFormat = Json.format[Event]
   implicit val productFormat = Json.format[Product]

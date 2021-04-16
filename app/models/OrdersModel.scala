@@ -48,12 +48,6 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     */
   private val productJoin = (orderedProducts join products on (_.productId === _.id) join events on (_._2.eventId === _.id)).map { case ((p1, p2), p3) => (p1, p2, p3) }
 
-  /**
-    * List of orders and the client who made them
-    * orders JOIN clients
-    */
-  private val orderJoin = (orders filterNot (_.removed)) join clients on (_.clientId === _.id)
-  private val allOrderJoin = orders join clients on (_.clientId === _.id)
 
   /**
     * Defines a style of barcode
@@ -130,16 +124,15 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   def loadOrders(userId: Int, isAdmin: Boolean): Future[Seq[data.Order]] = {
     val ordersTable = if (isAdmin) orders else orders.filterNot(_.removed)
 
-    db.run(clients.filter(_.id === userId)
-      .join(ordersTable)
-      .on(_.id === _.clientId)
-      .map { case (_, order) => order }
+    db.run(
+      ordersTable
+      .filter(_.clientId === userId)
       .result
       .map(_.filter(_.source == data.Web || isAdmin)))
   }
 
-  def userFromOrder(order: Int): Future[Client] =
-    db.run(allOrderJoin.filter(_._1.id === order).map(_._2).result.head)
+  def userFromOrder(order: Int): Future[Client] = ???
+    // db.run(allOrderJoin.filter(_._1.id === order).map(_._2).result.head)
 
   def getPosPaymentLogs(order: Int): Future[Seq[data.PosPaymentLog]] =
     db.run(posPaymentLogs.filter(_.orderId === order).result)
@@ -171,7 +164,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
   }
 
   def getOrderDetails(orderId: Int): Future[Option[(Order, Client, data.Event, Seq[(OrderedProduct, Product)])]] = {
-    db.run(
+    /*db.run(
       orderJoin.filter(_._1.id === orderId)
         .join(productJoin).on(_._1.id === _._1.orderId)
         .result
@@ -181,7 +174,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
         val rest = seq.map(_._2).map { case (op, p, _) => (op, p) }
         Some((order, client, event, rest))
       case _ => None
-    }
+    }*/ ??? // TODO
   }
 
   def getOrderProducts(orderId: Int): Future[Seq[(OrderedProduct, Product)]] =

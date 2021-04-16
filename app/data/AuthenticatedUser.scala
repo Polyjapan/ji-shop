@@ -5,7 +5,7 @@ import play.api.libs.json.Json
 /**
   * @author zyuiop
   */
-case class AuthenticatedUser(id: Int, lastname: String, firstname: String, email: String, permissions: Seq[String]) {
+case class AuthenticatedUser(id: Int, permissions: Seq[String]) {
   def hasPerm(perm: String) = {
     if (hasPermExclusion(perm)) false
     else if (permissions.contains(perm)) true
@@ -25,7 +25,7 @@ case class AuthenticatedUser(id: Int, lastname: String, firstname: String, email
 
 object AuthenticatedUser {
   def apply(client: Client, perms: Seq[String]): AuthenticatedUser =
-    AuthenticatedUser(client.id.get, client.lastname, client.firstname, client.email, perms)
+    AuthenticatedUser(client.id.get, perms)
 
   implicit val format = Json.format[AuthenticatedUser]
 }

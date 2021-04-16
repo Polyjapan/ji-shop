@@ -1,58 +1,35 @@
 package models
 
-import java.time.Clock
-
+import anorm.SqlParser._
+import anorm._
 import com.google.common.base.Preconditions
 import data.{AuthenticatedUser, Client}
-import javax.inject.Inject
 import pdi.jwt.JwtSession
 import play.api.Configuration
-import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import play.api.db.Database
 import play.api.mvc.Request
-import slick.jdbc.MySQLProfile
+import utils.SqlUtils
 
+import java.time.Clock
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * @author zyuiop
  */
-class ClientsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext, configuration: Configuration, clock: Clock)
-  extends HasDatabaseConfigProvider[MySQLProfile] {
-
-  import profile.api._
-
-
-  private class Permissions(tag: Tag) extends Table[(Int, String)](tag, "permissions") {
-    def userId = column[Int]("client_id")
-
-    def permission = column[String]("permission", O.SqlType("VARCHAR(180)"))
-
-
-    def user = foreignKey("permissions_client_fk", userId, clients)(_.id, onDelete = ForeignKeyAction.Cascade)
-
-    def * = (userId, permission)
-
-    def pk = primaryKey("pk_permissions", (userId, permission))
-  }
-
-  private val permissions = TableQuery[Permissions]
-  private val clientsJoin = clients joinLeft permissions on (_.id === _.userId)
-
+class ClientsModel @Inject()(val database: Database)(implicit ec: ExecutionContext, configuration: Configuration, clock: Clock) {
   type ClientAndPermissions = (Client, Seq[String])
-
-  private val permsJoinMapper: (Seq[(Client, Option[(Int, String)])]) => Seq[ClientAndPermissions] =
-    _.groupBy(pair => pair._1).mapValues(_.map(_._2).filter(_.nonEmpty).map(_.get._2)).toSeq
-
-  private val singleClientPermsJoinMapper: (Seq[(Client, Option[(Int, String)])]) => Option[ClientAndPermissions] =
-    permsJoinMapper(_).headOption
-
 
   /**
    * Query all the clients registered in database
    *
    * @return a future holding a [[Seq]] of all registered [[Client]]
    */
-  def allClients: Future[Seq[Client]] = db.run(clients.result)
+  def allClients: Future[Seq[Client]] = Future {
+    database.withConnection { implicit conn =>
+      SQL("SELECT * FROM clients").as(Client.parser.*)
+    }
+  }
 
   /**
    * Query all the clients registered in database having a given permission
@@ -60,28 +37,57 @@ class ClientsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvi
    * @param permission the permission to look for
    * @return a future holding a [[Seq]] of all registered [[Client]] having the given permission
    */
-  def allClientsWithPermission(permission: String): Future[Seq[Client]] = db.run(clientsJoin.filter(_._2.map(_.permission) === permission).map(_._1).distinct.result)
+  def allClientsWithPermission(permission: String): Future[Seq[Client]] = Future {
+    database.withConnection { implicit c =>
+      SQL("SELECT clients.* FROM clients NATURAL JOIN permissions WHERE permission = {perm}")
+        .on("perm" -> permission)
+        .as(Client.parser.*)
+    }
+  }
+
+  private def getClient(field: String, value: ParameterValue): Future[Option[ClientAndPermissions]] = Future {
+    database.withConnection { implicit c =>
+      SQL(s"SELECT clients.*, permissions.permission FROM clients NATURAL LEFT JOIN permissions WHERE $field = {v}")
+        .on("v" -> value)
+        .as((Client.parser ~ str("permission").?).*)
+        .groupMapReduce(_._1)(_._2.toList)(_ ++ _)
+        .headOption
+    }
+  }
 
   /**
    * Query a client by its email
    */
-  def findClient(email: String): Future[Option[ClientAndPermissions]] =
-    db.run(clientsJoin.filter(_._1.email === email).result).map(singleClientPermsJoinMapper)
+  def findClient(email: String): Future[Option[ClientAndPermissions]] = getClient("client_email", email)
+
+  def getClient(id: Int): Future[Option[ClientAndPermissions]] = getClient("client_id", id)
 
   /**
    * Query a client by its cas ID
    */
-  def findClientByCasId(casId: Int): Future[Option[Client]] =
-    db.run(clients.filter(row => row.casId === casId).result.headOption)
+  def findClientByCasId(casId: Int): Future[Option[Client]] = Future {
+    database.withConnection { implicit c =>
+      SQL("SELECT * FROM clients WHERE client_cas_user_id = {id}")
+        .on("id" -> casId)
+        .as(Client.parser.singleOpt)
+    }
+  }
 
-  def getClient(id: Int): Future[Option[ClientAndPermissions]] =
-    db.run(clientsJoin.filter(_._1.id === id).result).map(singleClientPermsJoinMapper)
+  def addPermission(id: Int, permission: String): Future[Int] = Future {
+    database.withConnection { implicit c =>
+      SQL("INSERT INTO permissions(client_id, permission) VALUES ({id}, {perm})")
+        .on("id" -> id, "perm" -> permission)
+        .executeUpdate()
+    }
+  }
 
-  def addPermission(id: Int, permission: String): Future[Int] =
-    db.run(permissions += (id, permission))
-
-  def removePermission(id: Int, permission: String): Future[Int] =
-    db.run(permissions.filter(pair => pair.permission === permission && pair.userId === id).delete)
+  def removePermission(id: Int, permission: String): Future[Int] = Future {
+    database.withConnection { implicit c =>
+      SQL("DELETE FROM permissions WHERE client_id = {id} AND permission = {perm}")
+        .on("id" -> id, "perm" -> permission)
+        .executeUpdate()
+    }
+  }
 
   /**
    * Create a client
@@ -89,7 +95,11 @@ class ClientsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvi
    * @param client the client to create
    * @return a future hodling the id of the inserted client
    */
-  def createClient(client: Client): Future[Int] = db.run((clients returning clients.map(_.id)) += client)
+  def createClient(client: Client): Future[Int] = Future {
+    database.withConnection { implicit c =>
+      SqlUtils.insertOne("clients", client)
+    }
+  }
 
   /**
    * Updates a client whose id is set
@@ -99,7 +109,11 @@ class ClientsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvi
    */
   def updateClient(client: Client): Future[Int] = {
     Preconditions.checkArgument(client.id.isDefined)
-    db.run(clients.filter(_.id === client.id.get).update(client))
+    Future {
+      database.withConnection { implicit c =>
+        SqlUtils.updateOne("clients", client, ignores = Set(""))
+      }
+    }
   }
 
   def generateLoginResponse(client: Int)(implicit request: Request[_]): Future[String] = {
