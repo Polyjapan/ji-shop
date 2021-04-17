@@ -26,7 +26,7 @@ class PosController @Inject()(cc: ControllerComponents, orders: OrdersModel, mod
 
   def getConfigs: Action[AnyContent] = Action.async {
     model.getConfigs
-      .map(result => Ok(Json.toJson(result.map(pair => Json.obj("event" -> pair._1, "configs" -> pair._2)))))
+      .map(result => Ok(Json.toJson(Json.obj("event" -> "POS Configurations (all)", "configs" -> result)))) // TODO
   } requiresPermission SELL_ON_SITE
 
   def getConfigsForEvent(eventId: Int): Action[AnyContent] = Action.async {

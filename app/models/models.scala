@@ -8,21 +8,6 @@ import slick.jdbc.MySQLProfile.api._
   * associated [[TableQuery]].
   */
 package object models {
-  private[models] class Events(tag: Tag) extends Table[Event](tag, "events") {
-    def id = column[Int]("event_id", O.PrimaryKey, O.AutoInc)
-    def name = column[String]("event_name", O.SqlType("VARCHAR(250)"))
-    def location = column[String]("event_location", O.SqlType("VARCHAR(250)"))
-    def image = column[Option[String]]("event_tickets_image", O.SqlType("VARCHAR(250) NULL"))
-    def desc = column[Option[String]]("event_description", O.SqlType("TEXT NULL"))
-    def visible = column[Boolean]("event_visible")
-    def archived = column[Boolean]("event_archived", O.Default(false))
-
-    def * =
-      (id.?, name, location, image, desc, visible, archived).shaped <> (Event.tupled, Event.unapply)
-  }
-
-  private[models] val events = TableQuery[Events]
-
   implicit val sourceMap = MappedColumnType.base[Source, String](Source.unapply, Source.apply)
 
   private[models] class Orders(tag: Tag) extends Table[Order](tag, "orders") {
@@ -57,8 +42,6 @@ package object models {
     def isExclusive = column[Boolean]("is_web_exclusive")
     def realPrice = column[Int]("product_real_price")
 
-    def category = foreignKey("product_event_fk", eventId, events)(_.id)
-
     def * =
       (id.?, name, price, description, longDescription, maxItems, eventId, isTicket, freePrice, isVisible, image,
         isExclusive, realPrice).shaped <> (Product.tupled, Product.unapply)
@@ -87,8 +70,6 @@ package object models {
     def name = column[String]("pos_configuration_name", O.SqlType("VARCHAR(250)"))
     def acceptCards = column[Boolean]("pos_configuration_accept_cards")
     def acceptCamipro = column[Boolean]("pos_configuration_accept_camipro")
-
-    def event = foreignKey("pos_configurations_events_event_id_fk", eventId, events)(_.id)
 
     def * =
       (id.?, eventId, name, acceptCards, acceptCamipro).shaped <> (PosConfiguration.tupled, PosConfiguration.unapply)

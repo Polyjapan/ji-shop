@@ -49,7 +49,7 @@ DELETE         /pos/configurations/:eventId/:id                       controller
 +nocsrf
 POST           /admin/orders/import/:event                            controllers.admin.OrdersController.importOrder(event: Int)
 
-GET            /admin/orders/:event                                   controllers.admin.OrdersController.getOrders(event: Int)
+GET            /admin/orders                                 controllers.admin.OrdersController.getAllOrders
 GET            /admin/orders/userInfo/:id                             controllers.admin.OrdersController.getOrderUserInfo(id: Int)
 GET            /admin/orders/posLogs/:id                              controllers.admin.OrdersController.getPosPaymentLogs(id: Int)
 GET            /admin/orders/logs/:id                                 controllers.admin.OrdersController.getOrderLogs(id: Int)
@@ -60,20 +60,6 @@ DELETE         /admin/orders/:id                                      controller
 GET            /admin/stats/:event                                    controllers.admin.StatsController.getSales(event: Int, start: Long ?= 0, end: Long ?= 0)
 GET            /admin/stats/:event/salesData.csv                      controllers.admin.StatsController.getOrdersStats(event: Int, start: Long ?= 0, end: Long ?= 0, source: Option[String] ?= None)
 GET            /admin/stats/:event/sales                              controllers.admin.StatsController.getSalesStats(event: Int, groupBy: Int ?= 24)
-
-GET            /admin/events                                          controllers.admin.EventsController.getEvents
-GET            /admin/events/:event                                   controllers.admin.EventsController.getEvent(event: Int)
-
-+nocsrf
-DELETE         /admin/events/:event                                   controllers.admin.EventsController.deleteEvent(event: Int)
-
-+nocsrf
-POST           /admin/events                                          controllers.admin.EventsController.createEvent
-+nocsrf
-POST           /admin/events/clone/:id                                controllers.admin.EventsController.cloneEvent(id: Int)
-+nocsrf
-PUT            /admin/events/:id                                      controllers.admin.EventsController.updateEvent(id: Int)
-
 
 GET            /admin/events/:event/products                          controllers.admin.ProductsController.getProducts(event: Int)
 GET            /admin/events/:event/products/purge                    controllers.admin.ProductsController.purgeUnsoldProducts(event: Int)

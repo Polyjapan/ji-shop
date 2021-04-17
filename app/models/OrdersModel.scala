@@ -46,7 +46,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     * List of ordered products, associated with the product and the event in which this product appears
     * ordered_products JOIN products JOIN events
     */
-  private val productJoin = (orderedProducts join products on (_.productId === _.id) join events on (_._2.eventId === _.id)).map { case ((p1, p2), p3) => (p1, p2, p3) }
+   private val productJoin: Query[(OrderedProducts, Products), (OrderedProduct, Product), Seq] = (orderedProducts join products on (_.productId === _.id))
 
 
   /**
@@ -146,17 +146,10 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
     * @param eventId the id of the event to look for
     * @return the orders in this event
     */
-  def ordersByEvent(eventId: Int, returnRemovedOrders: Boolean = false): Future[Seq[data.Order]] = {
+  def allOrders(returnRemovedOrders: Boolean = false): Future[Seq[data.Order]] = {
     val ordersTable = (if (returnRemovedOrders) orders else orders.filterNot(_.removed))
 
-    db.run(
-      ordersTable
-        .join(productJoin).on(_.id === _._1.orderId) // join with products and events
-        .filter(_._2._3.id === eventId) // get only this event id
-        .map(_._1) // get only the order
-        .distinctOn(_.id) // distinct ids
-        .result
-    )
+    db.run(ordersTable.result)
   }
 
   def getOrder(orderId: Int): Future[Option[Order]] = {
@@ -179,7 +172,7 @@ class OrdersModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvid
 
   def getOrderProducts(orderId: Int): Future[Seq[(OrderedProduct, Product)]] =
     db.run(
-      productJoin.filter(_._1.orderId === orderId).map { case (op, p, _) => (op, p) }.result
+      productJoin.filter(_._1.orderId === orderId).result
     )
 
   def insertProducts(list: Iterable[CheckedOutItem], orderId: Int): Future[Boolean] = {

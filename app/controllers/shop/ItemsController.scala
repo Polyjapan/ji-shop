@@ -2,14 +2,15 @@ package controllers.shop
 
 import constants.Permissions._
 import data._
+
 import javax.inject.Inject
 import models.{OrdersModel, ProductsModel}
 import play.api.Configuration
 import play.api.i18n.I18nSupport
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 import play.api.libs.mailer.MailerClient
 import play.api.mvc._
-import services.{PolybankingClient, PdfGenerationService}
+import services.{PdfGenerationService, PolybankingClient}
 import utils.AuthenticationPostfix._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -18,13 +19,16 @@ import scala.concurrent.{ExecutionContext, Future}
   * @author zyuiop
   */
 class ItemsController @Inject()(cc: MessagesControllerComponents, pdfGen: PdfGenerationService, orders: OrdersModel, products: ProductsModel, mailerClient: MailerClient, pb: PolybankingClient)(implicit ec: ExecutionContext, config: Configuration) extends MessagesAbstractController(cc) with I18nSupport {
-  private def itemsAsResult(getter: ProductsModel => Future[Map[Event, Seq[data.Product]]]): Future[Result] =
-    getter(products).map(data => {
-      val common = data.view.mapValues(_.partition(_.isTicket))
-      val tickets = common.mapValues(_._1).toMap
-      val goodies = common.mapValues(_._2).toMap
 
-      val json = Json.obj("tickets" -> products.buildItemList(tickets), "goodies" -> products.buildItemList(goodies))
+
+  private def buildItemList(items: Seq[data.Product]): List[JsObject] =
+    List(Json.obj("event" -> "All", "items" -> items)) // TODO
+
+  private def itemsAsResult(getter: ProductsModel => Future[Seq[data.Product]]): Future[Result] =
+    getter(products).map(data => {
+      val (tickets, goodies) = data.partition(_.isTicket)
+
+      val json = Json.obj("tickets" -> buildItemList(tickets), "goodies" -> buildItemList(goodies))
 
       Ok(json)
     })

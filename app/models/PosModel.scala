@@ -18,8 +18,6 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
   import profile.api._
 
   private val configJoin = posConfigurations joinLeft posConfigItems on (_.id === _.configId)
-  private val eventsJoin = posConfigurations join events on (_.eventId === _.id)
-  private val productsJoin = posConfigurations join posConfigItems on (_.id === _.configId) join products on (_._2.itemId === _.id)
   private val productsLeftJoin = posConfigurations joinLeft posConfigItems on (_.id === _.configId) joinLeft products on (_._2.map(_.itemId) === _.id)
 
   def createConfig(config: PosConfiguration): Future[Int] = db.run(posConfigurations.returning(posConfigurations.map(_.id)) += config)
@@ -55,9 +53,8 @@ class PosModel @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
       .map(pair => JsonPosConfigItem(pair._1._2.get, pair._2.get))))
   }
 
-  def getConfigs: Future[Map[Event, Seq[PosConfiguration]]] =
-    db.run(eventsJoin.filterNot(_._2.archived).result)
-      .map(res => res.groupMap(_._2)(_._1))
+  def getConfigs: Future[Seq[PosConfiguration]] =
+    db.run(posConfigurations.result)
 
   def getConfigsForEvent(eventId: Int): Future[Seq[PosConfiguration]] =
     db.run(posConfigurations.filter(_.eventId === eventId).result)

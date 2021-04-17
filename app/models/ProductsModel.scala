@@ -17,27 +17,26 @@ class ProductsModel @Inject()(protected val dbConfigProvider: DatabaseConfigProv
 
   import profile.api._
 
-  private val productsJoin = events join products on (_.id === _.eventId)
-
   private val joinToMap: Seq[(Event, data.Product)] => Map[Event, Seq[data.Product]] = _.groupMap(_._1)(_._2)
 
 
-  def buildItemList(map: Map[Event, Seq[Product]]): List[JsObject] =
-    map.filter(_._2.nonEmpty).map(pair => Json.obj("event" -> pair._1, "items" -> pair._2)).toList
+  def getProducts: Future[Seq[data.Product]] = // TODO: should not exist; we should have a concept of "frontpage" that lists the products to display
+    db.run(products.filter(prod => prod.isVisible === true).result)
 
-  def getProducts: Future[Map[Event, Seq[data.Product]]] =
-    db.run(productsJoin.filter(pair => pair._1.visible === true && pair._1.archived === false && pair._2.isVisible === true).result).map(joinToMap)
-
-  def getProductsAdmin: Future[Map[Event, Seq[data.Product]]] =
+  def getProductsAdmin: Future[Seq[data.Product]] = db.run(products.result)
+    // TODO
   // Here we allow invisible products to be displayed
-    db.run(productsJoin.filter(pair => pair._1.visible === true && pair._1.archived === false).result).map(joinToMap)
+    // db.run(productsJoin.filter(pair => pair._1.visible === true && pair._1.archived === false).result).map(joinToMap)
 
-  def getAllProducts: Future[Map[Event, Seq[data.Product]]] =
+  def getAllProducts: Future[Seq[data.Product]] = db.run(products.result)
+    // TODO
   // Here we allow invisible products to be displayed, but still not archived ones
-    db.run(productsJoin.filter(_._1.archived === false).result).map(joinToMap)
+    // db.run(productsJoin.filter(_._1.archived === false).result).map(joinToMap)
 
-  def getMergedProducts(includeHidden: Boolean, includeHiddenEvents: Boolean = false): Future[Seq[data.Product]] =
-    db.run(productsJoin.filter(pair => (pair._1.visible === true || includeHiddenEvents) && pair._1.archived === false).filter(_._2.isVisible === true || includeHidden).result).map(_.map(_._2))
+  def getMergedProducts(includeHidden: Boolean, includeHiddenEvents: Boolean = false): Future[Seq[data.Product]] = {
+    // TODO
+    db.run(products.filter(_.isVisible === true || includeHidden).result)
+  }
 
   def splitTickets(map: Map[Event, Seq[data.Product]]): Map[Event, (Seq[data.Product], Seq[data.Product])] =
     map.view.mapValues(_.partition(_.isTicket)).toMap
