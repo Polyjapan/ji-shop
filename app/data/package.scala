@@ -1,7 +1,8 @@
 import anorm._
 import play.api.libs.json._
+import utils.SqlUtils
 
-import java.sql.Timestamp
+import java.sql.{PreparedStatement, Timestamp}
 import java.time.Instant
 
 /**
@@ -41,6 +42,25 @@ package object data {
                    )
 
   implicit val temporaryTokenFormat: Format[TemporaryToken] = Json.format[TemporaryToken]
+
+  import FrontpageVisibility.FrontpageVisibility
+
+  case class Frontpage(
+                        frontpageId: Option[Int],
+                        frontpageTitle: String,
+                        frontpageVisibility: FrontpageVisibility
+                      )
+
+  case class FrontpageBlock(
+                             blockId: Option[Int],
+                             frontpageId: Int,
+                             blockOrder: Int,
+                             blockVisibility: FrontpageVisibility,
+                             productId: Option[Int],
+                             categoryId: Option[Int],
+                             blockText: Option[String],
+                             blockImage: Option[String]
+                           )
 
   case class TemporaryToken(casId: Int, lastname: String, firstname: String, email: String)
 
@@ -204,13 +224,11 @@ package object data {
   case class OrderLog(id: Option[Int], orderId: Int, logDate: Timestamp, name: String, details: Option[String],
                       accepted: Boolean)
 
-  object Client {
-    implicit val parser: RowParser[Client] = Macro.namedParser[Client](Macro.ColumnNaming.SnakeCase)
-    implicit val writer: ToParameterList[Client] = ToParameterList {
-      Macro.toParameters[Client]()
-        .andThen(list => list.map(np => np.copy(name = s"client_${np.name}")))
-    }
+  object FrontpageVisibility extends Enumeration {
+    type FrontpageVisibility = Value
+    val Draft, Internal, Public, Archived = Value
   }
+
 
   /**
    * An order made directly from the website. The clientId is then the client who made the order.
@@ -303,8 +321,32 @@ package object data {
     override def writes(o: PaymentMethod): JsValue = JsString(PaymentMethod.unapply(o))
   }
 
-  implicit val orderFormat = Json.format[Order]
-  implicit val posLogFormat = Json.format[PosPaymentLog]
-  implicit val logFormat = Json.format[OrderLog]
-  implicit val imageFormat = Json.format[Image]
+  implicit val orderFormat: OFormat[Order] = Json.format[Order]
+  implicit val posLogFormat: OFormat[PosPaymentLog] = Json.format[PosPaymentLog]
+  implicit val logFormat: OFormat[OrderLog] = Json.format[OrderLog]
+  implicit val imageFormat: OFormat[Image] = Json.format[Image]
+  implicit val visibilityFormat: Format[data.FrontpageVisibility.Value] = Json.formatEnum(FrontpageVisibility)
+  implicit val frontpageFormat: OFormat[Frontpage] = Json.format[Frontpage]
+  implicit val frontpageBlockFormat: OFormat[FrontpageBlock] = Json.format[FrontpageBlock]
+
+  implicit val (fpVisibilityCol: Column[data.FrontpageVisibility.Value], fpVisibilityStmt: ToStatement[data.FrontpageVisibility.Value]) =
+    (SqlUtils.enumToColumn(FrontpageVisibility), SqlUtils.enumToStatement(FrontpageVisibility))
+
+
+  object Client {
+    implicit val parser: RowParser[Client] = Macro.namedParser[Client](Macro.ColumnNaming.SnakeCase)
+    implicit val writer: ToParameterList[Client] = ToParameterList {
+      Macro.toParameters[Client]()
+        .andThen(list => list.map(np => np.copy(name = s"client_${np.name}")))
+    }
+  }
+
+  object Frontpage {
+    implicit val parser: RowParser[Frontpage] = Macro.namedParser[Frontpage](Macro.ColumnNaming.SnakeCase)
+    implicit val writer: ToParameterList[Frontpage] = Macro.toParameters[Frontpage]
+  }
+  object FrontpageBlock {
+    implicit val parser: RowParser[FrontpageBlock] = Macro.namedParser[FrontpageBlock](Macro.ColumnNaming.SnakeCase)
+    implicit val writer: ToParameterList[FrontpageBlock] = Macro.toParameters[FrontpageBlock]
+  }
 }

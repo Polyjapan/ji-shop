@@ -2,11 +2,15 @@ package utils
 
 import anorm.Macro.ColumnNaming
 import anorm.SqlParser.scalar
-import anorm.{BatchSql, NamedParameter, SQL, ToParameterList}
+import anorm.{BatchSql, Column, NamedParameter, SQL, ToParameterList, ToStatement}
 
 import java.sql.Connection
+import scala.language.implicitConversions
 
 object SqlUtils {
+  implicit def enumToColumn(enum: Enumeration): Column[enum.Value] = Column.columnToString.map(s => enum.withName(s))
+  implicit def enumToStatement(enum: Enumeration): ToStatement[enum.Value] = (s, index, v) => s.setString(index, v.toString)
+
   /**
    * Inserts one item in the given table and returns its id
    *
