@@ -2,16 +2,19 @@ package services
 
 import akka.Done
 import data.{Event, Order}
+
 import javax.inject.{Inject, Singleton}
 import models.OrdersModel
 import models.OrdersModel.GeneratedBarCode
+import play.api.Configuration
 import play.api.libs.mailer.{AttachmentData, Email, MailerClient}
 import services.EmailService.{OrderEmail, TicketsEmail}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class EmailService @Inject()(orders: OrdersModel)(implicit ec: ExecutionContext, pdfGen: PdfGenerationService, mailer: MailerClient) {
+class EmailService @Inject()(orders: OrdersModel, conf: Configuration)(implicit ec: ExecutionContext, pdfGen: PdfGenerationService, mailer: MailerClient) {
+  val cci = conf.get[Seq[String]]("email.cci")
   /**
    * Send the provided email
    *
@@ -30,10 +33,10 @@ class EmailService @Inject()(orders: OrdersModel)(implicit ec: ExecutionContext,
         orders.getOrderProducts(order.id.get) flatMap { products =>
           val (invoiceName, body) = pdfGen.genInvoice(client, o.event, order, products)
 
-          o.sendMail(attachments :+ AttachmentData(invoiceName, body, "application/pdf"))
+          o.sendMail(attachments :+ AttachmentData(invoiceName, body, "application/pdf"), cci)
         }
       case other =>
-        other.sendMail(attachments)
+        other.sendMail(attachments, cci)
     }
 
     // Log errors and pass them on
@@ -57,7 +60,7 @@ object EmailService {
         AttachmentData(name, document, "application/pdf")
       }
 
-    def sendMail(attachments: Seq[AttachmentData])(implicit mailer: MailerClient, ec: ExecutionContext): Future[Done]
+    def sendMail(attachments: Seq[AttachmentData], cci: Seq[String])(implicit mailer: MailerClient, ec: ExecutionContext): Future[Done]
 
     lazy val event: Event = tickets.head.event
   }
@@ -71,13 +74,14 @@ object EmailService {
    * @param sendTo  optional: if specified, the email address to which the order should be sent
    */
   case class OrderEmail(order: Order, client: data.Client, tickets: Seq[GeneratedBarCode], sendTo: Option[String] = None) extends TicketsEmail {
-    override def sendMail(attachments: Seq[AttachmentData])(implicit mailer: MailerClient, ec: ExecutionContext): Future[Done] = Future {
+    override def sendMail(attachments: Seq[AttachmentData], cci: Seq[String])(implicit mailer: MailerClient, ec: ExecutionContext): Future[Done] = Future {
       mailer.send(Email(
         s"Boutique Japan Impact - Commande ${order.id.get} acceptée",
         "Billetterie JapanImpact <ticket@japan-impact.ch>",
         Seq(sendTo.getOrElse(client.email)),
         bodyHtml = Some(views.html.emails.orderEmail(client, event, order).body),
-        attachments = attachments
+        attachments = attachments,
+        bcc = cci
       ))
       Done
     }
@@ -90,14 +94,15 @@ object EmailService {
    * @param sendTo  the email of the invited person
    */
   case class InviteEmail(tickets: Seq[GeneratedBarCode], sendTo: String) extends TicketsEmail {
-    override def sendMail(attachments: Seq[AttachmentData])(implicit mailer: MailerClient, ec: ExecutionContext): Future[Done] =
+    override def sendMail(attachments: Seq[AttachmentData], cci: Seq[String])(implicit mailer: MailerClient, ec: ExecutionContext): Future[Done] =
       Future {
         mailer.send(Email(
           "Vos invitations JapanImpact",
           "Comité JapanImpact <comite@japan-impact.ch>",
           Seq(sendTo),
           bodyHtml = Some(views.html.emails.inviteEmail(event).body),
-          attachments = attachments
+          attachments = attachments,
+          bcc = cci
         ))
         Done
       }
